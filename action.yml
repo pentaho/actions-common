@@ -1,0 +1,22 @@
+name: "Common Pentaho Maven Settings file"
+description: "Common Pentaho Maven Settings file"
+
+outputs:
+  settings-file-path:
+    description: "Maven settings file path"
+    value: ${{ steps.settings-file.outputs.path }}
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Return settings.xml
+      id: settings-file
+      shell: sh
+      run: |
+        file_path="$GITHUB_ACTION_PATH/settings.xml"
+        
+        echo "path=${file_path}" >> $GITHUB_OUTPUT

@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+  <mirrors>
+    <mirror>
+      <id>pentaho.resolve.repo</id>
+      <url>${env.RESOLVE_REPO_MIRROR}</url>
+      <mirrorOf>*</mirrorOf>
+    </mirror>
+  </mirrors>
+
+  <servers>
+    <server>
+      <id>pentaho.resolve.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.public.release.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.public.snapshot.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.private.release.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.private.snapshot.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>nexus.pentaho.org:8001</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>nexus.pentaho.org:8002</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>nexus3.pentaho.com:8001</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>nexus3.pentaho.com:8002</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pnt-docker.repo.orl.eng.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pntprv-docker-dev-orl.repo.orl.eng.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pntprv-docker-release-orl.repo.orl.eng.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pntpub-docker-dev-orl.repo.orl.eng.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pntpub-docker-release-orl.repo.orl.eng.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+  </servers>
+
+  <profiles>
+    <profile>
+      <id>pentaho</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <!-- Artifact repositories -->
+        <pentaho.public.release.repo>${env.PUBLIC_RELEASE_REPO_URL}</pentaho.public.release.repo>
+        <pentaho.public.snapshot.repo>${env.PUBLIC_SNAPSHOT_REPO_URL}</pentaho.public.snapshot.repo>
+        <pentaho.private.release.repo>${env.PRIVATE_RELEASE_REPO_URL}</pentaho.private.release.repo>
+        <pentaho.private.snapshot.repo>${env.PRIVATE_SNAPSHOT_REPO_URL}</pentaho.private.snapshot.repo>
+
+        <pentaho.docker.pull.host>${env.DOCKER_PULL_HOST}</pentaho.docker.pull.host>
+        <pentaho.docker.public.push.host>${env.DOCKER_PUBLIC_PUSH_HOST}</pentaho.docker.public.push.host>
+        <pentaho.docker.private.push.host>${env.DOCKER_PRIVATE_PUSH_HOST}</pentaho.docker.private.push.host>
+
+        <!-- hide test output clutter -->
+        <maven.test.redirectTestOutputToFile>true</maven.test.redirectTestOutputToFile>
+
+        <!-- let the build become unstable with failed tests instead of failing -->
+        <maven.test.failure.ignore>true</maven.test.failure.ignore>
+      </properties>
+      <repositories>
+        <repository>
+          <id>pentaho-public</id>
+          <name>pentaho-public</name>
+          <url>${env.RESOLVE_REPO_MIRROR}</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </snapshots>
+        </repository>
+      </repositories>
+      <pluginRepositories>
+        <pluginRepository>
+          <id>pentaho-public</id>
+          <name>pentaho-public</name>
+          <url>${env.RESOLVE_REPO_MIRROR}</url>
+          <releases>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </releases>
+          <snapshots>
+            <enabled>true</enabled>
+            <updatePolicy>never</updatePolicy>
+          </snapshots>
+        </pluginRepository>
+      </pluginRepositories>
+    </profile>
+  </profiles>
+</settings>
