@@ -53,7 +53,7 @@ env:
 
   PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-dev-orl
   PRIVATE_RELEASE_REPO: pntprv-mvn-dev-orl
-  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${RELEASE_PRIVATE_REPO}
+  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
 
   PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-snapshot-orl
   PRIVATE_SNAPSHOT_REPO: pntprv-mvn-snapshot-orl
@@ -152,6 +152,7 @@ jobs:
       - name: Version set
         run: |
           sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
+          sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
           
           java -DRELEASE_MODE=true -jar /version-merger.jar . \
             -f .github/release-versions.properties \
