@@ -114,7 +114,7 @@ jobs:
       - name: Build code and deploy artifacts
         uses: lumada-common-services/gh-composite-actions@slack-open
         with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: mvn clean deploy -X -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
         env:
           cmd_type: BUILD
 
