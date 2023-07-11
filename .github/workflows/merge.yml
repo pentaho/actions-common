@@ -1,4 +1,4 @@
-name: Pentaho merge request workflow
+name: Pentaho merge workflow
 on:
   workflow_call:
     inputs:
@@ -41,7 +41,7 @@ env:
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
-  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}} # secret should be renamed
+  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
@@ -66,7 +66,7 @@ env:
 jobs:
 
   setup-maven-settings:
-    name: Setup common Maven settings
+    name: Setup Maven settings
 
     runs-on: [ k8s ]
 
