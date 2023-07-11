@@ -35,7 +35,7 @@ on:
 
 env:
   VERSION: "${{ inputs.version }}"
-  BASE_VERSION: "{{ inputs.base_version }}"
+  BASE_VERSION: "${{ inputs.base_version }}"
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
   BUILD_NAME: "${{ github.event.repository.name }}-$VERSION"
 
