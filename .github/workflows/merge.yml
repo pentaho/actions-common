@@ -6,7 +6,6 @@ on:
         type: string
         required: false
         description: "The modules to build when running from the root of the project. Defaults to everything ('.')"
-        default: "."
       version:
         type: string
         required: true
@@ -113,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.0
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         with:
           command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
         env:
@@ -163,7 +162,7 @@ jobs:
             project.stage=master
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         with:
           command: |
             mvn clean deploy -DskipTests \
@@ -173,7 +172,7 @@ jobs:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         with:
           command: |
             mvn verify -B -Daudit \
@@ -183,13 +182,13 @@ jobs:
 
       - name: Sonarqube scan
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         env:
           Tag_version: "${{ steps.version.outputs.current-version }}"
           push_tag_only: true
@@ -217,7 +216,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@slack-open
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
