@@ -79,7 +79,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@master
+        uses: pentaho/actions-common@1.0.0
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
