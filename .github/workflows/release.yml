@@ -1,21 +1,20 @@
-name: pdi-plugins-ee merge request workflow
+name: Pentaho release workflow
 on:
   workflow_call:
 
 jobs:
 
-  pdi-plugins-ee:
+  pentaho-release:
 
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/jenkins-build/maven/open-jdk/11
-      volumes:
-        - /home/runner/caches/pdi-plugins-ee/.m2:/root/.m2
+      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+
     steps:
 
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Promote artifacts
+        run: echo "Do something"
 
       - name: Push artifacts to Box
         run: echo "Do something"
