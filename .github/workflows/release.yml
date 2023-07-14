@@ -37,7 +37,7 @@ jobs:
     steps:
 
       - name: Check if manifest file is present
-        if: ${{ inputs.box_upload == "true" }}
+        if: ${{ inputs.box_upload == 'true' }}
         run: |
           if [ ! -f ".github/artifacts-manifest.yaml" ]; then
             echo "Manifest file does not exist."
@@ -45,7 +45,7 @@ jobs:
           fi
 
       - name: Update versions in manifest
-        if: ${{ inputs.box_upload == "true" }}
+        if: ${{ inputs.box_upload == 'true' }}
         run:
           sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
 
@@ -58,7 +58,6 @@ jobs:
           echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
 
-      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
       - name: Config Artifactory in jFrog CLI
         run: |
           jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
@@ -66,8 +65,11 @@ jobs:
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
 
+      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
       - name: Get Repository Metadata
         uses: varunsridharan/action-repository-meta@2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote artifacts
         run: |
@@ -81,6 +83,12 @@ jobs:
           rt_repo='devops-mvn-test'
           
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
+          
+          echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
       - name: Push artifacts to Box
-        run: echo "Do something"
+        if: ${{ inputs.box_upload == 'true' }}
+        run: |
+          echo "Do something"
+          
+          echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
