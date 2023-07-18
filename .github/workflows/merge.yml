@@ -109,7 +109,7 @@ jobs:
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.0
+        uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build code and deploy artifacts
         uses: lumada-common-services/gh-composite-actions@slack-open
@@ -143,7 +143,7 @@ jobs:
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.0
+        uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Determine version
         id: version
