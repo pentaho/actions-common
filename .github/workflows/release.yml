@@ -1,0 +1,115 @@
+name: Pentaho release workflow
+on:
+  workflow_call:
+    inputs:
+      release_version:
+        description: ""
+        required: true
+        type: string
+      arti_host:
+        required: false
+        type: string
+        default: https://repo.orl.eng.hitachivantara.com
+        description: "Artifactory's Host name"
+      box_upload:
+        type: boolean
+        default: true
+        description: "Flag that controls whether the box upload should be done."
+      box_root_folder_name:
+        required: true
+        type: string
+        description: ""
+      manifest_file_path:
+        required: false
+        type: string
+        default: ".github/artifacts-manifest.yaml" 
+      
+
+env:
+  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+
+  NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+
+jobs:
+
+  pentaho-release:
+
+    runs-on: [ k8s ]
+
+    container:
+      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+
+    steps:
+
+      - name: Check if manifest file is present
+        if: ${{ inputs.box_upload == 'true' }}
+        run: |
+          if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
+            echo "Manifest file does not exist."
+            exit 1 # fails the build
+          fi
+
+      - name: Update versions in manifest
+        if: ${{ inputs.box_upload == 'true' }}
+        run:
+          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
+
+      # expecting the release_version to be something like 9.5.1.0-23
+      - name: Work the release version
+        run: |
+          version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
+          build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
+          
+          echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
+
+      - name: Config Artifactory in jFrog CLI
+        run: |
+          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+            --user ${{ env.NEXUS_DEPLOY_USER }}
+
+      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
+      - name: Get Repository Metadata
+        uses: varunsridharan/action-repository-meta@2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote artifacts
+        run: |
+          rt_repo='pntpub-mvn-release-orl'
+          
+          if [ "${{ env.REPOSITORY_IS_PRIVATE }}" == "true" ]; then
+            rt_repo='pntprv-mvn-release-orl'
+          fi
+          
+          # for testing purposes
+          rt_repo='devops-mvn-test'
+          
+          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
+          
+          echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Push artifacts to Box
+        if: ${{ inputs.box_upload == 'true' }}
+        run: |
+          echo "Do something"
+
+          python3 promote-release-to-box.py \
+          --client_id ${{ vars.BOX_CLIENT_ID}} \
+          --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
+          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
+          --build_name ${{ env.BUILD_NAME }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
+          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
+          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+          --box_root_folder_name ${{ inputs.box_root_folder_name}} \
+          --manifest_file_path ${{ inputs.manifest_file_name}} \
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }}
+
+          echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
