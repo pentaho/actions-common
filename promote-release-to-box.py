@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import yaml
@@ -82,7 +83,6 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
 
 
 def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, None), rt_base_url = None):
-
     release_artifact_downloaded = []
     for build_artifact in tqdm(builds_output_json):
         file_name = build_artifact['path']
@@ -121,11 +121,16 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
     return release_artifact_downloaded
 
 
+def replace_versions(text, replacement_word):
+    pattern = r'\${.*?}'
+    return re.sub(pattern, replacement_word, text)
+
+
 def get_manifest_yaml(version, manifest_file = 'manifest.yaml'):
     with open(manifest_file, 'r') as f:
         file_content = f.read()
 
-    new_file_content = file_content.replace('${release.version}', version) # change this
+    new_file_content = replace_versions(file_content, version)
     yaml_obj = yaml.safe_load(new_file_content)
     return yaml_obj
 
@@ -216,28 +221,22 @@ def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
             return folder
         return None
 
-def box_create_folder(client, box_folder_parent_id=None):
-    d = {}
-    
-    # ee stuff
-    d['ee'] = box_create_one_folder(box_folder_parent_id, 'ee', client)
-    d['ee/client-tools'] = box_create_one_folder(d['ee'].id, 'client-tools', client)
-    d['ee/installers'] = box_create_one_folder(d['ee'].id, 'installers', client)
-    d['ee/other'] = box_create_one_folder(d['ee'].id, 'other', client)
-    d['ee/patches'] = box_create_one_folder(d['ee'].id, 'patches', client)
-    d['ee/plugins'] = box_create_one_folder(d['ee'].id, 'plugins', client)
-    d['ee/server'] = box_create_one_folder(d['ee'].id, 'server', client)
-    d['ee/shims'] = box_create_one_folder(d['ee'].id, 'shims', client)
-    d['ee/upgrade'] = box_create_one_folder(d['ee'].id, 'upgrade', client)
-    
-    # ce stuff
-    d['ce'] = box_create_one_folder(box_folder_parent_id, 'ce', client)
-    d['ce/client-tools'] = box_create_one_folder(d['ce'].id, 'client-tools', client)
-    d['ce/plugins'] = box_create_one_folder(d['ce'].id, 'plugins', client)
-    d['ce/server'] = box_create_one_folder(d['ce'].id, 'server', client)
-    d['ce/other'] = box_create_one_folder(d['ce'].id, 'other', client)
-    
-    return d
+def box_create_folder(client, yaml_data, box_folder_parent_id=215698533664, path='', result={}):
+
+    for key, value in yaml_data.items():
+        if isinstance(value, dict):
+            folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
+            print(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
+            result[os.path.join(path, key)] = folder_obj
+            box_create_folder(client, yaml_data[key], box_folder_parent_id=folder_obj.id, path=os.path.join(path, key), result=result)
+            
+        elif isinstance(value, list):
+            folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
+            print(f'Create folder with parent id as {box_folder_parent_id} with name {key}')
+            current_path = os.path.join(path, key)
+            result[os.path.join(path, key)] = folder_obj
+        
+    return result
 
 def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
     for artifact, target_box_path in tqdm(artifacts_to_release.items()):
@@ -272,7 +271,6 @@ if __name__ == '__main__':
     manifest_file_path = args.manifest_file_path
     rt_base_url = args.rt_base_url
 
-
     # set up box client
     box_client = set_box_client(client_id, client_secret, box_subject_id)
 
@@ -286,8 +284,7 @@ if __name__ == '__main__':
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth, rt_base_url = rt_base_url)
 
     # uploading to box
-    artifact_to_box_path = box_create_folder(box_client, box_folder_parent_id=root_folder.id)
+    yaml_data = get_manifest_yaml(build_number, manifest_file = manifest_file_path)
+    artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=root_folder.id)
     upload_to_box(box_client, artifacts_to_release, artifact_to_box_path)
-
-
 
