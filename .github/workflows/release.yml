@@ -48,7 +48,7 @@ jobs:
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == 'true' }}
         run: |
-          if [ ! -f ".github/artifacts-manifest.yaml" ]; then
+          if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
             echo "Manifest file does not exist."
             exit 1 # fails the build
           fi
@@ -99,5 +99,17 @@ jobs:
         if: ${{ inputs.box_upload == 'true' }}
         run: |
           echo "Do something"
-          
+
+          python3 promote-release-to-box.py \
+          --client_id ${{ vars.BOX_CLIENT_ID}} \
+          --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
+          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
+          --build_name ${{ env.BUILD_NAME }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
+          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
+          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+          --box_root_folder_name ${{ inputs.box_root_folder_name}} \
+          --manifest_file_path ${{ inputs.manifest_file_name}} \
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }}
+
           echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
