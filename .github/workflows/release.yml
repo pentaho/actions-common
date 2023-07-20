@@ -15,6 +15,15 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
+      box_root_folder_name:
+        required: true
+        type: string
+        description: ""
+      manifest_file_path:
+        required: false
+        type: string
+        default: ".github/artifacts-manifest.yaml" 
+      
 
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
