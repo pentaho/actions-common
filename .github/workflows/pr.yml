@@ -91,7 +91,7 @@ jobs:
 
       - name: Determine which changes occurred
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.0
+        uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build the project for changed modules only
         uses: lumada-common-services/gh-composite-actions@slack-open
