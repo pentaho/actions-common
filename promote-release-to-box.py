@@ -20,7 +20,7 @@ logging.basicConfig(
      datefmt='%H:%M:%S'
  )
 
-def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_base_url = None):
+def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_base_url = None, jf_cli_rt_name = 'artifactory'):
     ''' 
     Expected Jfrog CLI is availble in the system.
     Executes these:
@@ -49,20 +49,20 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
     '''
     
 
-    # Define the command and arguments
-    command = [
-        'jf', 'config', 'add', 'orl-artifactory',
-        '--interactive=false', '--enc-password=false', '--basic-auth-only',
-        '--artifactory-url', f'{rt_base_url}',
-        '--password', f'{rt_auth[0]}',
-        '--user', f'{rt_auth[1]}'
-    ]
+    # # Define the command and arguments
+    # command = [
+    #     'jf', 'config', 'add', 'orl-artifactory',
+    #     '--interactive=false', '--enc-password=false', '--basic-auth-only',
+    #     '--artifactory-url', f'{rt_base_url}',
+    #     '--password', f'{rt_auth[0]}',
+    #     '--user', f'{rt_auth[1]}'
+    # ]
 
-    # Execute the command
-    subprocess.run(command)
+    # # Execute the command
+    # subprocess.run(command)
     
     # Define the command and arguments
-    command = ['jf', 'rt', 'search', '--server-id', 'orl-artifactory', '--props', 
+    command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
                f'build.name={build_name};build.number={build_number}',
                f'*' ]
                # f'{artifact_name}']
@@ -84,6 +84,30 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
 
 def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, None), rt_base_url = None):
     release_artifact_downloaded = []
+
+    # For all the builds in artifactory that meets the build number and number name
+    # we only want to download the ones that is present in the manifest file
+    # Example of builds_output_json:
+    # [
+    # {
+    #     "path": "pntpub-mvn-release-orl/pentaho/psw-ce/9.3.0.4-739/psw-ce-9.3.0.4-739.zip",
+    #     "sha1": "bb1cda483ce7de00d1a59a00f7aac52b5f5206ea",
+    #     "sha256": "2b197f5f40b06b10a07ec1e864abaecbced4247ddbab4f789d6492f753900201",
+    #     "md5": "ca3945763c73c5b128126f2d0837d73b",
+    # },
+    # {
+    #     "path": "pntprv-mvn-release-orl/pentaho/psw-ee/9.3.0.4-739/psw-ee-9.3.0.4-739-dist.zip",
+    #     "sha1": "4d63449b3d658a1a25215fa9c8d9614f9dd0971d",
+    #     "sha256": "946881250d2c073654fea5ade952cb281222809164cc7805cbaaa7c3ecd5a37f",
+    #     "md5": "e4df9f24a93cface78bdeada19ae4bf2",
+    # ...
+
+    # Example of artifacts_to_release:
+    # {'pad-ee-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    #  'pdi-ee-client-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    #  'pentaho-analysis-ee-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    # ...
+            
     for build_artifact in tqdm(builds_output_json):
         file_name = build_artifact['path']
         if build_artifact['path'].split('/')[-1] in artifacts_to_release.keys():
@@ -103,11 +127,13 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
                 f"{rt_base_url}/"+path, auth=auth, auth_type=HTTPBasicAuth
             )
             
+            # Only download artifact if it doesn't exists
             if not os.path.exists(file_name):
                 logging.info(f'Downloading {file_name} from {rt_path}.')
                 rt_path.writeto(out=file_name, progress_func=None)
                 logging.info(f'Download complete.')
             
+            # Only download artifact if it doesn't exists
             if not os.path.exists(check_sum_file_name):
                 logging.info(f'Saving check sum file {check_sum_file_name}')
                 with open(check_sum_file_name, 'w') as f:
@@ -126,7 +152,7 @@ def replace_versions(text, replacement_word):
     return re.sub(pattern, replacement_word, text)
 
 
-def get_manifest_yaml(version, manifest_file = 'manifest.yaml'):
+def get_manifest_yaml(version, manifest_file = None):
     with open(manifest_file, 'r') as f:
         file_content = f.read()
 
@@ -161,6 +187,7 @@ def process_manifest_yaml(yaml_data, parent=None):
 
 
 def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
+    # This function takes builds_output_json 
     d = {}
     manifest_files = set(file_folder_dict.keys()).intersection(set([artifact['path'].split('/')[-1] for artifact in builds_output_json]))
     manifest_files
@@ -221,7 +248,7 @@ def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
             return folder
         return None
 
-def box_create_folder(client, yaml_data, box_folder_parent_id=215698533664, path='', result={}):
+def box_create_folder(client, yaml_data, box_folder_parent_id=None, path='', result={}):
 
     for key, value in yaml_data.items():
         if isinstance(value, dict):
@@ -252,12 +279,13 @@ if __name__ == '__main__':
     parser.add_argument("--client_secret", action="store", help="box client secret")
     parser.add_argument("--box_subject_id", action="store", help="box box subject id")
     parser.add_argument("--build_name", action="store", help="build name")
-    parser.add_argument("--build_number", action="store", help="box client secret")
-    parser.add_argument("--rt_auth_username", action="store", help="box client secret")
-    parser.add_argument("--rt_auth_password", action="store", help="box client secret")
-    parser.add_argument("--box_root_folder_name", action="store", help="box client secret")
-    parser.add_argument("--manifest_file_path", action="store", help="box client secret")
-    parser.add_argument("--rt_base_url", action="store", help="box client secret")
+    parser.add_argument("--build_number", action="store", help="artifactory build_number")
+    # parser.add_argument("--rt_auth_username", action="store", help="box client secret")
+    # parser.add_argument("--rt_auth_password", action="store", help="box client secret")
+    parser.add_argument("--box_root_folder_name", action="store", help="root folder to the artifacts on box")
+    parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
+    parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
+    parser.add_argument("--jf_cli_rt_name", action="store", help="From the jf CLI config, the alias of the artifactory build info resides")
 
     args = parser.parse_args()
 
