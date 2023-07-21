@@ -187,7 +187,8 @@ def process_manifest_yaml(yaml_data, parent=None):
 
 
 def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
-    # This function takes builds_output_json 
+    # This function picks the artifacts that's only both in builds_output_json and file_folder_dict
+    # returns a dictionary of files to release as key, and the path correspond to box as value
     d = {}
     manifest_files = set(file_folder_dict.keys()).intersection(set([artifact['path'].split('/')[-1] for artifact in builds_output_json]))
     manifest_files
