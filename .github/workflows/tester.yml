@@ -25,4 +25,4 @@ jobs:
       - run: echo "actions-minion"
 
       - name: Output Inputs
-          run: echo "${{ toJSON(github.event.inputs) }}"
+        run: echo "${{ toJSON(github.event.inputs) }}"
