@@ -6,9 +6,15 @@ on:
     inputs:
       build_cmd:
         description: 'My build command'
-
       test_cmd:
         description: 'My test command'
+      release_version:
+        required: true
+        description: 'Version to be set and built'
+      build_number:
+        required: true
+        description: 'Orchestration Build number'
+
         
 jobs:
 
@@ -18,10 +24,5 @@ jobs:
 
       - run: echo "actions-minion"
 
-      - name: Build command
-        run: |
-          echo "${{ github.event.inputs.build_cmd }}"
-
-      - name: Test command
-        run: |
-          echo "${{ github.event.inputs.test_cmd }}"
+      - name: Output Inputs
+          run: echo "${{ toJSON(github.event.inputs) }}"
