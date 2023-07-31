@@ -154,7 +154,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version="${{ env.VERSION }}-${{ github.run_number }}"
+          version="${{ env.VERSION }}"
           echo "current-version=$version" >> $GITHUB_OUTPUT
 
       - name: Version set
