@@ -32,6 +32,12 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
+      build_cmd:
+        description: 'Build command'
+        type: string
+      test_cmd:
+        description: 'Test command'
+        type: string
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -114,7 +120,7 @@ jobs:
       - name: Build code and deploy artifacts
         uses: lumada-common-services/gh-composite-actions@slack-open
         with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: "${{ inputs.build_cmd }}"
         env:
           cmd_type: BUILD
 
@@ -167,19 +173,14 @@ jobs:
       - name: Build code and deploy artifacts
         uses: lumada-common-services/gh-composite-actions@slack-open
         with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: "${{ inputs.build_cmd }}"
         env:
           cmd_type: BUILD
 
       - name: Run unit-tests
         uses: lumada-common-services/gh-composite-actions@slack-open
         with:
-          command: |
-            mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: "${{ inputs.test_cmd }}"
         env:
           cmd_type: UNIT_TEST
 
