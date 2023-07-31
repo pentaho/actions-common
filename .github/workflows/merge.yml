@@ -191,11 +191,11 @@ jobs:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
-      - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@slack-open
-        env:
-          Tag_version: "${{ steps.version.outputs.current-version }}"
-          push_tag_only: true
+      #- name: Tag release
+      #  uses: lumada-common-services/gh-composite-actions@slack-open
+      #  env:
+      #    Tag_version: "${{ steps.version.outputs.current-version }}"
+      #    push_tag_only: true
 
       - name: Create artifacts download links
         shell: bash
