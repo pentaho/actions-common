@@ -14,12 +14,6 @@ from requests.auth import HTTPBasicAuth
 from boxsdk.exception import BoxAPIException
 
 
-logging.basicConfig(
-     level=logging.WARNING, 
-     format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
-     datefmt='%H:%M:%S'
- )
-
 def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_base_url = None, jf_cli_rt_name = 'artifactory'):
     ''' 
     Expected Jfrog CLI is availble in the system.
@@ -45,13 +39,12 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
     all_builds = arti_build.builds
     print(all_builds)
     ^^^^^^^^^^^^^
-
     '''
     
 
     # # Define the command and arguments
     # command = [
-    #     'jf', 'config', 'add', 'orl-artifactory',
+    #     'jf', 'config', 'add', f'{jf_cli_rt_name}',
     #     '--interactive=false', '--enc-password=false', '--basic-auth-only',
     #     '--artifactory-url', f'{rt_base_url}',
     #     '--password', f'{rt_auth[0]}',
@@ -205,17 +198,23 @@ def set_box_client(client_id, client_secret, box_subject_id):
         client_secret=client_secret,
         access_token=token,  
     )
-
     return Client(oauth)
 
 
 def upload_one_artifact_to_box(folder_id, file_name, client):
+    try:
+        with open(file_name, 'rb') as file:
+            box_file = client.folder(folder_id).upload_stream(file, file_name)
+            logging.info(f'Uploaded file: {file_name} into folder id: {folder_id}')
 
-    with open(file_name, 'rb') as file:
-        box_file = client.folder(folder_id).upload_stream(file, file_name)
-    # Here we have to catch network issue and file not found error etc., right now it does fail the script
-    
-    logging.info('Uploaded file ID:', box_file.id)
+    except BoxAPIException as e:
+        # if the file already exists, update the contents of it
+        if e.status == 409:
+            logging.WARNING(f'File exist name {file_name} already exist.')
+            file_id = e.context_info['conflicts']['id']
+            updated_file = client.file(file_id).update_contents(file_name)
+        return updated_file
+
 
 
 def generate_access_token(client_id, client_secret, box_subject_id):
@@ -274,6 +273,7 @@ def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
 
 if __name__ == '__main__':
 
+    ########### Parse args #################
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--client_id", action="store")
@@ -281,12 +281,13 @@ if __name__ == '__main__':
     parser.add_argument("--box_subject_id", action="store", help="box box subject id")
     parser.add_argument("--build_name", action="store", help="build name")
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
-    # parser.add_argument("--rt_auth_username", action="store", help="box client secret")
-    # parser.add_argument("--rt_auth_password", action="store", help="box client secret")
+    parser.add_argument("--rt_auth_username", action="store", help="box client secret")
+    parser.add_argument("--rt_auth_password", action="store", help="box client secret")
     parser.add_argument("--box_root_folder_name", action="store", help="root folder to the artifacts on box")
     parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
     parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
     parser.add_argument("--jf_cli_rt_name", action="store", help="From the jf CLI config, the alias of the artifactory build info resides")
+    parser.add_argument("--logging_level", action="store", default="INFO", help="Set logging level")
 
     args = parser.parse_args()
 
@@ -299,21 +300,46 @@ if __name__ == '__main__':
     box_root_folder_name = args.box_root_folder_name
     manifest_file_path = args.manifest_file_path
     rt_base_url = args.rt_base_url
+    logging_level = args.logging_level
+    ############ End parsing args #############
 
-    # set up box client
-    box_client = set_box_client(client_id, client_secret, box_subject_id)
 
-    # create root folder
-    root_folder = box_create_one_folder('261814384', box_root_folder_name, box_client)
+    ######### logging ############
+    string_to_level = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL
+    }
 
+    logging.basicConfig(
+        level=string_to_level[logging_level], 
+        format= '[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    ####### End of logging #######
+
+
+    ###### Upload to box ##########
     # downloads artifacts
     builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth)
     file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_number, manifest_file = manifest_file_path))
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth, rt_base_url = rt_base_url)
 
+    # set up box client
+    box_client = set_box_client(client_id, client_secret, box_subject_id)
+
+    # create root folder, 
+    # TODO: Add 'CI' folder id as variable
+    root_folder = box_create_one_folder('261814384', box_root_folder_name, box_client)
+
     # uploading to box
     yaml_data = get_manifest_yaml(build_number, manifest_file = manifest_file_path)
     artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=root_folder.id)
     upload_to_box(box_client, artifacts_to_release, artifact_to_box_path)
+    ######## End upload to box #########
+
+
 

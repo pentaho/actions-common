@@ -110,6 +110,6 @@ jobs:
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
           --box_root_folder_name ${{ inputs.box_root_folder_name}} \
           --manifest_file_path ${{ inputs.manifest_file_name}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }}
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} 
 
           echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
