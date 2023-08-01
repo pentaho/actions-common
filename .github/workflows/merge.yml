@@ -39,6 +39,8 @@ on:
         description: 'Test command'
         type: string
 
+run-name: "Something ${{ inputs.version }}"
+
 env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
