@@ -89,7 +89,7 @@ jobs:
         run: |
           rt_repo='pntpub-mvn-release-orl'
           
-          if [ "${{ env.REPOSITORY_IS_PRIVATE }}" == "true" ]; then
+          if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
             rt_repo='pntprv-mvn-release-orl'
           fi
           
