@@ -15,8 +15,13 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
-      box_root_folder_name:
+      box_parent_folder_name:
         required: true
+        type: string
+        description: ""
+      box_root_folder_name:
+        required: false
+        default: "CI"
         type: string
         description: ""
       manifest_file_path:
@@ -108,8 +113,9 @@ jobs:
           --build_number ${{ env.BUILD_NUMBER }} \
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_root_folder_name ${{ inputs.box_root_folder_name}} \
+          --box_parent_folder_name ${{ inputs.box_parent_folder_name}} \
           --manifest_file_path ${{ inputs.manifest_file_name}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} 
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+          --box_root_folder_name ${{ inputs.box_root_folder_name }}
 
           echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY

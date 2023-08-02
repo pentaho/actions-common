@@ -283,11 +283,12 @@ if __name__ == '__main__':
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
     parser.add_argument("--rt_auth_username", action="store", help="box client secret")
     parser.add_argument("--rt_auth_password", action="store", help="box client secret")
-    parser.add_argument("--box_root_folder_name", action="store", help="root folder to the artifacts on box")
+    parser.add_argument("--box_parent_folder_name", action="store", help="Parent folder to the artifacts on box, example: 9.5.0.0")
     parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
     parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
     parser.add_argument("--jf_cli_rt_name", action="store", help="From the jf CLI config, the alias of the artifactory build info resides")
     parser.add_argument("--logging_level", action="store", default="INFO", help="Set logging level")
+    parser.add_argument("--box_root_folder_name", action="store", default="CI", help="This is default to CI folder")
 
     args = parser.parse_args()
 
@@ -296,11 +297,12 @@ if __name__ == '__main__':
     box_subject_id = args.box_subject_id
     build_name = args.build_name  # for rt buildinfo query
     build_number = args.build_number  # for rt buildinfo query
-    rt_auth = ( args.rt_auth_username, args.rt_auth_password)
-    box_root_folder_name = args.box_root_folder_name
+    rt_auth = (args.rt_auth_username, args.rt_auth_password)
+    box_parent_folder_name = args.box_parent_folder_name
     manifest_file_path = args.manifest_file_path
     rt_base_url = args.rt_base_url
     logging_level = args.logging_level
+    box_root_folder_name = args.box_root_folder_name
     ############ End parsing args #############
 
 
@@ -331,13 +333,13 @@ if __name__ == '__main__':
     # set up box client
     box_client = set_box_client(client_id, client_secret, box_subject_id)
 
-    # create root folder, 
-    # TODO: Add 'CI' folder id as variable
-    root_folder = box_create_one_folder('261814384', box_root_folder_name, box_client)
+    # create root folder, defaults to CI
+    root_folder = box_create_one_folder('0', box_root_folder_name, box_client)
+    parent_folder = box_create_one_folder(root_folder.id, box_parent_folder_name, box_client)
 
     # uploading to box
     yaml_data = get_manifest_yaml(build_number, manifest_file = manifest_file_path)
-    artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=root_folder.id)
+    artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=parent_folder.id)
     upload_to_box(box_client, artifacts_to_release, artifact_to_box_path)
     ######## End upload to box #########
 
