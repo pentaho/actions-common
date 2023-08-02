@@ -16,7 +16,7 @@ on:
         default: true
         description: "Flag that controls whether the box upload should be done."
       box_parent_folder_name:
-        required: true
+        required: false
         type: string
         description: ""
       box_root_folder_name:

@@ -281,8 +281,6 @@ if __name__ == '__main__':
     parser.add_argument("--box_subject_id", action="store", help="box box subject id")
     parser.add_argument("--build_name", action="store", help="build name")
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
-    parser.add_argument("--rt_auth_username", action="store", help="box client secret")
-    parser.add_argument("--rt_auth_password", action="store", help="box client secret")
     parser.add_argument("--box_parent_folder_name", action="store", help="Parent folder to the artifacts on box, example: 9.5.0.0")
     parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
     parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
@@ -295,9 +293,8 @@ if __name__ == '__main__':
     client_id = args.client_id
     client_secret = args.client_secret
     box_subject_id = args.box_subject_id
-    build_name = args.build_name  # for rt buildinfo query
+    build_name = args.build_name      # for rt buildinfo query
     build_number = args.build_number  # for rt buildinfo query
-    rt_auth = (args.rt_auth_username, args.rt_auth_password)
     box_parent_folder_name = args.box_parent_folder_name
     manifest_file_path = args.manifest_file_path
     rt_base_url = args.rt_base_url
