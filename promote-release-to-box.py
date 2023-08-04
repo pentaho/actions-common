@@ -40,25 +40,23 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
     print(all_builds)
     ^^^^^^^^^^^^^
     '''
-    
 
-    # # Define the command and arguments
-    # command = [
-    #     'jf', 'config', 'add', f'{jf_cli_rt_name}',
-    #     '--interactive=false', '--enc-password=false', '--basic-auth-only',
-    #     '--artifactory-url', f'{rt_base_url}',
-    #     '--password', f'{rt_auth[0]}',
-    #     '--user', f'{rt_auth[1]}'
-    # ]
-
-    # # Execute the command
-    # subprocess.run(command)
+    if jf_cli_rt_name != 'artifactory':
+        # Define the command and arguments
+        command = [
+            'jf', 'config', 'add', f'{jf_cli_rt_name}',
+            '--interactive=false', '--enc-password=false', '--basic-auth-only',
+            '--artifactory-url', f'{rt_base_url}',
+            '--password', f'{rt_auth[0]}',
+            '--user', f'{rt_auth[1]}'
+        ]
+        # Execute the command
+        subprocess.run(command)
     
     # Define the command and arguments
     command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
                f'build.name={build_name};build.number={build_number}',
                f'*' ]
-               # f'{artifact_name}']
     
     output_file = 'artifacts.json'
 
@@ -71,6 +69,8 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
     # Save the JSON object to a file
     with open(output_file, 'w') as file:
         json.dump(output_json, file, indent=4)
+
+    logging.info(f'Artifacts in artifactory with build.name={build_name};build.number={build_number}: {output_json}')
     
     return output_json, set([artifact['path'].split('/')[-1] for artifact in output_json])
 
@@ -104,8 +104,6 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
     for build_artifact in tqdm(builds_output_json):
         file_name = build_artifact['path']
         if build_artifact['path'].split('/')[-1] in artifacts_to_release.keys():
-
-            logging.info(f"Downloading {file_name}")
 
             path = build_artifact['path']
             sha1 = build_artifact['sha1']
@@ -164,7 +162,6 @@ def process_manifest_yaml(yaml_data, parent=None):
      'pme-ee-9.5.1.0-dist.zip': 'ee/client-tools',
      'prd-ee-9.5.1.0-dist.zip': 'ee/client-tools',
      ...}
-    
     '''
     result = {}
     for key, value in yaml_data.items():
@@ -183,9 +180,16 @@ def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
     # This function picks the artifacts that's only both in builds_output_json and file_folder_dict
     # returns a dictionary of files to release as key, and the path correspond to box as value
     d = {}
-    manifest_files = set(file_folder_dict.keys()).intersection(set([artifact['path'].split('/')[-1] for artifact in builds_output_json]))
-    manifest_files
-    for file_to_release in manifest_files:
+    files_to_be_promoted = set(file_folder_dict.keys()).intersection(set([artifact['path'].split('/')[-1] for artifact in builds_output_json]))
+
+    # Sanity check
+    files_only_in_manifest = set(file_folder_dict.keys()) - set([artifact['path'].split('/')[-1] for artifact in builds_output_json])
+    
+    if files_only_in_manifest:
+        logging.warning(f'Found some artifacts only present in manifest file {files_only_in_manifest}')
+
+    logging.info(f'Files to be downloaded and promoted {files_to_be_promoted}')
+    for file_to_release in files_to_be_promoted:
         d[file_to_release] = file_folder_dict[file_to_release]
         d[file_to_release + '.sum'] =  file_folder_dict[file_to_release]
     return d
@@ -281,6 +285,8 @@ if __name__ == '__main__':
     parser.add_argument("--box_subject_id", action="store", help="box box subject id")
     parser.add_argument("--build_name", action="store", help="build name")
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
+    parser.add_argument("--rt_auth_username", action="store", default="buildguy", help="box client secret")
+    parser.add_argument("--rt_auth_password", action="store", help="box client secret")
     parser.add_argument("--box_parent_folder_name", action="store", help="Parent folder to the artifacts on box, example: 9.5.0.0")
     parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
     parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
@@ -293,8 +299,9 @@ if __name__ == '__main__':
     client_id = args.client_id
     client_secret = args.client_secret
     box_subject_id = args.box_subject_id
-    build_name = args.build_name      # for rt buildinfo query
+    build_name = args.build_name  # for rt buildinfo query
     build_number = args.build_number  # for rt buildinfo query
+    rt_auth = (args.rt_auth_username, args.rt_auth_password)
     box_parent_folder_name = args.box_parent_folder_name
     manifest_file_path = args.manifest_file_path
     rt_base_url = args.rt_base_url
@@ -326,6 +333,11 @@ if __name__ == '__main__':
     file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_number, manifest_file = manifest_file_path))
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth, rt_base_url = rt_base_url)
+
+    # if there are no files to deploy, exit process
+    if not artifacts_to_release:
+        logging.WARNING(f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}')
+        sys.exit(1)
 
     # set up box client
     box_client = set_box_client(client_id, client_secret, box_subject_id)
