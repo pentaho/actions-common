@@ -217,7 +217,8 @@ def upload_one_artifact_to_box(folder_id, file_name, client):
             logging.WARNING(f'File exist name {file_name} already exist.')
             file_id = e.context_info['conflicts']['id']
             updated_file = client.file(file_id).update_contents(file_name)
-        return updated_file
+            logging.iinfo(f'{file_name} updated.')
+            return updated_file
 
 
 
