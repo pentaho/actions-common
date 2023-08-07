@@ -14,7 +14,7 @@ from requests.auth import HTTPBasicAuth
 from boxsdk.exception import BoxAPIException
 
 
-def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_base_url = None, jf_cli_rt_name = 'artifactory'):
+def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_base_url = None, jf_cli_rt_name = None):
     ''' 
     Expected Jfrog CLI is availble in the system.
     Executes these:
@@ -41,7 +41,8 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
     ^^^^^^^^^^^^^
     '''
 
-    if jf_cli_rt_name != 'artifactory':
+    if jf_cli_rt_name == None :
+        jf_cli_rt_name = 'artifactory'
         # Define the command and arguments
         command = [
             'jf', 'config', 'add', f'{jf_cli_rt_name}',
@@ -53,10 +54,14 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
         # Execute the command
         subprocess.run(command)
     
-    # Define the command and arguments
+        # Define the command and arguments
+        command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
+                f'build.name={build_name};build.number={build_number}',
+                f'*' ]
+
     command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
-               f'build.name={build_name};build.number={build_number}',
-               f'*' ]
+            f'build.name={build_name};build.number={build_number}',
+            f'*' ]
     
     output_file = 'artifacts.json'
 
@@ -121,7 +126,9 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
             # Only download artifact if it doesn't exists
             if not os.path.exists(file_name):
                 logging.info(f'Downloading {file_name} from {rt_path}.')
-                rt_path.writeto(out=file_name, progress_func=None)
+                # rt_path.writeto(out=file_name, progress_func=None)
+                with rt_path.open() as fd, open(file_name, "wb") as out:
+                    out.write(fd.read())
                 logging.info(f'Download complete.')
             
             # Only download artifact if it doesn't exists
@@ -219,6 +226,8 @@ def upload_one_artifact_to_box(folder_id, file_name, client):
             updated_file = client.file(file_id).update_contents(file_name)
             logging.iinfo(f'{file_name} updated.')
             return updated_file
+    except Exception as e:
+        logging.warning(f'error uploading to box {e}')
 
 
 
@@ -244,10 +253,11 @@ def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
     
     try:
         folder = client.folder(parent_folder_id).create_subfolder(folder_name_to_create)
+        logging.info(f'Create folder {folder_name_to_create}')
         return folder
     except BoxAPIException as e:
         # if the folder already exists, return the Folder object
-        if e.code == 'item_name_in_use': 
+        if e.status == 409:
             logging.info(f'Folder name {folder_name_to_create} already exist.')
             folder = client.folder(folder_id=e.context_info['conflicts'][0]['id']).get()
             return folder
@@ -258,13 +268,13 @@ def box_create_folder(client, yaml_data, box_folder_parent_id=None, path='', res
     for key, value in yaml_data.items():
         if isinstance(value, dict):
             folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
-            print(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
+            logging.info(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
             result[os.path.join(path, key)] = folder_obj
             box_create_folder(client, yaml_data[key], box_folder_parent_id=folder_obj.id, path=os.path.join(path, key), result=result)
             
         elif isinstance(value, list):
             folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
-            print(f'Create folder with parent id as {box_folder_parent_id} with name {key}')
+            logging.info(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
             current_path = os.path.join(path, key)
             result[os.path.join(path, key)] = folder_obj
         
@@ -287,7 +297,7 @@ if __name__ == '__main__':
     parser.add_argument("--build_name", action="store", help="build name")
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
     parser.add_argument("--rt_auth_username", action="store", default="buildguy", help="box client secret")
-    parser.add_argument("--rt_auth_password", action="store", help="box client secret")
+    parser.add_argument("--rt_auth_password", action="store", help="artifactory password")
     parser.add_argument("--box_parent_folder_name", action="store", help="Parent folder to the artifacts on box, example: 9.5.0.0")
     parser.add_argument("--manifest_file_path", action="store", help="pass in a manifest file path relative to current workingdir")
     parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
@@ -344,8 +354,9 @@ if __name__ == '__main__':
     box_client = set_box_client(client_id, client_secret, box_subject_id)
 
     # create root folder, defaults to CI
-    root_folder = box_create_one_folder('0', box_root_folder_name, box_client)
-    parent_folder = box_create_one_folder(root_folder.id, box_parent_folder_name, box_client)
+    # root_folder = box_create_one_folder('0', box_root_folder_name, box_client)
+    # parent_folder = box_create_one_folder(root_folder.id, box_parent_folder_name, box_client)
+    parent_folder = box_create_one_folder(261814384, box_parent_folder_name, box_client)
 
     # uploading to box
     yaml_data = get_manifest_yaml(build_number, manifest_file = manifest_file_path)
