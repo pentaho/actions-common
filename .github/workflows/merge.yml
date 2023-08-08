@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
         env:
@@ -165,7 +165,7 @@ jobs:
             project.stage=master
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: |
             mvn clean deploy -DskipTests \
@@ -175,7 +175,7 @@ jobs:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: |
             mvn verify -B -Daudit \
@@ -185,13 +185,13 @@ jobs:
 
       - name: Sonarqube scan
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           Tag_version: "${{ steps.version.outputs.current-version }}"
           push_tag_only: true
@@ -219,7 +219,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
