@@ -27,7 +27,11 @@ on:
       manifest_file_path:
         required: false
         type: string
-        default: ".github/artifacts-manifest.yaml" 
+        default: ".github/artifacts-manifest.yaml"
+      jf_cli_rt_name:
+        required: false
+        type: string
+        default: artifactory
       
 
 env:
@@ -114,6 +118,7 @@ jobs:
           --box_parent_folder_name ${{ inputs.box_parent_folder_name}} \
           --manifest_file_path ${{ inputs.manifest_file_name}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --box_root_folder_name ${{ inputs.box_root_folder_name }}
+          --box_root_folder_name ${{ inputs.box_root_folder_name }} \
+          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
 
-          echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
+          echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
