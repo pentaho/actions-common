@@ -40,8 +40,13 @@ on:
       blackduck_server_url:
         required: false
         type: string
-        description: "Project key for Blackduck"
+        description: "Server URL for Blackduck"
         default: https://orion.orl.eng.hitachivantara.com
+      blackduck_additional_args:
+        required: false
+        type: string
+        description: "Extra additional args for blackduck scan"
+        default: ""
 
       
 
@@ -202,6 +207,7 @@ jobs:
           BlackDuck_Project_Name: "${{ inputs.blackduck_project_key }}"
           BlackDuck_Api_Token: "${{ secrets.BLACKDUCK_API_TOKEN }}"
           BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
+          ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
       - name: Sonarqube scan
         continue-on-error: true
