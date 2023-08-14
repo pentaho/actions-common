@@ -78,7 +78,7 @@ jobs:
 
       - name: Config Artifactory in jFrog CLI
         run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+          jf config add ${{ inputs.jf_cli_rt_name}} --interactive=false --enc-password=false --basic-auth-only \
             --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
