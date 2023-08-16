@@ -43,22 +43,24 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
 
     if jf_cli_rt_name == None :
         jf_cli_rt_name = 'artifactory'
+
+        # adding artifactory cli config
+        logging.info(f'Adding artifactory CLI name {jf_cli_rt_name}')
+
         # Define the command and arguments
         command = [
             'jf', 'config', 'add', f'{jf_cli_rt_name}',
             '--interactive=false', '--enc-password=false', '--basic-auth-only',
-            '--artifactory-url', f'{rt_base_url}',
-            '--password', f'{rt_auth[0]}',
-            '--user', f'{rt_auth[1]}'
+            '--artifactory-url', f'{rt_base_url}/',
+            '--user', f'{rt_auth[0]}',
+            '--password', f'{rt_auth[1]}'
         ]
-        # Execute the command
-        subprocess.run(command)
-    
-        # Define the command and arguments
-        command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
-                f'build.name={build_name};build.number={build_number}',
-                f'*' ]
+        # Execute the command and capture the output
+        result = subprocess.run(command, capture_output=True, text=True)
 
+        logging.info(result)
+    
+    # Define jf command and arguments
     command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props', 
             f'build.name={build_name};build.number={build_number}',
             f'*' ]
@@ -67,6 +69,9 @@ def get_artifact_info_json(build_name, build_number, rt_auth = (None, None), rt_
 
     # Execute the command and capture the output
     result = subprocess.run(command, capture_output=True, text=True)
+
+    # log result
+    logging.info(f'jf execution result {result}')
 
     # Parse the command output as JSON
     output_json = json.loads(result.stdout)
@@ -340,7 +345,7 @@ if __name__ == '__main__':
 
     ###### Upload to box ##########
     # downloads artifacts
-    builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth)
+    builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth, rt_base_url=rt_base_url)
     file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_number, manifest_file = manifest_file_path))
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth, rt_base_url = rt_base_url)
