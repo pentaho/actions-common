@@ -16,9 +16,9 @@ on:
         default: true
         description: "Flag that controls whether the box upload should be done."
       box_parent_folder_name:
-        required: false
+        required: true
         type: string
-        description: ""
+        description: "The parent folder name for artifacts to be uploaded, example: '9.5.1.0'"
       box_root_folder_name:
         required: false
         default: "CI"
@@ -107,6 +107,9 @@ jobs:
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == 'true' }}
         run: |
+
+          pip install pyyaml dohq-artifactory requests boxsdk tqdm
+          
           python3 promote-release-to-box.py \
           --client_id ${{ vars.BOX_CLIENT_ID}} \
           --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
@@ -116,7 +119,7 @@ jobs:
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
           --box_parent_folder_name ${{ inputs.box_parent_folder_name}} \
-          --manifest_file_path ${{ inputs.manifest_file_name}} \
+          --manifest_file_path ${{ inputs.manifest_file_path}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --box_root_folder_name ${{ inputs.box_root_folder_name }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
