@@ -15,15 +15,15 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
-      box_parent_folder_name:
+      box_parent_folder_id:
         required: true
         type: string
-        description: "The parent folder name for artifacts to be uploaded, example: '9.5.1.0'"
+        description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
       box_root_folder_name:
         required: false
         default: "CI"
         type: string
-        description: ""
+        description: "NOT IN USE"
       manifest_file_path:
         required: false
         type: string
@@ -118,10 +118,11 @@ jobs:
           --build_number ${{ env.BUILD_NUMBER }} \
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_parent_folder_name ${{ inputs.box_parent_folder_name}} \
+          --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
           --manifest_file_path ${{ inputs.manifest_file_path}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --box_root_folder_name ${{ inputs.box_root_folder_name }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
+          # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
+          
 
           echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
