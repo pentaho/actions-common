@@ -205,7 +205,7 @@ jobs:
         env:
           BlackDuck_Project_Version: ${{ steps.version.outputs.current-version }}
           BlackDuck_Project_Name: "${{ inputs.blackduck_project_key }}"
-          BlackDuck_Api_Token: "${{ secrets.BLACKDUCK_API_TOKEN }}"
+          BlackDuck_Api_Token: "${{ secrets.BLACKDUCK_API_TOKEN_YKN }}"
           BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
           ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
