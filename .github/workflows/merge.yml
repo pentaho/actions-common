@@ -128,12 +128,12 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@1.0.1
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.3.1
-        with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@1.3.1
+      #   with:
+      #     command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+      #   env:
+      #     cmd_type: BUILD
 
   release-candidate:
     name: Build Release Candidate
@@ -181,15 +181,15 @@ jobs:
             distribution.version=${{ steps.version.outputs.current-version }} \
             project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.3.1
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@1.3.1
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+      #   env:
+      #     cmd_type: BUILD
 
       - name: Run unit-tests
         uses: lumada-common-services/gh-composite-actions@1.3.1
@@ -209,39 +209,39 @@ jobs:
           BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
           ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
-      - name: Sonarqube scan
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@1.3.1
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+      # - name: Sonarqube scan
+      #   continue-on-error: true
+      #   uses: lumada-common-services/gh-composite-actions@1.3.1
+      #   env:
+      #     sonar_utility: sonar-scanner
+      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
-      - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@1.3.1
-        env:
-          Tag_version: "${{ steps.version.outputs.current-version }}"
-          push_tag_only: true
+      # - name: Tag release
+      #   uses: lumada-common-services/gh-composite-actions@1.3.1
+      #   env:
+      #     Tag_version: "${{ steps.version.outputs.current-version }}"
+      #     push_tag_only: true
 
-      - name: Create artifacts download links
-        shell: bash
-        run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
-            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-            --user ${{ env.NEXUS_DEPLOY_USER }}
+      # - name: Create artifacts download links
+      #   shell: bash
+      #   run: |
+      #     jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+      #       --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+      #       --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+      #       --user ${{ env.NEXUS_DEPLOY_USER }}
           
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
-            "*-${{ steps.version.outputs.current-version }}.zip")
+      #     resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
+      #       "*-${{ steps.version.outputs.current-version }}.zip")
           
-          echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
-          echo "|:----:|" >> $GITHUB_STEP_SUMMARY
+      #     echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
+      #     echo "|:----:|" >> $GITHUB_STEP_SUMMARY
           
-          echo "$resp" | jq -r '.[].path' | while read -r path; do
-            link_text=$(echo "$path" | sed 's/.*\///')
-            echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
-          done
+      #     echo "$resp" | jq -r '.[].path' | while read -r path; do
+      #       link_text=$(echo "$path" | sed 's/.*\///')
+      #       echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
+      #     done
           
-          echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
+      #     echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
 
       - name: Report notifications
         if: always()
