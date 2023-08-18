@@ -16,7 +16,7 @@ on:
         default: true
         description: "Flag that controls whether the box upload should be done."
       box_parent_folder_id:
-        required: true
+        required: false
         type: string
         description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
       box_root_folder_name:
