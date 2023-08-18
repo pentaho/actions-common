@@ -80,7 +80,7 @@ jobs:
           fi
           
           # for testing purposes
-          rt_repo='devops-mvn-test'
+          # rt_repo='devops-mvn-test'
           
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
           
