@@ -15,6 +15,24 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
+      box_parent_folder_id:
+        required: false
+        type: string
+        description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
+      box_root_folder_name:
+        required: false
+        default: "CI"
+        type: string
+        description: "NOT IN USE"
+      manifest_file_path:
+        required: false
+        type: string
+        default: ".github/artifacts-manifest.yaml"
+      jf_cli_rt_name:
+        required: false
+        type: string
+        default: artifactory
+      
 
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
@@ -39,7 +57,7 @@ jobs:
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == 'true' }}
         run: |
-          if [ ! -f ".github/artifacts-manifest.yaml" ]; then
+          if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
             echo "Manifest file does not exist."
             exit 1 # fails the build
           fi
@@ -60,7 +78,7 @@ jobs:
 
       - name: Config Artifactory in jFrog CLI
         run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+          jf config add ${{ inputs.jf_cli_rt_name}} --interactive=false --enc-password=false --basic-auth-only \
             --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
@@ -74,7 +92,7 @@ jobs:
       - name: Promote artifacts
         run: |
           rt_repo='pntpub-mvn-release-orl'
-          
+
           if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
             rt_repo='pntprv-mvn-release-orl'
           fi
@@ -89,6 +107,22 @@ jobs:
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == 'true' }}
         run: |
-          echo "Do something"
+
+          pip install pyyaml dohq-artifactory requests boxsdk tqdm
           
-          echo ":rocket: Version ${{ inputs.release_version }} was uploaded to Box.com at ..." >> $GITHUB_STEP_SUMMARY
+          python3 promote-release-to-box.py \
+          --client_id ${{ vars.BOX_CLIENT_ID}} \
+          --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
+          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
+          --build_name ${{ env.BUILD_NAME }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
+          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
+          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+          --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
+          --manifest_file_path ${{ inputs.manifest_file_path}} \
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
+          # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
+          
+
+          echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
