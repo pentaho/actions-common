@@ -59,7 +59,7 @@ jobs:
     steps:
 
       - name: Check if manifest file is present
-        if: ${{ inputs.box_upload == 'true' }}
+        if: ${{ inputs.box_upload == true }}
         run: |
           echo ${{ inputs.manifest_content }}
           echo ${{ inputs.manifest_content }} > ${{ inputs.manifest_file_path }}
