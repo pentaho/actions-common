@@ -87,66 +87,62 @@ jobs:
         run:
           sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' ${{ env.MANIFEST_PATH }}
 
-      - name: Check manifest
+      # expecting the release_version to be something like 9.5.1.0-23
+      - name: Work the release version
         run: |
-          cat ${{ env.MANIFEST_PATH }}
-
-      # # expecting the release_version to be something like 9.5.1.0-23
-      # - name: Work the release version
-      #   run: |
-      #     version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
-      #     build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
+          version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
+          build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
           
-      #     echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV
-      #     echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
+          echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
 
-      # - name: Config Artifactory in jFrog CLI
-      #   run: |
-      #     jf config add ${{ inputs.jf_cli_rt_name}} --interactive=false --enc-password=false --basic-auth-only \
-      #       --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-      #       --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-      #       --user ${{ env.NEXUS_DEPLOY_USER }}
+      - name: Config Artifactory in jFrog CLI
+        run: |
+          jf config add ${{ inputs.jf_cli_rt_name}} --interactive=false --enc-password=false --basic-auth-only \
+            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+            --user ${{ env.NEXUS_DEPLOY_USER }}
 
-      # # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
-      # - name: Get Repository Metadata
-      #   uses: varunsridharan/action-repository-meta@2.2
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
+      - name: Get Repository Metadata
+        uses: varunsridharan/action-repository-meta@2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Promote artifacts
-      #   run: |
-      #     rt_repo='pntpub-mvn-release-orl'
+      - name: Promote artifacts
+        run: |
+          rt_repo='pntpub-mvn-release-orl'
 
-      #     if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
-      #       rt_repo='pntprv-mvn-release-orl'
-      #     fi
+          if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
+            rt_repo='pntprv-mvn-release-orl'
+          fi
           
-      #     # for testing purposes
-      #     rt_repo='devops-mvn-test'
+          # for testing purposes
+          rt_repo='devops-mvn-test'
           
-      #     jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
+          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
           
-      #     echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
+          echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
-      # - name: Push artifacts to Box
-      #   if: ${{ inputs.box_upload == 'true' }}
-      #   run: |
+      - name: Push artifacts to Box
+        if: ${{ inputs.box_upload == 'true' }}
+        run: |
 
-      #     pip install pyyaml dohq-artifactory requests boxsdk tqdm
+          pip install pyyaml dohq-artifactory requests boxsdk tqdm
           
-      #     python3 promote-release-to-box.py \
-      #     --client_id ${{ vars.BOX_CLIENT_ID}} \
-      #     --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
-      #     --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
-      #     --build_name ${{ env.BUILD_NAME }} \
-      #     --build_number ${{ env.BUILD_NUMBER }} \
-      #     --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
-      #     --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-      #     --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
-      #     --manifest_file_path ${{ inputs.manifest_file_path}} \
-      #     --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-      #     --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
-      #     # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
+          python3 promote-release-to-box.py \
+          --client_id ${{ vars.BOX_CLIENT_ID}} \
+          --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
+          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
+          --build_name ${{ env.BUILD_NAME }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
+          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
+          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+          --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
+          --manifest_file_path ${{ inputs.manifest_file_path}} \
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
+          # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
           
 
-      #     echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
