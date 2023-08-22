@@ -69,6 +69,8 @@ jobs:
           ls -la
           ls -la $GITHUB_WORKSPACE
           ls -la $GITHUB_WORKSPACE/.github
+          cat $GITHUB_WORKSPACE/.github > "${{ inputs.manifest_file_path }}"
+          cat "${{ inputs.manifest_file_path }}"
 
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
