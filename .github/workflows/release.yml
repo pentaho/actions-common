@@ -50,6 +50,7 @@ env:
 
   NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+  MANIFEST_PATH: $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
 
 jobs:
 
@@ -74,14 +75,15 @@ jobs:
           ls -la
           ls -la $GITHUB_WORKSPACE
           ls -la $GITHUB_WORKSPACE/.github
-          ls -la $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
+          # ls -la $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
+          cat ${{ env.MANIFEST_PATH }}
           # cp $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" "${{ inputs.manifest_file_path }}" 
           # cat "${{ inputs.manifest_file_path }}" 
       
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
         run: |
-          if [ ! -f $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" ]; then
+          if [ ! -f ${{ env.MANIFEST_PATH }} ]; then
             echo "Manifest file does not exist."
             exit 1 # fails the build
           fi
@@ -89,7 +91,8 @@ jobs:
       - name: Update versions in manifest
         if: ${{ inputs.box_upload == true }}
         run:
-          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
+          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' ${{ env.MANIFEST_PATH }}
+          echo 
 
       # # expecting the release_version to be something like 9.5.1.0-23
       # - name: Work the release version
