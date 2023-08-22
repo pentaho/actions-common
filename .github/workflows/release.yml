@@ -73,24 +73,23 @@ jobs:
         run: |
           ls -la
           ls -la $GITHUB_WORKSPACE
-          ls -la $GITHUB_WORKSPACE/.github/workflows
-          mv $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" "${{ inputs.manifest_file_path }}" 
-          cat "${{ inputs.manifest_file_path }}" 
-
-
+          ls -la $GITHUB_WORKSPACE/.github
+          ls -la $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
+          # cp $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" "${{ inputs.manifest_file_path }}" 
+          # cat "${{ inputs.manifest_file_path }}" 
       
-      # - name: Check if manifest file is present
-      #   if: ${{ inputs.box_upload == true }}
-      #   run: |
-      #     if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
-      #       echo "Manifest file does not exist."
-      #       exit 1 # fails the build
-      #     fi
+      - name: Check if manifest file is present
+        if: ${{ inputs.box_upload == true }}
+        run: |
+          if [ ! -f $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" ]; then
+            echo "Manifest file does not exist."
+            exit 1 # fails the build
+          fi
 
-      # - name: Update versions in manifest
-      #   if: ${{ inputs.box_upload == true }}
-      #   run:
-      #     sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
+      - name: Update versions in manifest
+        if: ${{ inputs.box_upload == true }}
+        run:
+          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
 
       # # expecting the release_version to be something like 9.5.1.0-23
       # - name: Work the release version
