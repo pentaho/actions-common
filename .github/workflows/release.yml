@@ -32,7 +32,11 @@ on:
         required: false
         type: string
         default: artifactory
-      repo_ref:
+      check_repo:
+        required: true
+        type: string
+        description: "org/repo to which the repo calls this workflow"
+      ref:
         required: true
         type: string
         description: "ref to which the repo calls this workflow"
@@ -61,8 +65,9 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v3
         with:
-          repository: ${{ inputs.repo_ref }}
+          repository: ${{ inputs.check_repo }}
           token: ${{ secrets.GH_PAT }}
+          ref: ${{ inputs.ref }}
 
       - name: check files
         run: |
