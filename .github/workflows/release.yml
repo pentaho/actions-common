@@ -58,6 +58,12 @@ jobs:
 
     steps:
 
+      - name: test step
+        run: |
+          echo 'testing'
+          echo ${{ inputs.manifest_content }}
+          ls -la
+
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
         run: |
@@ -69,7 +75,7 @@ jobs:
           fi
 
       - name: Update versions in manifest
-        if: ${{ inputs.box_upload == 'true' }}
+        if: ${{ inputs.box_upload == true }}
         run:
           sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
 
