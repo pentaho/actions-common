@@ -32,10 +32,10 @@ on:
         required: false
         type: string
         default: artifactory
-      manifest_content:
-        required: false
+      repo_ref:
+        required: true
         type: string
-        description: "manifest file content"
+        description: "ref to which the repo calls this workflow"
       
 
 env:
@@ -58,16 +58,21 @@ jobs:
 
     steps:
 
-      - name: test step
+      - name: Checkout source repo
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.repo_ref }}
+          token: ${{ secrets.GH_PAT }}
+
+      - name: check files
         run: |
-          echo 'testing'
-          echo "${{ inputs.manifest_content }}" > ${{ inputs.manifest_file_path }}
           ls -la
+          ls -la $GITHUB_WORKSPACE
+          ls -la $GITHUB_WORKSPACE/.github
 
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
         run: |
-          echo "${{ inputs.manifest_content }}" > ${{ inputs.manifest_file_path }}
           if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
             echo "Manifest file does not exist."
             exit 1 # fails the build
