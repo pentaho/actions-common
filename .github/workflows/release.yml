@@ -74,10 +74,9 @@ jobs:
           ls -la
           ls -la $GITHUB_WORKSPACE
           ls -la $GITHUB_WORKSPACE/.github/workflows
-          cat $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
-          
-          # cat $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" > "${{ inputs.manifest_file_path }}"
-          # cat "${{ inputs.manifest_file_path }}"
+          mv $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}" "${{ inputs.manifest_file_path }}" 
+          cat "${{ inputs.manifest_file_path }}" 
+
 
       
       # - name: Check if manifest file is present
