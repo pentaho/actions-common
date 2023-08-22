@@ -86,6 +86,9 @@ jobs:
         if: ${{ inputs.box_upload == true }}
         run:
           sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' ${{ env.MANIFEST_PATH }}
+
+      - name: Check manifest
+        run: |
           cat ${{ env.MANIFEST_PATH }}
 
       # # expecting the release_version to be something like 9.5.1.0-23
