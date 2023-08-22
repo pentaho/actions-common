@@ -125,7 +125,7 @@ jobs:
           echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
       - name: Push artifacts to Box
-        if: ${{ inputs.box_upload == 'true' }}
+        if: ${{ inputs.box_upload == true }}
         run: |
 
           pip install pyyaml dohq-artifactory requests boxsdk tqdm
