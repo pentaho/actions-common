@@ -62,14 +62,13 @@ jobs:
         shell: bash
         run: |
           echo 'testing'
-          echo "${{ inputs.manifest_content }}"
+          echo "${{ inputs.manifest_content }}" > ${{ inputs.manifest_file_path }}
           ls -la
 
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
         shell: bash
         run: |
-          echo "${{ inputs.manifest_content }}"
           echo "${{ inputs.manifest_content }}" > ${{ inputs.manifest_file_path }}
           if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
             echo "Manifest file does not exist."
