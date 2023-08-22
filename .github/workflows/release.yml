@@ -50,7 +50,7 @@ env:
 
   NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
-  MANIFEST_PATH: $GITHUB_WORKSPACE/"${{ inputs.manifest_file_path }}"
+  MANIFEST_PATH: $GITHUB_WORKSPACE/${{ inputs.manifest_file_path }}
 
 jobs:
 
