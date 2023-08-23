@@ -59,7 +59,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230823.15
 
     steps:
 
@@ -121,17 +121,12 @@ jobs:
           
           echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-           python-version: '3.10'  
-           architecture: 'x64'
 
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
         run: |
 
-          pip install pyyaml dohq-artifactory requests boxsdk tqdm
+          pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
           
           python3 promote-release-to-box.py \
           --client_id ${{ vars.BOX_CLIENT_ID}} \
