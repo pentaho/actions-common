@@ -71,6 +71,12 @@ jobs:
           ref: ${{ inputs.ref }}
           path: ${{ inputs.manifest_file_path }}
 
+      - name: Check out files
+        run: |
+          ls -la 
+          ls -la $GITHUB_WORKSPACE/.github
+          cat ${{ env.MANIFEST_PATH }}
+
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
         run: |
