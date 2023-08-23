@@ -69,13 +69,11 @@ jobs:
           repository: ${{ inputs.check_repo }}
           token: ${{ secrets.GH_PAT }}
           ref: ${{ inputs.ref }}
-          path: ${{ inputs.manifest_file_path }}
 
       - name: Check out files
         run: |
-          ls -la 
-          ls -la $GITHUB_WORKSPACE/.github
-          ls -la ${{ env.MANIFEST_PATH }}
+          ls -la $GITHUB_WORKSPACE
+          cat ${{ env.MANIFEST_PATH }}
 
       - name: Check if manifest file is present
         if: ${{ inputs.box_upload == true }}
@@ -143,7 +141,7 @@ jobs:
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
           --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
-          --manifest_file_path ${{ inputs.manifest_file_path}} \
+          --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
           # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
