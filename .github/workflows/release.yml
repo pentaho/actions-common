@@ -75,6 +75,8 @@ jobs:
         run: |
           # cat ${{ env.MANIFEST_PATH }}
           ls -la
+          ls -la $GITHUB_WORKSPACE
+          ls -la $GITHUB_WORKSPACE/.github
 
       # - name: Check if manifest file is present
       #   if: ${{ inputs.box_upload == true }}
