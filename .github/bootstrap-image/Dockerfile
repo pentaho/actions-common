@@ -17,6 +17,3 @@ RUN apt-get update && \
     apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m venv env && source env/bin/activate
-    
