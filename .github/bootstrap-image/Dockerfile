@@ -14,8 +14,9 @@ RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${
 
 # pip
 RUN apt-get update && \
-    apt-get install -y python3-pip && \
+    apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
+RUN python3 -m venv env && source env/bin/activate
+    
