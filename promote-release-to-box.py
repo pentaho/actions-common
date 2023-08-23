@@ -300,6 +300,7 @@ if __name__ == '__main__':
     parser.add_argument("--client_secret", action="store", help="box client secret")
     parser.add_argument("--box_subject_id", action="store", help="box box subject id")
     parser.add_argument("--build_name", action="store", help="build name")
+    parser.add_argument("--build_version", action="store", help="build version such as: 9.5.1.0")
     parser.add_argument("--build_number", action="store", help="artifactory build_number")
     parser.add_argument("--rt_auth_username", action="store", default="buildguy", help="box client secret")
     parser.add_argument("--rt_auth_password", action="store", help="artifactory password")
@@ -317,6 +318,7 @@ if __name__ == '__main__':
     box_subject_id = args.box_subject_id
     build_name = args.build_name  # for rt buildinfo query
     build_number = args.build_number  # for rt buildinfo query
+    build_version = args.build_version
     rt_auth = (args.rt_auth_username, args.rt_auth_password)
     box_parent_folder_id = args.box_parent_folder_id
     manifest_file_path = args.manifest_file_path
@@ -344,15 +346,18 @@ if __name__ == '__main__':
 
 
     ###### Upload to box ##########
+    # determine the build suffix 9.5.1.0-124
+    build_suffix = build_version + '-' + build_number
+
     # downloads artifacts
     builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth, rt_base_url=rt_base_url)
-    file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_number, manifest_file = manifest_file_path))
+    file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_suffix, manifest_file = manifest_file_path))
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth, rt_base_url = rt_base_url)
 
     # if there are no files to deploy, exit process
     if not artifacts_to_release:
-        logging.WARNING(f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}')
+        logging.warning(f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}, build version {build_version}')
         sys.exit(1)
 
     # set up box client

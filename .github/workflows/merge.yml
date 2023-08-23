@@ -32,6 +32,23 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
+      blackduck_project_key:
+        required: false
+        type: string
+        description: "Project key for Blackduck"
+        default: "Pentaho"  # it's either "Pentaho" or "Pentaho SHIMS" on Orion
+      blackduck_server_url:
+        required: false
+        type: string
+        description: "Server URL for Blackduck"
+        default: https://orion.orl.eng.hitachivantara.com
+      blackduck_additional_args:
+        required: false
+        type: string
+        description: "Extra additional args for blackduck scan"
+        default: ""
+
+      
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -112,7 +129,7 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
         env:
@@ -165,7 +182,7 @@ jobs:
             project.stage=master
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: |
             mvn clean deploy -DskipTests \
@@ -175,7 +192,7 @@ jobs:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         with:
           command: |
             mvn verify -B -Daudit \
@@ -183,15 +200,24 @@ jobs:
         env:
           cmd_type: UNIT_TEST
 
+      #- name: Blackduck Scan
+      #  uses: lumada-common-services/gh-composite-actions@1.2.0
+      #  env:
+      #    BlackDuck_Project_Version: ${{ steps.version.outputs.current-version }}
+      #    BlackDuck_Project_Name: "${{ inputs.blackduck_project_key }}"
+      #    BlackDuck_Api_Token: "${{ secrets.BLACKDUCK_API_TOKEN }}"
+      #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
+      #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
+
       - name: Sonarqube scan
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           Tag_version: "${{ steps.version.outputs.current-version }}"
           push_tag_only: true
@@ -219,7 +245,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@1.3.1
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
