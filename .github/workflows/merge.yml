@@ -201,7 +201,7 @@ jobs:
       #     cmd_type: UNIT_TEST
 
       - name: Blackduck Scan
-        uses: lumada-common-services/gh-composite-actions@1.2.0
+        uses: lumada-common-services/gh-composite-actions@blackduck-fix
         env:
           BlackDuck_Project_Version: ${{ steps.version.outputs.current-version }}
           BlackDuck_Project_Name: "${{ inputs.blackduck_project_key }}"
