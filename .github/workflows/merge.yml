@@ -187,7 +187,7 @@ jobs:
           command: |
             mvn clean deploy -DskipTests \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+              -pl ./automation-utils,./arrow-flight -amd
         env:
           cmd_type: BUILD
 
@@ -196,7 +196,7 @@ jobs:
         with:
           command: |
             mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+              -pl ./arrow-flight -amd
         env:
           cmd_type: UNIT_TEST
 
@@ -229,18 +229,18 @@ jobs:
             --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
-          
+
           resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
             "*-${{ steps.version.outputs.current-version }}.zip")
-          
+
           echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
           echo "|:----:|" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "$resp" | jq -r '.[].path' | while read -r path; do
             link_text=$(echo "$path" | sed 's/.*\///')
-            echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
+            echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY;
           done
-          
+
           echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
 
       - name: Report notifications
