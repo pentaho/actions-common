@@ -18,6 +18,7 @@ on:
         type: string
         required: true
         description: "Slack channel(s) to send notifications to."
+        default: "arrow-flight-plugin-build-test"
       arti_host:
         required: false
         type: string
