@@ -47,8 +47,11 @@ on:
         type: string
         description: "Extra additional args for blackduck scan"
         default: ""
-
-      
+      additional_mvn_directives:
+        required: false
+        type: string
+        description: "Extra additional directives for the Maven command"
+        default: ""
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -187,7 +190,7 @@ jobs:
           command: |
             mvn clean deploy -DskipTests \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: BUILD
 
