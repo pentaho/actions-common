@@ -18,7 +18,6 @@ on:
         type: string
         required: true
         description: "Slack channel(s) to send notifications to."
-        default: "arrow-flight-plugin-build-test"
       arti_host:
         required: false
         type: string
@@ -54,7 +53,7 @@ on:
 env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
-  SLACK_CHANNEL: "${{ inputs.slack_channels }}"
+  SLACK_CHANNEL: arrow-flight-plugin-build-test
   BUILD_NAME: "${{ github.event.repository.name }}-$VERSION"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
