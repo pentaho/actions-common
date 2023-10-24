@@ -19,11 +19,6 @@ on:
         required: false
         type: string
         description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
-      box_root_folder_name:
-        required: false
-        default: "CI"
-        type: string
-        description: "NOT IN USE"
       manifest_file_path:
         required: false
         type: string
@@ -110,18 +105,17 @@ jobs:
           
           echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
-      - name: Checkout source repo
+      - name: Checkout reusable workflow source repo
         uses: actions/checkout@v3
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: YKN-435
+          ref: YKN-435-2
 
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
         shell: bash
         run: |
-          ls -la actions-common
           python3 -m venv env
           source env/bin/activate
           pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
@@ -142,6 +136,4 @@ jobs:
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
 
-          
-
-          echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
+          echo ":ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/${{ inputs.box_parent_folder_id }}" >> $GITHUB_STEP_SUMMARY
