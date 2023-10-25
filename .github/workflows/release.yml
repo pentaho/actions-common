@@ -15,10 +15,6 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
-      box_parent_folder_id:
-        required: false
-        type: string
-        description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
       manifest_file_path:
         required: false
         type: string
@@ -32,7 +28,6 @@ on:
         default: ''
         type: string
         description: "ref to which the repo calls this workflow"
-      
 
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
@@ -50,13 +45,16 @@ jobs:
 
     runs-on: [ k8s ]
 
+    environment:
+      name: ${{ github.ref_name }}
+
     container:
       image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230823.18
 
     steps:
 
       - name: Checkout source repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
 
@@ -106,7 +104,7 @@ jobs:
           echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout reusable workflow source repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: pentaho/actions-common
           path: actions-common
@@ -131,9 +129,9 @@ jobs:
           --build_version  ${{ env.BUILD_VERSION }} \
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
+          --box_parent_folder_id ${{ vars.BOX_FOLDER_ID }} \
           --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
 
-          echo ":ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/${{ inputs.box_parent_folder_id }}" >> $GITHUB_STEP_SUMMARY
+          echo ":ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/${{ vars.BOX_FOLDER_ID }}" >> $GITHUB_STEP_SUMMARY

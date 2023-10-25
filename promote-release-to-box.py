@@ -228,10 +228,10 @@ def upload_one_artifact_to_box(folder_id, file_name, client):
     except BoxAPIException as e:
         # if the file already exists, update the contents of it
         if e.status == 409:
-            logging.WARNING(f'File exist name {file_name} already exist.')
+            logging.warning(f'File exist name {file_name} already exist.')
             file_id = e.context_info['conflicts']['id']
             updated_file = client.file(file_id).update_contents(file_name)
-            logging.iinfo(f'{file_name} updated.')
+            logging.info(f'{file_name} updated.')
             return updated_file
     except Exception as e:
         logging.warning(f'error uploading to box {e}')
