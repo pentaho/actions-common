@@ -39,14 +39,13 @@ env:
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
   MANIFEST_PATH: $GITHUB_WORKSPACE/${{ inputs.manifest_file_path }}
 
+  BOX_CI_FOLDER_ID: 261814384
+
 jobs:
 
   pentaho-release:
 
     runs-on: [ k8s ]
-
-    environment:
-      name: ${{ github.ref_name }}
 
     container:
       image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230823.18
@@ -68,8 +67,17 @@ jobs:
 
       - name: Update versions in manifest
         if: ${{ inputs.box_upload == true }}
-        run:
-          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' ${{ env.MANIFEST_PATH }}
+        shell: bash
+        run: |
+          sed -i "s/\${RELEASE_VERSION}/${{ inputs.release_version }}/g" ${{ env.MANIFEST_PATH }}
+          
+          major_version=$(echo "${{ inputs.release_version }}" | cut -d '.' -f1,2)
+          sed -i 's/\${SHORT_VERSION}/'"$major_version"'/g' ${{ env.MANIFEST_PATH }}
+          
+          no_build_nbr_version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1)
+          sed -i 's/\${MAJOR_VERSION}/'"$no_build_nbr_version"'/g' ${{ env.MANIFEST_PATH }}
+        
+          cat ${{ env.MANIFEST_PATH }}
 
       # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
@@ -108,7 +116,7 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: YKN-435-2
+          ref: master
 
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
@@ -129,7 +137,7 @@ jobs:
           --build_version  ${{ env.BUILD_VERSION }} \
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_parent_folder_id ${{ vars.BOX_FOLDER_ID }} \
+          --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
           --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
