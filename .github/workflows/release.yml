@@ -15,15 +15,6 @@ on:
         type: boolean
         default: true
         description: "Flag that controls whether the box upload should be done."
-      box_parent_folder_id:
-        required: false
-        type: string
-        description: "The parent folder id for artifacts to be uploaded, example: '209594775139' which can be found in the box folder URL"
-      box_root_folder_name:
-        required: false
-        default: "CI"
-        type: string
-        description: "NOT IN USE"
       manifest_file_path:
         required: false
         type: string
@@ -32,7 +23,11 @@ on:
         required: false
         type: string
         default: artifactory
-      
+      ref:
+        required: false
+        default: ''
+        type: string
+        description: "ref to which the repo calls this workflow"
 
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
@@ -42,6 +37,9 @@ env:
 
   NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+  MANIFEST_PATH: $GITHUB_WORKSPACE/${{ inputs.manifest_file_path }}
+
+  BOX_CI_FOLDER_ID: 261814384
 
 jobs:
 
@@ -50,22 +48,36 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230823.18
 
     steps:
 
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
       - name: Check if manifest file is present
-        if: ${{ inputs.box_upload == 'true' }}
+        if: ${{ inputs.box_upload == true }}
         run: |
-          if [ ! -f "${{ inputs.manifest_file_path }}" ]; then
+          if [ ! -f ${{ env.MANIFEST_PATH }} ]; then
             echo "Manifest file does not exist."
             exit 1 # fails the build
           fi
 
       - name: Update versions in manifest
-        if: ${{ inputs.box_upload == 'true' }}
-        run:
-          sed -i 's/RELEASE_VERSION/${{ inputs.release_version }}/g' .github/artifacts-manifest.yaml
+        if: ${{ inputs.box_upload == true }}
+        shell: bash
+        run: |
+          sed -i "s/\${RELEASE_VERSION}/${{ inputs.release_version }}/g" ${{ env.MANIFEST_PATH }}
+          
+          major_version=$(echo "${{ inputs.release_version }}" | cut -d '.' -f1,2)
+          sed -i 's/\${SHORT_VERSION}/'"$major_version"'/g' ${{ env.MANIFEST_PATH }}
+          
+          no_build_nbr_version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1)
+          sed -i 's/\${MAJOR_VERSION}/'"$no_build_nbr_version"'/g' ${{ env.MANIFEST_PATH }}
+        
+          cat ${{ env.MANIFEST_PATH }}
 
       # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
@@ -73,8 +85,9 @@ jobs:
           version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
           build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
           
-          echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV
-          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
+          echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV 
+          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
+          echo "BUILD_VERSION=${version}" >> $GITHUB_ENV 
 
       - name: Config Artifactory in jFrog CLI
         run: |
@@ -82,12 +95,6 @@ jobs:
             --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
-
-      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
-      - name: Get Repository Metadata
-        uses: varunsridharan/action-repository-meta@2.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote artifacts
         run: |
@@ -104,25 +111,35 @@ jobs:
           
           echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
 
-      - name: Push artifacts to Box
-        if: ${{ inputs.box_upload == 'true' }}
-        run: |
+      - name: Checkout reusable workflow source repo
+        uses: actions/checkout@v4
+        with:
+          repository: pentaho/actions-common
+          path: actions-common
+          ref: master
 
-          pip install pyyaml dohq-artifactory requests boxsdk tqdm
+      - name: Push artifacts to Box
+        if: ${{ inputs.box_upload == true }}
+        shell: bash
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
           
-          python3 promote-release-to-box.py \
-          --client_id ${{ vars.BOX_CLIENT_ID}} \
-          --client_secret ${{ secrets.BOX_CLIENT_SECRET }} \
+          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
+
+          python3 actions-common/promote-release-to-box.py \
+          --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
+          --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
           --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
           --build_name ${{ env.BUILD_NAME }} \
           --build_number ${{ env.BUILD_NUMBER }} \
+          --build_version  ${{ env.BUILD_VERSION }} \
           --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
           --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_parent_folder_id ${{ inputs.box_parent_folder_id}} \
-          --manifest_file_path ${{ inputs.manifest_file_path}} \
+          --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
+          --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
-          # --box_root_folder_name ${{ inputs.box_root_folder_name }} 
-          
 
-          echo "${{ inputs.release_version }} was uploaded to Box.com ${{ inputs.box_parent_folder_name}}" >> $GITHUB_STEP_SUMMARY
+          echo ":ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/${{ vars.BOX_FOLDER_ID }}" >> $GITHUB_STEP_SUMMARY
