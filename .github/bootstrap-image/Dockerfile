@@ -1,7 +1,7 @@
-FROM docker.repo.orl.eng.hitachivantara.com/jenkins-build/maven/open-jdk/11
+FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
 
 ARG VERSION_MERGER=1.0.8
-ARG ARTIFACTORY_URL=https://repo.orl.eng.hitachivantara.com/artifactory/pnt-mvn
+ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
 
 RUN curl -L -o version-merger.jar ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar
 
