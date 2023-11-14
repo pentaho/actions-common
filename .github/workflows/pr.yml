@@ -95,28 +95,31 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build the project for changed modules only
-        uses: lumada-common-services/gh-composite-actions@1.3.1
+        uses: lumada-common-services/gh-composite-actions@1.7.1
         with:
           command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
         env:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@1.3.1
+        uses: lumada-common-services/gh-composite-actions@1.7.1
         with:
           command: mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd
         env:
           cmd_type: UNIT_TEST
+          reporter: 'java-junit'
+          fail-on-error: 'false'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@1.3.1
+        uses: lumada-common-services/gh-composite-actions@1.7.1
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@1.3.1
+        uses: lumada-common-services/gh-composite-actions@1.7.1
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
