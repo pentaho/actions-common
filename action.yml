@@ -39,6 +39,10 @@ runs:
       uses: lumada-common-services/gh-composite-actions@1.7.1
       env:
         cmd_type: UNIT_TEST
+        test_report_path: '**/target/failsafe-reports/*.xml'
+        reporter: 'java-junit'
+        fail-on-error: 'false'
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         command: |
           echo "Running PDI plugin integration tests"
@@ -62,7 +66,11 @@ runs:
                 # ["'" "'"] is required because eligible_module names could contain hyphens
                 has_non_default_plugin_test_scenarios="$(jq '.["'"$eligible_module"'"] | has("scenarios")' ${{ inputs.test_scenario_json }})"
   
-                base_cmd=(mvn clean verify -Drelease -Dpentaho-ee-dsc.version="${{ env.BASE_VERSION }}" -Dmaven.test.redirectTestOutputToFile=false -Dpdi-plugin-test -B -amd -pl "$eligible_module" -Duse-existing-docker-network=$(docker network ls --filter name=github_network* -q))
+                # Notes about some of these properties:
+                # -Drelease and -Dpentaho-ee-dsc.version are needed for building the obfuscated jar
+                # -Dmaven.test.redirectTestOutputToFile=false ensures test output is displayed in the github action web UI
+                # -Duse-existing-docker-network attaches all test containers to the same docker custom network that the github actions runner container uses
+                base_cmd=(mvn verify -Dpdi-plugin-test -Drelease -Dpentaho-ee-dsc.version="${{ env.BASE_VERSION }}" -Dmaven.test.redirectTestOutputToFile=false -B -amd -pl "$eligible_module" -Duse-existing-docker-network=$(docker network ls --filter name=github_network* -q))
           
                 if [ "$has_non_default_plugin_test_scenarios" = false ]; then
                   echo -e "\nRunning default test command: ${base_cmd[0]}"
@@ -77,6 +85,7 @@ runs:
                     number_of_params_in_scenario="$(jq '.["'"$eligible_module"'"].scenarios['"${i}"'] | length' ${{ inputs.test_scenario_json }})"
                     for ((j = 0; j < number_of_params_in_scenario; j++)); do
                       cmd+=("$(jq -r '.["'"$eligible_module"'"].scenarios['"${i}"']['"${j}"']' ${{ inputs.test_scenario_json }})")
+                      cmd+=(-Dsurefire.reportNameSuffix=scenario"${i}")
                     done
                     echo -e "\nRunning test command:" "${cmd[@]}"
                     "${cmd[@]}"

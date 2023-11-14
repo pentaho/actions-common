@@ -124,7 +124,7 @@ jobs:
 
       # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@BACKLOG-39097-II
+        uses: pentaho/actions-common@BACKLOG-39097-III
         with:
           changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
           test_scenario_json: "${{ inputs.test_scenario_json }}"
