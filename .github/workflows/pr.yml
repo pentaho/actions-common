@@ -20,8 +20,19 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
+      test_scenario_json:
+        required: false
+        type: string
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+        default: "./.github/plugin_integration_test_scenarios.json"
+      base_version:
+        type: string
+        required: true
+        description: "Base version to be taken in consideration for dependencies"
 
 env:
+
+  BASE_VERSION: "${{ inputs.base_version }}"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
@@ -111,12 +122,22 @@ jobs:
           fail-on-error: 'false'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@1.7.1
+      # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
+      - name: Run PDI plugin integration tests
+        uses: pentaho/actions-common@BACKLOG-39097-II
+        with:
+          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+          test_scenario_json: "${{ inputs.test_scenario_json }}"
         env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+          run_plugin_integration_tests: true
 
+#
+#      - name: Sonarqube scan
+#        uses: lumada-common-services/gh-composite-actions@1.7.1
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+#
       - name: Report notifications
         if: always()
         uses: lumada-common-services/gh-composite-actions@1.7.1

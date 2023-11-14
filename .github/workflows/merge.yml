@@ -206,6 +206,15 @@ jobs:
           fail-on-error: 'false'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      #TODO update to correct actions-common version (master?)
+      - name: Run PDI plugin integration tests
+        uses: pentaho/actions-common@BACKLOG-39097-II
+        with:
+          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+          test_scenario_json: "${{ inputs.test_scenario_json }}"
+        env:
+          run_plugin_integration_tests: true
+
       #- name: Blackduck Scan
       #  uses: lumada-common-services/gh-composite-actions@1.2.0
       #  env:

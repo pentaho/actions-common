@@ -1,6 +1,12 @@
 name: "Common Pentaho Maven Settings file"
 description: "Common Pentaho Maven Settings file"
 
+inputs:
+  changed_modules:
+    description: "Comma-separated list of modules that have been edited"
+  test_scenario_json:
+    description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+
 outputs:
   settings-file-path:
     description: "Maven settings file path"
@@ -20,3 +26,62 @@ runs:
         file_path="$GITHUB_ACTION_PATH/settings.xml"
         
         echo "path=${file_path}" >> $GITHUB_OUTPUT
+
+    # PDI plugin integration test section
+    - name: Configure vm.max_map_count required by Elasticsearch
+      if: ${{ env.run_plugin_integration_tests }}
+      shell: bash
+      run: |
+        echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+
+    - name: Run plugin integration tests
+      if: ${{ env.run_plugin_integration_tests && inputs.test_scenario_json && inputs.changed_modules }}
+      uses: lumada-common-services/gh-composite-actions@1.7.1
+      env:
+        cmd_type: UNIT_TEST
+      with:
+        command: |
+          echo "Running PDI plugin integration tests"
+          
+          # make sure the test scenario file is valid json
+          if ! jq -e . >/dev/null 2>&1 <<< cat "${{ inputs.test_scenario_json }}"; then
+            echo "Failed to successfully parse the plugin test scenarios JSON: ${{ inputs.test_scenario_json }}."
+            echo "Exiting."
+            exit 1
+          fi
+          
+          # get the list of plugin code modules that have opted in to plugin integration testing
+          readarray -t eligible_modules <<< "$(jq -r keys[] ${{ inputs.test_scenario_json }})"
+          
+          for eligible_module in "${eligible_modules[@]}"; do
+          
+            case "${{ inputs.changed_modules }}" in
+              *$eligible_module* )
+                echo -e "\nPlugin module ${eligible_module} has changed; running integration tests for it"
+  
+                # ["'" "'"] is required because eligible_module names could contain hyphens
+                has_non_default_plugin_test_scenarios="$(jq '.["'"$eligible_module"'"] | has("scenarios")' ${{ inputs.test_scenario_json }})"
+  
+                base_cmd=(mvn clean verify -Drelease -Dpentaho-ee-dsc.version="${{ env.BASE_VERSION }}" -Dmaven.test.redirectTestOutputToFile=false -Dpdi-plugin-test -B -amd -pl "$eligible_module" -Duse-existing-docker-network=$(docker network ls --filter name=github_network* -q))
+          
+                if [ "$has_non_default_plugin_test_scenarios" = false ]; then
+                  echo -e "\nRunning default test command: ${base_cmd[0]}"
+                  "${base_cmd[@]}"
+                else
+                  number_of_scenarios="$(jq '.["'"$eligible_module"'"].scenarios | length' ${{ inputs.test_scenario_json }})"
+                  echo "Plugin ${eligible_module} has ${number_of_scenarios} unique test scenarios"
+          
+                  for ((i = 0; i < number_of_scenarios; i++)); do
+                    unset cmd
+                    cmd=("${base_cmd[@]}")
+                    number_of_params_in_scenario="$(jq '.["'"$eligible_module"'"].scenarios['"${i}"'] | length' ${{ inputs.test_scenario_json }})"
+                    for ((j = 0; j < number_of_params_in_scenario; j++)); do
+                      cmd+=("$(jq -r '.["'"$eligible_module"'"].scenarios['"${i}"']['"${j}"']' ${{ inputs.test_scenario_json }})")
+                    done
+                    echo -e "\nRunning test command:" "${cmd[@]}"
+                    "${cmd[@]}"
+                  done
+                fi
+                ;;
+            esac
+          done
