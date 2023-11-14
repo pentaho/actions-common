@@ -42,7 +42,7 @@ runs:
         test_report_path: '**/target/failsafe-reports/*.xml'
         reporter: 'java-junit'
         fail-on-error: 'false'
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         command: |
           echo "Running PDI plugin integration tests"

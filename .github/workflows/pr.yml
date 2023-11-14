@@ -120,7 +120,7 @@ jobs:
           cmd_type: UNIT_TEST
           reporter: 'java-junit'
           fail-on-error: 'false'
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       - name: Run PDI plugin integration tests
