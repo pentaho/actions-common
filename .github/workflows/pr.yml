@@ -115,7 +115,10 @@ jobs:
       - name: Run unit-tests
         uses: lumada-common-services/gh-composite-actions@1.7.1
         with:
-          command: mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd
+          command: |
+            mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
+            cd automation-utils && \
+            ls -alR
         env:
           cmd_type: UNIT_TEST
           reporter: 'java-junit'
