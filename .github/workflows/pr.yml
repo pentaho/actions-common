@@ -117,7 +117,7 @@ jobs:
         with:
           command: |
             mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
-            cd azure-datalake1-vfs && \
+            cd azure-datalake2-vfs && \
             ls -alR
         env:
           cmd_type: UNIT_TEST
