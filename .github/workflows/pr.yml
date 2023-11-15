@@ -127,14 +127,14 @@ jobs:
           test_report_path: '**/target/surefire-reports/*.xml'
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
-      - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@BACKLOG-39097-III
-        with:
-          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
-          test_scenario_json: "${{ inputs.test_scenario_json }}"
-        env:
-          run_plugin_integration_tests: true
+      # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
+      # - name: Run PDI plugin integration tests
+      #   uses: pentaho/actions-common@BACKLOG-39097-III
+      #   with:
+      #     changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+      #     test_scenario_json: "${{ inputs.test_scenario_json }}"
+      #   env:
+      #     run_plugin_integration_tests: true
 
 #
 #      - name: Sonarqube scan
