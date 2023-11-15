@@ -121,6 +121,7 @@ jobs:
           reporter: 'java-junit'
           fail-on-error: 'false'
           GITHUB_TOKEN: ${{ github.token }}
+          test_report_path: '**/target/surefire-reports/*.xml'
 #          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
