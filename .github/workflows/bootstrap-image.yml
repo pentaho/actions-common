@@ -24,6 +24,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: login to Artifactory
+        id: login
+        run: docker login ${{ env.ARTIFACTORY }} -u ${{ env.ARTIFACTORY_USER }} -p ${{ env.ARTIFACTORY_API_KEY }}
+          
       - name: Build
         id: build-image
         run: docker build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile .
@@ -31,8 +35,9 @@ jobs:
       - name: Push to Artifactory
         id: push-to-artifactory
         run: |
-          echo "${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
+          # echo "${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
           docker push "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
+          
       - name: Summary
         run: |
           echo ":frog: Image pushed!" >> $GITHUB_STEP_SUMMARY
