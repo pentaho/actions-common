@@ -35,7 +35,7 @@ jobs:
       - name: Push to Artifactory
         id: push-to-artifactory
         run: |
-          docker login ${{ env.ARTIFACTORY }} -u ${{ env.ARTIFACTORY_USER }} -p ${{ env.ARTIFACTORY_API_KEY }}
+          docker login ${{ env.ARTIFACTORY }} -u  ${{ secrets.JARJAR_CICD_ONE_USER }} -p ${{ secrets.JARJAR_CICD_ONE_KEY }}
           # echo "${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
           docker push "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
           
