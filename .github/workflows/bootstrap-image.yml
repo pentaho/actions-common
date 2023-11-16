@@ -4,9 +4,9 @@ on:
   push:
     paths: [ .github/bootstrap-image/** ]
 env:
-  ARTIFACTORY: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com
-  ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
-  ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
+  ARTIFACTORY: one.hitachivantara.com/devops-docker-release
+  ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
   IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 jobs:
 
