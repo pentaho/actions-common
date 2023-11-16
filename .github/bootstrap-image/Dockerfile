@@ -11,7 +11,6 @@ RUN --mount=type=secret,id=myuser \
 
 RUN curl -fL https://install-cli.jfrog.io | sh
 
-# java
 ARG JQ_VERSION=1.6
 
 RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 && \
