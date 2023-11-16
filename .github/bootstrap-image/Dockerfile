@@ -10,7 +10,7 @@ RUN --mount=type=secret,id=myuser \
     curl -Sf -L -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY -X GET ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar --output version-merger.jar
 
 RUN curl -fL https://install-cli.jfrog.io | sh
-# Java
+
 ARG JQ_VERSION=1.6
 
 RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${JQ_VERSION}/jq-linux64 && \
