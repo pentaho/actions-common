@@ -106,14 +106,14 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build the project for changed modules only
-        uses: lumada-common-services/gh-composite-actions@1.7.1
+        uses: lumada-common-services/gh-composite-actions@HNC-502
         with:
           command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
         env:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@1.7.1
+        uses: lumada-common-services/gh-composite-actions@HNC-502
         with:
           command: |
             mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
@@ -122,10 +122,8 @@ jobs:
         env:
           cmd_type: UNIT_TEST
           reporter: 'java-junit'
-          fail-on-error: 'false'
-          GITHUB_TOKEN: ${{ github.token }}
           test_report_path: '**/target/surefire-reports/*.xml'
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#        
 
       # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       # - name: Run PDI plugin integration tests
@@ -145,7 +143,7 @@ jobs:
 #
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@1.7.1
+        uses: lumada-common-services/gh-composite-actions@HNC-502
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
