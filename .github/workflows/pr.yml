@@ -57,7 +57,10 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20231117.30
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
 
