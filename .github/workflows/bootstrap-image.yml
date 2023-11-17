@@ -35,13 +35,13 @@ jobs:
       - name: Push to Artifactory
         id: push-to-artifactory
         run: |
-          # docker login ${{ env.ARTIFACTORY }} -u ${{ env.ARTIFACTORY_USER }} -p ${{ env.ARTIFACTORY_API_KEY }}
           docker push "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
           
       - name: Summary
         run: |
           echo ":frog: Image pushed!" >> $GITHUB_STEP_SUMMARY
           echo "Pull it from '${{ env.ARTIFACTORY }}/${{ env.IMAGE }}'" >> $GITHUB_STEP_SUMMARY
+          
       - uses: rickstaa/action-create-tag@v1
         with:
           tag: "build-image-${{ env.IMAGE_TAG }}"
