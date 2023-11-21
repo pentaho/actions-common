@@ -135,12 +135,12 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@1.0.1
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+      #   env:
+      #     cmd_type: BUILD
 
   release-candidate:
     name: Build Release Candidate
