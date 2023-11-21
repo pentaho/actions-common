@@ -52,6 +52,10 @@ on:
         type: string
         description: "Extra additional directives for the Maven command"
         default: ""
+      citadel_json_path:
+        required: false
+        type: string
+        description: "Citadel json path"
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -215,6 +219,13 @@ jobs:
       #    BlackDuck_Api_Token: "${{ secrets.ORION_BLACKDUCK_TOKEN }}"
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
+      
+      - name: Citadel 
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          CITADEL_JSON_PATH:  '${{ input.citadel_json_path }}'
+          citadel-host: 'citadel.wal.eng.hitachivantara.com' 
+          CITADEL_JSON_LIST_SLEEP_SECONDS: 15    
 
       - name: Sonarqube scan
         continue-on-error: true
