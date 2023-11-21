@@ -223,7 +223,7 @@ jobs:
       - name: Citadel 
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          CITADEL_JSON_PATH:  '${{ input.citadel_json_path }}'
+          CITADEL_JSON_PATH: '${{ input.citadel_json_path }}'
           citadel-host: 'citadel.wal.eng.hitachivantara.com' 
           CITADEL_JSON_LIST_SLEEP_SECONDS: 15    
 
