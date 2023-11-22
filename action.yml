@@ -1,6 +1,12 @@
 name: "Common Pentaho Maven Settings file"
 description: "Common Pentaho Maven Settings file"
 
+inputs:
+  changed_modules:
+    description: "Comma-separated list of modules that have been edited"
+  test_scenario_json:
+    description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+
 outputs:
   settings-file-path:
     description: "Maven settings file path"
@@ -20,3 +26,31 @@ runs:
         file_path="$GITHUB_ACTION_PATH/settings.xml"
         
         echo "path=${file_path}" >> $GITHUB_OUTPUT
+
+    # PDI plugin integration test section
+    - name: Configure vm.max_map_count required by Elasticsearch
+      if: ${{ env.run_plugin_integration_tests }}
+      shell: bash
+      run: |
+        echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+
+    - name: Checkout reusable workflow source repo
+      uses: actions/checkout@v4
+      with:
+        repository: pentaho/actions-common
+        path: actions-common
+        ref: stable
+
+    - name: Run plugin integration tests
+      if: ${{ env.run_plugin_integration_tests && inputs.test_scenario_json && inputs.changed_modules }}
+      uses: lumada-common-services/gh-composite-actions@stable
+      env:
+        cmd_type: INTEGRATION_TEST
+        test_report_path: '**/target/failsafe-reports/TEST*.xml'
+        reporter: 'java-junit'
+        fail-on-error: 'true'
+      with:
+        command: |
+          actions-common/.github/scripts/sh/run-pdi-plugin-integration-tests.sh \
+          "${{ inputs.test_scenario_json }}" \
+          "${{ inputs.changed_modules  }}"
