@@ -225,9 +225,7 @@ jobs:
         env:
           CITADEL_JSON_PATH: '${{ inputs.citadel_json_path }}'
           CITADEL_URL: 'https://citadel.orl.eng.hitachivantara.com/citadel' 
-          CITADEL_JSON_LIST_SLEEP_SECONDS: 15    
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
+          CITADEL_JSON_LIST_SLEEP_SECONDS: 15
 
       # - name: Sonarqube scan
       #   continue-on-error: true
