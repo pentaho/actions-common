@@ -116,7 +116,7 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: master
+          ref: stable
 
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
@@ -128,7 +128,7 @@ jobs:
           
           echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
 
-          python3 actions-common/promote-release-to-box.py \
+          python3 actions-common/.github/scripts/python/promote-release-to-box.py \
           --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
           --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
           --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
