@@ -9,7 +9,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://repo.orl.eng.hitachivantara.com
+        default: https://one.hitachivantara.com/
         description: "Artifactory's Host name"
       box_upload:
         type: boolean
@@ -33,7 +33,7 @@ env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/maven
 
   NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
@@ -48,7 +48,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230823.18
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20230823.18
 
     steps:
 
