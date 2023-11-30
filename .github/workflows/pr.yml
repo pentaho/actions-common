@@ -20,6 +20,19 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
+      test_scenario_json:
+        required: false
+        type: string
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+        default: "./.github/plugin_integration_test_scenarios.json"
+      base_version:
+        type: string
+        required: false
+        description: "Base version to be taken in consideration for dependencies"
+      modules_to_always_build_in_addition_to_those_with_changes:
+        type: string
+        required: false
+        description: "List of modules to build in addition to those that have changes."
 
 env:
 
@@ -94,23 +107,36 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@1.0.1
 
-      - name: Build the project for changed modules only
+      - name: Build the project
         uses: lumada-common-services/gh-composite-actions@stable
         with:
-          command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
+          command: |
+            mvn clean install -DskipTests -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: BUILD
 
       - name: Run unit-tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
-          command: mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd
+          command: |
+            mvn verify -B -Daudit -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: UNIT_TEST
           reporter: 'java-junit'
-          fail-on-error: 'false'
-          GITHUB_TOKEN: ${{ github.token }}
+          fail-on-error: 'true'
           test_report_path: '**/target/surefire-reports/*.xml'
+
+      - name: Run PDI plugin integration tests
+        uses: pentaho/actions-common@stable
+        if: ${{ inputs.test_scenario_json }}
+        with:
+          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+          test_scenario_json: "${{ inputs.test_scenario_json }}"
+        env:
+          run_plugin_integration_tests: true
+          BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
         uses: lumada-common-services/gh-composite-actions@stable

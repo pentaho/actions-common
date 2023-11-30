@@ -5,7 +5,15 @@ on:
       modules_to_build:
         type: string
         required: false
-        description: "The modules to build when running from the root of the project. Defaults to everything ('.')"
+        description: >
+          The modules to build when running from the root of the project. Defaults to everything ('.').
+          Using this option builds only the modules you specify, regardless of whether those modules have changes.
+      modules_to_always_build_in_addition_to_those_with_changes:
+        type: string
+        required: false
+        description: >
+          When using the default behavior of building only changed modules (i.e., 'modules_to_build' is NOT specified),
+          use this option to list any modules you want to build in addition to those that have changes.
       version:
         type: string
         required: true
@@ -52,6 +60,11 @@ on:
         type: string
         description: "Extra additional directives for the Maven command"
         default: ""
+      test_scenario_json:
+        required: false
+        type: string
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+        default: "./.github/plugin_integration_test_scenarios.json"
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -134,7 +147,9 @@ jobs:
       - name: Build code and deploy artifacts
         uses: lumada-common-services/gh-composite-actions@stable
         with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: |
+            mvn clean deploy -DskipTests -amd \
+            -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: BUILD
 
@@ -190,7 +205,8 @@ jobs:
           command: |
             mvn clean deploy -DskipTests \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
+              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+              -amd ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: BUILD
 
@@ -199,13 +215,23 @@ jobs:
         with:
           command: |
             mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+              -amd
         env:
           cmd_type: UNIT_TEST
           reporter: 'java-junit'
-          fail-on-error: 'false'
-          GITHUB_TOKEN: ${{ github.token }}
+          fail-on-error: 'true'
           test_report_path: '**/target/surefire-reports/*.xml'
+
+      - name: Run PDI plugin integration tests
+        uses: pentaho/actions-common@stable
+        if: ${{ inputs.test_scenario_json }}
+        with:
+          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+          test_scenario_json: "${{ inputs.test_scenario_json }}"
+        env:
+          run_plugin_integration_tests: true
+          BASE_VERSION: "${{ inputs.base_version }}"
 
       #- name: Blackduck Scan
       #  uses: lumada-common-services/gh-composite-actions@1.2.0
