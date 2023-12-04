@@ -224,7 +224,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           CITADEL_JSON_PATH: '${{ inputs.citadel_json_path }}'
-          CITADEL_URL: 'https://citadel.orl.eng.hitachivantara.com/citadel' 
+          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
           CITADEL_JSON_LIST_SLEEP_SECONDS: 15
 
       # - name: Sonarqube scan
