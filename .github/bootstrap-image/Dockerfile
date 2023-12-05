@@ -18,5 +18,5 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
     
-# Install PyYAML
-RUN sudo apt install python-yaml
+#Install yaml
+RUN pip3 install pyyaml
