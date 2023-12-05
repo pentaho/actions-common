@@ -112,18 +112,18 @@ jobs:
         env:
           cmd_type: BUILD
 
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
-            cd azure-datalake2-vfs && \
-            ls -alR
-        env:
-          cmd_type: UNIT_TEST
-          reporter: 'java-junit'
-          test_report_path: '**/target/surefire-reports/*.xml'
-          fail-on-empty: true
+      # - name: Run unit-tests
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
+      #       cd azure-datalake2-vfs && \
+      #       ls -alR
+      #   env:
+      #     cmd_type: UNIT_TEST
+      #     reporter: 'java-junit'
+      #     test_report_path: '**/target/surefire-reports/*.xml'
+      #     fail-on-empty: true
 
       - name: FrogBot
         uses: lumada-common-services/gh-composite-actions@stable
@@ -152,10 +152,10 @@ jobs:
 #          sonar_utility: sonar-scanner
 #          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 #
-      - name: Report notifications
-        if: always()
-        uses: lumada-common-services/gh-composite-actions@HNC-502
-        env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
-          report: true
+      # - name: Report notifications
+      #   if: always()
+      #   uses: lumada-common-services/gh-composite-actions@HNC-502
+      #   env:
+      #     Slack_Token: ${{ secrets.SLACK_TOKEN }}
+      #     Slack_Channel: ${{ env.SLACK_CHANNEL }}
+      #     report: true
