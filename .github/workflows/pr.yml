@@ -68,7 +68,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20231205.49
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
 
@@ -128,7 +128,7 @@ jobs:
       - name: FrogBot
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          JF_URL: https://hitachi.jfrog.io/
+          JF_URL: https://hitachi.jfrog.io
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JF_CHANGED_PATHS: "${{ steps.change_detection.outputs.changed_modules }}"
