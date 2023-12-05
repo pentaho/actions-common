@@ -19,4 +19,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
     
 # Install PyYAML
-RUN pip3 install pyyaml
+RUN apt install python3-yaml
