@@ -1,4 +1,3 @@
-FROM docker.repo.orl.eng.hitachivantara.com/jenkins-build/maven/open-jdk/11
 
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://repo.orl.eng.hitachivantara.com/artifactory/pnt-mvn
@@ -16,7 +15,7 @@ RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${
 RUN apt-get update && \
     apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/* 
-    
+    rm -rf /var/lib/apt/lists/*
+
 # Install PyYAML
 RUN pip install pyyaml
