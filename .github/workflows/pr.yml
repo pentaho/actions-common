@@ -131,7 +131,6 @@ jobs:
           JF_URL: https://hitachi.jfrog.io/
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JF_WORKING_DIR: .
           JF_CHANGED_MODULE: "${{ steps.change_detection.outputs.changed_modules }}"
           
       #        
