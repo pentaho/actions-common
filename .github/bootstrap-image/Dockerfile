@@ -1,3 +1,4 @@
+FROM docker.repo.orl.eng.hitachivantara.com/jenkins-build/maven/open-jdk/11
 
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://repo.orl.eng.hitachivantara.com/artifactory/pnt-mvn
