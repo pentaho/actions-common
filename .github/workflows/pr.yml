@@ -106,14 +106,14 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build the project for changed modules only
-        uses: lumada-common-services/gh-composite-actions@HNC-502
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
         env:
           cmd_type: BUILD
 
       - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@HNC-502
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
             mvn verify -pl "${{ steps.change_detection.outputs.changed_modules }}" -B -Daudit -amd && \
@@ -124,7 +124,16 @@ jobs:
           reporter: 'java-junit'
           test_report_path: '**/target/surefire-reports/*.xml'
           fail-on-empty: true
-#        
+
+      - name: FrogBot
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JF_CHANGED_MODULE: "${{ steps.change_detection.outputs.changed_modules }}"
+          
+      #        
 
       # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       # - name: Run PDI plugin integration tests
