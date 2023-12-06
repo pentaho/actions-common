@@ -126,7 +126,7 @@ jobs:
       #     fail-on-empty: true
 
       - name: FrogBot
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-510
         env:
           JF_URL: https://hitachi.jfrog.io/
           JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
