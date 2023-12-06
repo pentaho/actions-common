@@ -132,7 +132,7 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ github.token }}
           # JF_WORKING_DIR: ./automation-utils
-          JF_CHANGED_PATHS: "${{ steps.change_detection.outputs.changed_modules }}"
+          # JF_CHANGED_PATHS: "${{ steps.change_detection.outputs.changed_modules }}"
           
       #        
 
