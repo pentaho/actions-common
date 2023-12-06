@@ -106,7 +106,7 @@ jobs:
         uses: hv-actions/change-detection-builder@1.0.1
 
       - name: Build the project for changed modules only
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-510
         with:
           command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
         env:
