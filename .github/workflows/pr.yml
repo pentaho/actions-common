@@ -103,7 +103,7 @@ jobs:
 
       - name: Determine which changes occurred
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.1
+        uses: hv-actions/change-detection-builder@test-frog
 
       - name: Build the project for changed modules only
         uses: lumada-common-services/gh-composite-actions@HNC-510
