@@ -64,6 +64,10 @@ on:
         required: false
         type: string
         description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+      citadel_json_path:
+        required: false
+        type: string
+        description: "Citadel json path"
 
 env:
   VERSION: "${{ inputs.version }}"
