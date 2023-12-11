@@ -91,9 +91,9 @@ env:
   PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: one.hitachivantara.com/artifactory/docker/
-  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/artifactory/pntpub-docker-dev/
-  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/artifactory/pntprv-docker-dev/
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
 
 jobs:
 
