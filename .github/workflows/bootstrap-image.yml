@@ -26,7 +26,7 @@ jobs:
 
       - name: login to Artifactory
         id: login
-        run: docker login ${{ env.ARTIFACTORY }} -u ${{ env.ARTIFACTORY_USER }} -p ${{ env.ARTIFACTORY_API_KEY }}
+        run: docker login ${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
           
       - name: Build
         id: build-image

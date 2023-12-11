@@ -9,7 +9,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://one.hitachivantara.com/
+        default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       box_upload:
         type: boolean
