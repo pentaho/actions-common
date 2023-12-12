@@ -203,7 +203,9 @@ jobs:
         shell: bash
         run: |
           python3 -m venv /venv
-          export PATH=/venv/bin:$PATH
+          source /venv/bin/activate
+          echo "/venv/bin" >> $GITHUB_PATH
+          
           # python3 -m venv env
           # source env/bin/activate
    
