@@ -203,7 +203,7 @@ jobs:
         shell: bash
         run: |
           python3 -m venv /venv
-          ENV PATH=/venv/bin:$PATH
+          export PATH=/venv/bin:$PATH
           # python3 -m venv env
           # source env/bin/activate
    
