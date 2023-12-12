@@ -202,8 +202,10 @@ jobs:
       - name: Setting Env For Citadel
         shell: bash
         run: |
-          python3 -m venv env
-          source env/bin/activate
+          RUN python3 -m venv /venv
+          ENV PATH=/venv/bin:$PATH
+          # python3 -m venv env
+          # source env/bin/activate
    
       - name: Trigger Citadel scan
         id: Citadel
