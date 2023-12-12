@@ -153,7 +153,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20231212.54
+      image: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20231205.49
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
@@ -201,7 +201,7 @@ jobs:
 
       - name: Trigger Citadel scan
         id: Citadel
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-510
         env:
           TRIGGER_CITADEL_SCAN: true
           CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
