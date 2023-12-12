@@ -113,6 +113,15 @@ jobs:
         env:
           cmd_type: BUILD
 
+      - name: Trigger Citadel scan
+        id: Citadel
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          TRIGGER_CITADEL_SCAN: true
+          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
       #   with:
@@ -126,14 +135,14 @@ jobs:
       #     test_report_path: '**/target/surefire-reports/*.xml'
       #     fail-on-empty: true
 
-      - name: FrogBot
-        uses: lumada-common-services/gh-composite-actions@HNC-510
-        env:
-          JF_URL: https://hitachi.jfrog.io/
-          JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ github.token }}
+      # - name: FrogBot
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     JF_URL: https://hitachi.jfrog.io/
+      #     JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
+      #     JF_GIT_TOKEN: ${{ github.token }}
           # JF_WORKING_DIR: ./automation-utils
-          JF_CHANGED_PATHS: "${{ steps.change_detection.outputs.changed_modules }}"
+          # JF_CHANGED_PATHS: "${{ steps.change_detection.outputs.changed_modules }}"
           
       #        
 
