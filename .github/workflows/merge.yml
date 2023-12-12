@@ -189,19 +189,24 @@ jobs:
       #       distribution.version=${{ steps.version.outputs.current-version }} \
       #       project.stage=master
 
-      # - name: Build code and deploy artifacts
-      #   uses: lumada-common-services/gh-composite-actions@1.7.1
-      #   with:
-      #     command: |
-      #       mvn clean deploy -DskipTests \
-      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-      #         -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
-      #   env:
-      #     cmd_type: BUILD
+      - name: Build code and deploy artifacts
+        uses: lumada-common-services/gh-composite-actions@1.7.1
+        with:
+          command: |
+            mvn clean deploy -DskipTests \
+              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
+        env:
+          cmd_type: BUILD
+
+      - name: Setting Env For Citadel
+        run: |
+          python3 -m venv env
+          source env/bin/activate
 
       - name: Trigger Citadel scan
         id: Citadel
-        uses: lumada-common-services/gh-composite-actions@HNC-510
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           TRIGGER_CITADEL_SCAN: true
           CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
