@@ -189,21 +189,22 @@ jobs:
       #       distribution.version=${{ steps.version.outputs.current-version }} \
       #       project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.7.1
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@1.7.1
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
+      #   env:
+      #     cmd_type: BUILD
 
       - name: Setting Env For Citadel
         shell: bash
         run: |
           python3 -m venv env
           source env/bin/activate
+          pip3 install pyyaml==6.0.1
 
       - name: Trigger Citadel scan
         id: Citadel
