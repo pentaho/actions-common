@@ -204,8 +204,7 @@ jobs:
         run: |
           python3 -m venv env
           source env/bin/activate
-          pip3 install pyyaml==6.0.1
-
+   
       - name: Trigger Citadel scan
         id: Citadel
         uses: lumada-common-services/gh-composite-actions@stable
