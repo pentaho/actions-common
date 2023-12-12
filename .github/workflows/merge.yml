@@ -202,7 +202,7 @@ jobs:
       - name: Setting Env For Citadel
         shell: bash
         run: |
-          RUN python3 -m venv /venv
+          python3 -m venv /venv
           ENV PATH=/venv/bin:$PATH
           # python3 -m venv env
           # source env/bin/activate
