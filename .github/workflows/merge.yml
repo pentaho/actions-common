@@ -153,7 +153,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20231212.54
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
@@ -189,15 +189,15 @@ jobs:
       #       distribution.version=${{ steps.version.outputs.current-version }} \
       #       project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@1.7.1
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@1.7.1
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd ${{ inputs.additional_mvn_directives }}
+      #   env:
+      #     cmd_type: BUILD
 
       - name: Trigger Citadel scan
         id: Citadel
