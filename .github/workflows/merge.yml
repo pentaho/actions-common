@@ -64,10 +64,7 @@ on:
         required: false
         type: string
         description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
-      citadel_json_path:
-        required: false
-        type: string
-        description: "Citadel json path"
+      
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -245,12 +242,14 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
     
-      - name: Citadel 
+      - name: Trigger Citadel scan
+        id: Citadel
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          CITADEL_JSON_PATH: '${{ inputs.citadel_json_path }}'
+          TRIGGER_CITADEL_SCAN: true
           CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-          CITADEL_JSON_LIST_SLEEP_SECONDS: 15
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
 
       - name: Sonarqube scan
         continue-on-error: true
