@@ -18,12 +18,12 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install pip3 (if not installed already using curl)
-RUN apt-get install -y curl && \
-    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-    python3 get-pip.py && \
-    rm get-pip.py && \
-    pip3 --version
+# # Install pip3 (if not installed already using curl)
+# RUN apt-get install -y curl && \
+#     curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+#     python3 get-pip.py && \
+#     rm get-pip.py && \
+#     pip3 --version
 
 # # Install PyYAML
 # RUN apt-get update && \
