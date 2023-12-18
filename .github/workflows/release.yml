@@ -14,7 +14,7 @@ on:
       box_upload:
         type: boolean
         default: true
-        description: "Flag that controls whether the box upload should be done."
+        description: "Box upload."
       manifest_file_path:
         required: false
         type: string
@@ -28,6 +28,14 @@ on:
         default: ''
         type: string
         description: "ref to which the repo calls this workflow"
+      dry_run:
+        type: boolean
+        default: true
+        description: "Dry run. No real changes should occur."
+      promote_artifacts:
+        type: boolean
+        default: true
+        description: "Promote artifacts in Artifactory."
 
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
@@ -97,21 +105,25 @@ jobs:
             --user ${{ env.NEXUS_DEPLOY_USER }}
 
       - name: Promote artifacts
+        if: ${{ inputs.promote_artifacts == true }}
         run: |
           rt_repo='pntpub-mvn-release-orl'
 
           if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
             rt_repo='pntprv-mvn-release-orl'
           fi
+
+          promotion_summary=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            promotion_summary="[Dry run] "
+          else
+            jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
+          fi
           
-          # for testing purposes
-          # rt_repo='devops-mvn-test'
-          
-          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
-          
-          echo ":frog: Version ${{ inputs.release_version }} was promoted (${rt_repo})" >> $GITHUB_STEP_SUMMARY
+          echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout reusable workflow source repo
+        if: ${{ inputs.box_upload == true }}
         uses: actions/checkout@v4
         with:
           repository: pentaho/actions-common
@@ -140,6 +152,17 @@ jobs:
           --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
           --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }}
+          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
+          --dry_run ${{ inputs.dry_run }}
 
-          echo ":ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/${{ vars.BOX_FOLDER_ID }}" >> $GITHUB_STEP_SUMMARY
+      - name: Set Box Summary
+        if: ${{ inputs.box_upload == true }}
+        shell: bash
+        run: |
+          box_summary=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then  
+            box_summary="[Dry run] "
+          fi
+          
+          # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
+          echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY

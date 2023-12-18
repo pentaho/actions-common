@@ -9,6 +9,8 @@ import logging
 import subprocess
 from tqdm import tqdm
 from boxsdk import OAuth2, Client
+from boxsdk.object.folder import Folder
+from boxsdk.object.file import File
 from artifactory import ArtifactoryPath
 from requests.auth import HTTPBasicAuth
 from boxsdk.exception import BoxAPIException
@@ -210,6 +212,9 @@ def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
 
 
 def set_box_client(client_id, client_secret, box_subject_id):
+    if dry_run is True:
+        return None
+
     token = generate_access_token(client_id, client_secret, box_subject_id)
     oauth = OAuth2(
         client_id=client_id,
@@ -220,21 +225,30 @@ def set_box_client(client_id, client_secret, box_subject_id):
 
 
 def upload_one_artifact_to_box(folder_id, file_name, client):
-    try:
-        with open(file_name, 'rb') as file:
-            box_file = client.folder(folder_id).upload_stream(file, file_name)
-            logging.info(f'Uploaded file: {file_name} into folder id: {folder_id}')
+    if dry_run is True:
+        logging.info(f'[Dry run]: Uploaded file: {file_name} into folder id: {folder_id}')
+    else:
+        try:
+            with open(file_name, 'rb') as file:
+                box_file = client.folder(folder_id).upload_stream(file, file_name)
+                logging.info(f'Uploaded file: {file_name} into folder id: {folder_id}')
 
-    except BoxAPIException as e:
-        # if the file already exists, update the contents of it
-        if e.status == 409:
-            logging.warning(f'File exist name {file_name} already exist.')
-            file_id = e.context_info['conflicts']['id']
-            updated_file = client.file(file_id).update_contents(file_name)
-            logging.info(f'{file_name} updated.')
-            return updated_file
-    except Exception as e:
-        logging.warning(f'error uploading to box {e}')
+        except BoxAPIException as e:
+            # if the file already exists, update the contents of it
+            if e.status == 409:
+                logging.warning(f'File exist name {file_name} already exist.')
+                file_id = e.context_info['conflicts']['id']
+                if dry_run is True:
+                    logging.info('[Dry run]: ')
+                    updated_file = File(client, file_name)
+                    updated_file.id = file_id
+                else:
+                    updated_file = client.file(file_id).update_contents(file_name)
+
+                logging.info(f'{file_name} updated.')
+                return updated_file
+        except Exception as e:
+            logging.warning(f'error uploading to box {e}')
 
 
 def generate_access_token(client_id, client_secret, box_subject_id):
@@ -258,7 +272,11 @@ def generate_access_token(client_id, client_secret, box_subject_id):
 
 def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
     try:
-        folder = client.folder(parent_folder_id).create_subfolder(folder_name_to_create)
+        if dry_run is True:
+            folder = Folder(client, folder_name_to_create)
+            folder.id = ''.join(str(ord(c)) for c in folder_name_to_create)
+        else:
+            folder = client.folder(parent_folder_id).create_subfolder(folder_name_to_create)
         logging.info(f'Create folder {folder_name_to_create}')
         return folder
     except BoxAPIException as e:
@@ -289,9 +307,16 @@ def box_create_folder(client, yaml_data, box_folder_parent_id=None, path='', res
 
 
 def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
+    final_folder_id = -1
     for artifact, target_box_path in tqdm(artifacts_to_release.items()):
-        print(f'Uploading {artifact} up to {artifact_to_box_path[target_box_path]}')
-        upload_one_artifact_to_box(artifact_to_box_path[target_box_path].id, artifact, client)
+        logging.info(f'Uploading {artifact} up to {artifact_to_box_path[target_box_path]}')
+        final_folder_id = artifact_to_box_path[target_box_path].id
+        upload_one_artifact_to_box(final_folder_id, artifact, client)
+
+    env_file = os.getenv('GITHUB_ENV')
+
+    with open(env_file, "a") as myfile:
+        myfile.write('BOX_FOLDER_ID=' + final_folder_id)
 
 
 if __name__ == '__main__':
@@ -315,7 +340,8 @@ if __name__ == '__main__':
     parser.add_argument("--jf_cli_rt_name", action="store",
                         help="From the jf CLI config, the alias of the artifactory build info resides")
     parser.add_argument("--logging_level", action="store", default="INFO", help="Set logging level")
-    # parser.add_argument("--box_root_folder_name", action="store", default="CI", help="This is default to CI folder")
+    parser.add_argument("--dry_run", default=True, type=lambda x: (str(x).lower() == 'true'),
+                        help="Executes the workflow as a dry run in the release. No real changes should occur.")
 
     args = parser.parse_args()
 
@@ -331,7 +357,7 @@ if __name__ == '__main__':
     rt_base_url = args.rt_base_url
     jf_cli_rt_name = args.jf_cli_rt_name
     logging_level = args.logging_level
-    # box_root_folder_name = args.box_root_folder_name
+    dry_run = args.dry_run
     ############ End parsing args #############
 
     ######### logging ############
@@ -366,7 +392,8 @@ if __name__ == '__main__':
     # if there are no files to deploy, exit process
     if not artifacts_to_release:
         logging.warning(
-            f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}, build version {build_version}')
+            f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}, build '
+            f'version {build_version}')
         sys.exit(1)
 
     # set up box client
@@ -379,6 +406,9 @@ if __name__ == '__main__':
 
     # uploading to box
     yaml_data = get_manifest_yaml(build_number, manifest_file=manifest_file_path)
+    if dry_run is True:
+        logging.info(f'[Dry run]: {yaml_data}')
+
     artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=box_parent_folder_id)
     upload_to_box(box_client, artifacts_to_release, artifact_to_box_path)
     ######## End upload to box #########
