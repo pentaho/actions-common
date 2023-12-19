@@ -116,9 +116,8 @@ jobs:
           promotion_summary=""
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             promotion_summary="[Dry run] "
-          else
-            jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo}
           fi
+          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
           
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY
 
