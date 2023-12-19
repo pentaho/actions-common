@@ -140,7 +140,6 @@ jobs:
           JF_URL: https://hitachi.jfrog.io/
           JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ github.token }}
-          JF_WORKING_DIR: .
              
       # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       # - name: Run PDI plugin integration tests
