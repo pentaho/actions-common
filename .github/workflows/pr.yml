@@ -104,9 +104,8 @@ jobs:
       - name: Determine which changes occurred
         id: change_detection
         uses: hv-actions/change-detection-builder@HNC-522
-        
-        # with:
-        #   exclude_paths: '.yaml, .yml, .github/, .frogbot/, .json'
+        with:
+          exclude_paths: '.yaml, .yml, .github/, .frogbot/, .json'
 
       # - name: Build the project for changed modules only
       #   uses: lumada-common-services/gh-composite-actions@HNC-510
