@@ -105,7 +105,7 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@HNC-522
         with:
-          steps_json: '.yaml, .yml, .github/workflows/, .frogbot/'
+          steps_json: '.yaml, .yml, .github/, .frogbot/'
 
       # - name: Build the project for changed modules only
       #   uses: lumada-common-services/gh-composite-actions@HNC-510
