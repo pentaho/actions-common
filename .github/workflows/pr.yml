@@ -103,14 +103,14 @@ jobs:
 
       - name: Determine which changes occurred
         id: change_detection
-        uses: hv-actions/change-detection-builder@test-frog
+        uses: hv-actions/change-detection-builder@HNC-522
 
-      - name: Build the project for changed modules only
-        uses: lumada-common-services/gh-composite-actions@HNC-510
-        with:
-          command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
-        env:
-          cmd_type: BUILD
+      # - name: Build the project for changed modules only
+      #   uses: lumada-common-services/gh-composite-actions@HNC-510
+      #   with:
+      #     command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
+      #   env:
+      #     cmd_type: BUILD
 
       # - name: Trigger Citadel scan
       #   id: Citadel
