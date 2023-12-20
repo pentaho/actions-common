@@ -105,12 +105,12 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@HNC-522
 
-      # - name: Build the project for changed modules only
-      #   uses: lumada-common-services/gh-composite-actions@HNC-510
-      #   with:
-      #     command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
-      #   env:
-      #     cmd_type: BUILD
+      - name: Build the project for changed modules only
+        uses: lumada-common-services/gh-composite-actions@HNC-510
+        with:
+          command: mvn clean install -pl "${{ steps.change_detection.outputs.changed_modules }}" -DskipTests -amd
+        env:
+          cmd_type: BUILD
 
       # - name: Trigger Citadel scan
       #   id: Citadel
@@ -134,12 +134,12 @@ jobs:
       #     test_report_path: '**/target/surefire-reports/*.xml'
       #     fail-on-empty: true
 
-      # - name: FrogBot
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   env:
-      #     JF_URL: https://hitachi.jfrog.io/
-      #     JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
-      #     JF_GIT_TOKEN: ${{ github.token }}
+      - name: FrogBot
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          JF_URL: https://hitachi.jfrog.io/
+          JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
+          JF_GIT_TOKEN: ${{ github.token }}
              
       # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
       # - name: Run PDI plugin integration tests
