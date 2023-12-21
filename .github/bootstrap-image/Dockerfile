@@ -18,6 +18,7 @@ RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${
     chmod +x /usr/local/bin/jq
 
 # pip  
+# test
 RUN apt-get update && \
     apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
