@@ -104,7 +104,7 @@ jobs:
 
       - name: Determine which changes occurred
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.1
+        uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
         uses: lumada-common-services/gh-composite-actions@stable
