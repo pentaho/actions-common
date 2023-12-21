@@ -48,7 +48,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20230823.18
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20231117.30
 
     steps:
 
