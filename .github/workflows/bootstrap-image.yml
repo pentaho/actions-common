@@ -24,9 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: login to Artifactory
-        id: login
-        run: docker login ${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
+      # - name: login to Artifactory
+      #   id: login
+      #   run: docker login ${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
           
       - name: Build
         id: build-image
