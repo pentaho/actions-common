@@ -60,7 +60,7 @@ def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_ba
         # Execute the command and capture the output
         result = subprocess.run(command, capture_output=True, text=True)
 
-        logging.info(result)
+        logging.debug(result)
 
     # Define jf command and arguments
     command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props',
@@ -73,7 +73,7 @@ def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_ba
     result = subprocess.run(command, capture_output=True, text=True)
 
     # log result
-    logging.info(f'jf execution result {result}')
+    logging.debug(f'jf execution result {result}')
 
     # Parse the command output as JSON
     output_json = json.loads(result.stdout)
@@ -82,13 +82,14 @@ def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_ba
     with open(output_file, 'w') as file:
         json.dump(output_json, file, indent=4)
 
-    logging.info(f'Artifacts in artifactory with build.name={build_name};build.number={build_number}: {output_json}')
+    logging.debug(f'Artifacts in artifactory with build.name={build_name};build.number={build_number}: {output_json}')
 
     return output_json, set([artifact['path'].split('/')[-1] for artifact in output_json])
 
 
 def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, None), rt_base_url=None):
     release_artifact_downloaded = []
+    release_artifact_check_sum=[]
 
     # For all the builds in artifactory that meets the build number and number name
     # we only want to download the ones that is present in the manifest file
@@ -129,15 +130,17 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
             rt_path = ArtifactoryPath(
                 f"{rt_base_url}/" + path, auth=auth, auth_type=HTTPBasicAuth
             )
-
+            
             # Only download artifact if it doesn't exists
             if not os.path.exists(file_name):
                 logging.info(f'Downloading {file_name} from {rt_path}.')
+
                 # rt_path.writeto(out=file_name, progress_func=None)
+
                 with rt_path.open() as fd, open(file_name, "wb") as out:
                     out.write(fd.read())
                 logging.info(f'Download complete.')
-
+            
             # Only download artifact if it doesn't exists
             if not os.path.exists(check_sum_file_name):
                 logging.info(f'Saving check sum file {check_sum_file_name}')
@@ -146,9 +149,13 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
                     f.write('sha256=' + sha256 + '\n')
                     f.write('md5=' + md5 + '\n')
 
-        release_artifact_downloaded.append(file_name)
+            # Moved it to the inner loop as the it was giving all the artifactory same as of the build_json output 
+            release_artifact_downloaded.append(file_name)
+            release_artifact_check_sum.append(check_sum_file_name)
 
     logging.info(f'Release artifacts {release_artifact_downloaded}')
+    logging.info(f'Release artifacts Check Sum Files {release_artifact_check_sum}')
+    
     return release_artifact_downloaded
 
 
@@ -186,9 +193,7 @@ def process_manifest_yaml(yaml_data, parent=None):
             for item in value:
                 if '$' not in item or '{' not in item:
                     result[item] = current_key
-    logging.info(f'Read manifest {result}')
     return result
-
 
 def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
     # This function picks the artifacts that's only both in builds_output_json and file_folder_dict
@@ -205,16 +210,18 @@ def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
         logging.warning(f'Found some artifacts only present in manifest file {files_only_in_manifest}')
 
     logging.info(f'Files to be downloaded and promoted {files_to_be_promoted}')
+
     for file_to_release in files_to_be_promoted:
         d[file_to_release] = file_folder_dict[file_to_release]
         d[file_to_release + '.sum'] = file_folder_dict[file_to_release]
     return d
 
-
 def set_box_client(client_id, client_secret, box_subject_id):
-    if dry_run is True:
-        return None
 
+    if dry_run is True:
+        logging.info(f'[Dry run]: Create Box Client')
+        return None
+       
     token = generate_access_token(client_id, client_secret, box_subject_id)
     oauth = OAuth2(
         client_id=client_id,
@@ -275,9 +282,10 @@ def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
         if dry_run is True:
             folder = Folder(client, folder_name_to_create)
             folder.id = ''.join(str(ord(c)) for c in folder_name_to_create)
+            logging.info(f'[Dry run] : Create folder {folder_name_to_create}')
         else:
             folder = client.folder(parent_folder_id).create_subfolder(folder_name_to_create)
-        logging.info(f'Create folder {folder_name_to_create}')
+            logging.info(f'Create folder {folder_name_to_create}')
         return folder
     except BoxAPIException as e:
         # if the folder already exists, return the Folder object
@@ -305,7 +313,6 @@ def box_create_folder(client, yaml_data, box_folder_parent_id=None, path='', res
 
     return result
 
-
 def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
     final_folder_id = -1
     for artifact, target_box_path in tqdm(artifacts_to_release.items()):
@@ -317,7 +324,6 @@ def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
 
     with open(env_file, "a") as myfile:
         myfile.write('BOX_FOLDER_ID=' + final_folder_id)
-
 
 if __name__ == '__main__':
 
@@ -358,6 +364,7 @@ if __name__ == '__main__':
     jf_cli_rt_name = args.jf_cli_rt_name
     logging_level = args.logging_level
     dry_run = args.dry_run
+
     ############ End parsing args #############
 
     ######### logging ############
@@ -371,13 +378,17 @@ if __name__ == '__main__':
 
     logging.basicConfig(
         level=string_to_level[logging_level],
-        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        format='[%(asctime)s] [%(filename)s:%(lineno)d] %(levelname)s - %(message)s',
         datefmt='%H:%M:%S'
     )
+    
+    logging.getLogger('boxsdk').setLevel(string_to_level[logging_level])
+
     ####### End of logging #######
 
-    ###### Upload to box ##########
+    ####### Upload to box ##########
     # determine the build suffix 9.5.1.0-124
+
     build_suffix = build_version + '-' + build_number
 
     # downloads artifacts
@@ -385,6 +396,7 @@ if __name__ == '__main__':
                                                                          rt_base_url=rt_base_url,
                                                                          jf_cli_rt_name=jf_cli_rt_name)
     file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_suffix, manifest_file=manifest_file_path))
+    logging.info(f'Read manifest {file_folder_dict}')
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth,
                                                  rt_base_url=rt_base_url)
@@ -398,6 +410,7 @@ if __name__ == '__main__':
 
     # set up box client
     box_client = set_box_client(client_id, client_secret, box_subject_id)
+   
 
     # create root folder, defaults to CI
     # root_folder = box_create_one_folder('0', box_root_folder_name, box_client)
