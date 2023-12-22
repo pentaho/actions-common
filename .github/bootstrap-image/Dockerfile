@@ -1,3 +1,4 @@
+
 FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
 
 ARG VERSION_MERGER=1.0.8
