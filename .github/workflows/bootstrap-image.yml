@@ -30,7 +30,7 @@ jobs:
           
       - name: Build
         id: build-image
-        run: DOCKER_BUILDKIT=1 docker buildx build --tag "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" --file .github/bootstrap-image/Dockerfile --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }}
+        run: docker build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
       - name: Push to Artifactory
         id: push-to-artifactory
