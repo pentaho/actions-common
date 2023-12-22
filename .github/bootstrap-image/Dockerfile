@@ -3,10 +3,13 @@ FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
 
+RUN --mount=type=secret,id=myuser \
+    PENTAHO_CICD_ONE_USER=$(cat /run/secrets/myuser) 
+
 RUN --mount=type=secret,id=mytoken \
     PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) 
 
-RUN curl -L  ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "Authorization: Bearer $PENTAHO_CICD_ONE_KEY" 
+RUN curl -L -u $PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar 
 
 RUN curl -fL https://install-cli.jfrog.io | sh
 
