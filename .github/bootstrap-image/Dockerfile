@@ -1,8 +1,12 @@
+#syntax=docker/dockerfile:1
+
 FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
 
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
-ARG PENTAHO_CICD_ONE_KEY
+
+RUN --mount=type=secret,id=mytoken \
+    PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) 
 
 RUN curl -L -o version-merger.jar ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "Authorization: Bearer $PENTAHO_CICD_ONE_KEY"
 
