@@ -12,7 +12,7 @@ RUN --mount=type=secret,id=mytoken \
 
 #RUN curl -L "${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar" -H "X-JFrog-Art-Api: $PENTAHO_CICD_ONE_KEY"
 
-RUN curl -L version-merger.jar ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "X-JFrog-Art-Api: $PENTAHO_CICD_ONE_KEY"
+RUN curl -L ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "X-JFrog-Art-Api: $PENTAHO_CICD_ONE_KEY"
 
 #RUN curl -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar 
 
