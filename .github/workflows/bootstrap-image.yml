@@ -21,11 +21,12 @@ jobs:
           IMAGE_TAG=$(date +'%Y%m%d').${{ github.run_number }}
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "IMAGE=${{ env.IMAGE }}:$IMAGE_TAG" >> $GITHUB_ENV
+          
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # - name: Set up Docker Buildx
-      #   uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       # - name: login to Artifactory
       #   id: login
@@ -33,7 +34,7 @@ jobs:
           
       - name: Build
         id: build-image
-        run: docker build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile  --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }} .
+        run: docker buildx build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile  --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }} .
 
       # - name: Push to Artifactory
       #   id: push-to-artifactory
