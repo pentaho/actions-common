@@ -24,8 +24,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # - name: Set up Docker Buildx
+      #   uses: docker/setup-buildx-action@v3
 
       # - name: login to Artifactory
       #   id: login
@@ -33,7 +33,7 @@ jobs:
           
       - name: Build
         id: build-image
-        run: docker buildx build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile  --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }} .
+        run: docker build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile  --secret id=mytoken,env=${{ secrets.PENTAHO_CICD_ONE_KEY }} .
 
       # - name: Push to Artifactory
       #   id: push-to-artifactory
@@ -41,10 +41,10 @@ jobs:
       #     docker push ${{ env.ARTIFACTORY }}/${{ env.IMAGE }}
 
       
-      - name: Push to Artifactory
-        id: push-to-artifactory
-        run: |
-          docker buildx build "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" --push
+      # - name: Push to Artifactory
+      #   id: push-to-artifactory
+      #   run: |
+      #     docker buildx build "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" --push
               
       - name: Summary
         run: |

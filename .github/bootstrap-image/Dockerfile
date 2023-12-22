@@ -8,7 +8,7 @@ ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
 RUN --mount=type=secret,id=mytoken \
     PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) 
 
-RUN curl -L  ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "Authorization: Bearer $PENTAHO_CICD_ONE_KEY" && mv version-merger-${VERSION_MERGER}.jar version-merger.jar
+RUN curl -L  ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar -H "Authorization: Bearer $PENTAHO_CICD_ONE_KEY" 
 
 RUN curl -fL https://install-cli.jfrog.io | sh
 
