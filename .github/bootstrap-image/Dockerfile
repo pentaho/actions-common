@@ -3,14 +3,20 @@ FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
 
+RUN --mount=type=secret,id=myuser \
+    --mount=type=secret,id=mytoken\
+    export PENTAHO_CICD_ONE_USER=$(cat /run/secrets/myuser) && \
+    export PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) && \
+    curl -L -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY -X GET ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar && \ 
+    mv version-merger-${VERSION_MERGER}.jar version-merger.jar
 
-RUN --mount=type=secret,id=myuser export PENTAHO_CICD_ONE_USER=$(cat /run/secrets/myuser) && echo ${PENTAHO_CICD_ONE_USER}
+# RUN --mount=type=secret,id=myuser export PENTAHO_CICD_ONE_USER=$(cat /run/secrets/myuser) && echo ${PENTAHO_CICD_ONE_USER}
 
-RUN --mount=type=secret,id=mytoken export PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) 
+# RUN --mount=type=secret,id=mytoken export PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) 
  
-RUN echo $PENTAHO_CICD_ONE_KEY
+# RUN echo $PENTAHO_CICD_ONE_KEY
 
-RUN curl -L -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY -X GET ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar && mv version-merger-${VERSION_MERGER}.jar version-merger.jar
+# RUN curl -L -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY -X GET ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar && mv version-merger-${VERSION_MERGER}.jar version-merger.jar
 
 RUN curl -fL https://install-cli.jfrog.io | sh
 
