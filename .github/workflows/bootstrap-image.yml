@@ -41,11 +41,10 @@ jobs:
       #   run: |
       #     docker push ${{ env.ARTIFACTORY }}/${{ env.IMAGE }}
 
-      
-      # - name: Push to Artifactory
-      #   id: push-to-artifactory
-      #   run: |
-      #     docker buildx build "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" --push
+      - name: Push to Artifactory Using buildX
+        id: push-to-artifactory
+        run: |
+          docker buildx build "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" --push
               
       - name: Summary
         run: |
