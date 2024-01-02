@@ -63,7 +63,7 @@ on:
       test_scenario_json:
         required: false
         type: string
-        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"  
 
 env:
   VERSION: "${{ inputs.version }}"
