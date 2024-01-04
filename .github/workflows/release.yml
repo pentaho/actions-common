@@ -134,40 +134,40 @@ jobs:
           path: actions-common
           ref: stable
 
-      - name: Push artifacts to Box
-        if: ${{ inputs.box_upload == true }}
-        shell: bash
-        run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
+     # - name: Push artifacts to Box
+     #   if: ${{ inputs.box_upload == true }}
+     #   shell: bash
+     #   run: |
+     #     python3 -m venv env
+     #     source env/bin/activate
+     #     pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
           
-          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
+     #     echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
 
-          python3 actions-common/.github/scripts/python/promote-release-to-box.py \
-          --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
-          --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
-          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
-          --build_name ${{ env.BUILD_NAME }} \
-          --build_number ${{ env.BUILD_NUMBER }} \
-          --build_version  ${{ env.BUILD_VERSION }} \
-          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
-          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
-          --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
-          --manifest_file_path ${{ env.MANIFEST_PATH}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
-          --dry_run ${{ inputs.dry_run }} \
-          --logging_level ${{inputs.logging_level }}
+     #    python3 actions-common/.github/scripts/python/promote-release-to-box.py \
+     #     --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
+     #     --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
+     #     --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
+     #     --build_name ${{ env.BUILD_NAME }} \
+     #     --build_number ${{ env.BUILD_NUMBER }} \
+     #     --build_version  ${{ env.BUILD_VERSION }} \
+     #     --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
+     #     --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+     #     --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
+     #     --manifest_file_path ${{ env.MANIFEST_PATH}} \
+     #     --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+     #     --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
+     #     --dry_run ${{ inputs.dry_run }} \
+     #     --logging_level ${{inputs.logging_level }}
 
-      - name: Set Box Summary
-        if: ${{ inputs.box_upload == true }}
-        shell: bash
-        run: |
-          box_summary=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then  
-            box_summary="[Dry run] "
-          fi
+     # - name: Set Box Summary
+     #   if: ${{ inputs.box_upload == true }}
+     #   shell: bash
+     #   run: |
+     #     box_summary=""
+     #     if [ "${{ inputs.dry_run }}" = "true" ]; then  
+     #       box_summary="[Dry run] "
+     #     fi
           
-          # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
-          echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+     #     # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
+     #     echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
