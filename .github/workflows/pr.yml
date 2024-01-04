@@ -139,7 +139,7 @@ jobs:
       - name: FrogBot
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          JF_URL: https://hitachi.jfrog.io/
+          JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ github.token }}
              
