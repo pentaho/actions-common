@@ -156,7 +156,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean install -DskipTests -X -amd \
+            mvn clean install -DskipTests -amd \
             -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: BUILD
