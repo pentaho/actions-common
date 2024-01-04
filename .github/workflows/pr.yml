@@ -140,7 +140,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           JF_URL: https://hitachi.jfrog.io/
-          JF_ACCESS_TOKEN: ${{ secrets.FROGBOT_ACCESS_TOKEN }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ github.token }}
              
       # # TODO when done testing, uncomment other steps, set correct actions-common version (master?)
