@@ -29,7 +29,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://one.hitachivantara.com/
+        default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       sonar_project_key:
         required: true
@@ -69,7 +69,7 @@ env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
-  BUILD_NAME: "${{ github.event.repository.name }}-${{ inputs.version }}"
+  BUILD_NAME: "${{ github.event.repository.name }}-$VERSION"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
