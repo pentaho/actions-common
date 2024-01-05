@@ -69,7 +69,7 @@ env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
-  BUILD_NAME: "${{ github.event.repository.name }}-$VERSION"
+  BUILD_NAME: "${{ github.event.repository.name }}-${{ inputs.version }}"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
