@@ -39,7 +39,7 @@ jobs:
       - name: Push to Artifactory
         id: push-to-artifactory
         run: |
-          docker buildx inspect ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} --bootstrap
+          docker inspect ${{ env.ARTIFACTORY }}/${{ env.IMAGE }}
 
       # - name: Push to Artifactory Using buildX
       #   id: push-to-artifactory
