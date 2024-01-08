@@ -10,6 +10,7 @@ RUN --mount=type=secret,id=myuser \
     PENTAHO_CICD_ONE_KEY=$(cat /run/secrets/mytoken) && \
     curl -Sf -L -u$PENTAHO_CICD_ONE_USER:$PENTAHO_CICD_ONE_KEY -X GET ${ARTIFACTORY_URL}/pentaho/version-merger/${VERSION_MERGER}/version-merger-${VERSION_MERGER}.jar --output version-merger.jar
 
+
 RUN curl -fL https://install-cli.jfrog.io | sh
 
 ARG JQ_VERSION=1.6

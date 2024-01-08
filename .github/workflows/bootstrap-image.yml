@@ -36,10 +36,10 @@ jobs:
         id: build-image
         run: docker buildx build -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} --push -f .github/bootstrap-image/Dockerfile --secret id=myuser,env=ARTIFACTORY_USER --secret id=mytoken,env=ARTIFACTORY_API_KEY .
 
-      # - name: Push to Artifactory
-      #   id: push-to-artifactory
-      #   run: |
-      #     docker push ${{ env.ARTIFACTORY }}/${{ env.IMAGE }}
+      - name: Push to Artifactory
+        id: push-to-artifactory
+        run: |
+          docker buildx inspect ${{ env.ARTIFACTORY }}/${{ env.IMAGE }}
 
       # - name: Push to Artifactory Using buildX
       #   id: push-to-artifactory
