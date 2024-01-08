@@ -29,7 +29,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://repo.orl.eng.hitachivantara.com
+        default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       sonar_project_key:
         required: true
@@ -78,22 +78,22 @@ env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/maven
 
-  NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
-  NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
-  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-dev-orl
-  PRIVATE_RELEASE_REPO: pntprv-mvn-dev-orl
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
   PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
 
-  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-snapshot-orl
-  PRIVATE_SNAPSHOT_REPO: pntprv-mvn-snapshot-orl
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: pnt-docker.repo.orl.eng.hitachivantara.com/
-  DOCKER_PUBLIC_PUSH_HOST: pntpub-docker-dev-orl.repo.orl.eng.hitachivantara.com
-  DOCKER_PRIVATE_PUSH_HOST: pntprv-docker-dev-orl.repo.orl.eng.hitachivantara.com
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
 
 jobs:
 
@@ -103,7 +103,10 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
 
@@ -125,7 +128,10 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
@@ -162,7 +168,10 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:

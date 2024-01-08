@@ -20,12 +20,12 @@ def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_ba
     ''' 
     Expected Jfrog CLI is availble in the system.
     Executes these:
-    1. jf config add orl-artifactory --interactive=false \
+    1. jf config add one-artifactory --interactive=false \
         --enc-password=false --basic-auth-only \
-        --artifactory-url https://repo.orl.eng.hitachivantara.com/artifactory \
+        --artifactory-url https://one.hitachivantara.com/artifactory \
         --password --user buildguy
 
-    2. jf rt search --server-id orl-artifactory \
+    2. jf rt search --server-id one-artifactory \
         --props "build.name=pdi-xxx-9.5.1.0;build.number=86" "*-9.5.1.0-86.zip" \
         > builds.json
 
@@ -96,13 +96,13 @@ def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, 
     # Example of builds_output_json:
     # [
     # {
-    #     "path": "pntpub-mvn-release-orl/pentaho/psw-ce/9.3.0.4-739/psw-ce-9.3.0.4-739.zip",
+    #     "path": "pntpub-maven-release/pentaho/psw-ce/9.3.0.4-739/psw-ce-9.3.0.4-739.zip",
     #     "sha1": "bb1cda483ce7de00d1a59a00f7aac52b5f5206ea",
     #     "sha256": "2b197f5f40b06b10a07ec1e864abaecbced4247ddbab4f789d6492f753900201",
     #     "md5": "ca3945763c73c5b128126f2d0837d73b",
     # },
     # {
-    #     "path": "pntprv-mvn-release-orl/pentaho/psw-ee/9.3.0.4-739/psw-ee-9.3.0.4-739-dist.zip",
+    #     "path": "pntprv-maven-release/pentaho/psw-ee/9.3.0.4-739/psw-ee-9.3.0.4-739-dist.zip",
     #     "sha1": "4d63449b3d658a1a25215fa9c8d9614f9dd0971d",
     #     "sha256": "946881250d2c073654fea5ade952cb281222809164cc7805cbaaa7c3ecd5a37f",
     #     "md5": "e4df9f24a93cface78bdeada19ae4bf2",

@@ -59,27 +59,27 @@
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
     <server>
-      <id>pnt-docker.repo.orl.eng.hitachivantara.com</id>
+      <id>pnt-docker.one.hitachivantara.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
     <server>
-      <id>pntprv-docker-dev-orl.repo.orl.eng.hitachivantara.com</id>
+      <id>pntprv-docker-dev.one.hitachivantara.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
     <server>
-      <id>pntprv-docker-release-orl.repo.orl.eng.hitachivantara.com</id>
+      <id>pntprv-docker-release.one.hitachivantara.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
     <server>
-      <id>pntpub-docker-dev-orl.repo.orl.eng.hitachivantara.com</id>
+      <id>pntpub-docker-dev.one.hitachivantara.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
     <server>
-      <id>pntpub-docker-release-orl.repo.orl.eng.hitachivantara.com</id>
+      <id>pntpub-docker-release.one.hitachivantara.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
