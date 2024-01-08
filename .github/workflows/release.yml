@@ -9,7 +9,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://repo.orl.eng.hitachivantara.com
+        default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       box_upload:
         type: boolean
@@ -46,10 +46,11 @@ env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/maven
 
-  NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
-  NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
   MANIFEST_PATH: $GITHUB_WORKSPACE/${{ inputs.manifest_file_path }}
 
   BOX_CI_FOLDER_ID: 261814384
@@ -140,7 +141,7 @@ jobs:
         run: |
           python3 -m venv env
           source env/bin/activate
-          pip3 install pyyaml dohq-artifactory requests boxsdk tqdm
+          pip3 install -q pyyaml dohq-artifactory requests boxsdk tqdm
           
           echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
 

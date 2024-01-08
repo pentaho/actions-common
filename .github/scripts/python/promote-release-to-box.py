@@ -22,7 +22,7 @@ def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_ba
     Executes these:
     1. jf config add orl-artifactory --interactive=false \
         --enc-password=false --basic-auth-only \
-        --artifactory-url https://repo.orl.eng.hitachivantara.com/artifactory \
+        --artifactory-url https://one.hitachivantara.com/artifactory \
         --password --user buildguy
 
     2. jf rt search --server-id orl-artifactory \
