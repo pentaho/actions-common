@@ -24,4 +24,4 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 ARG FROGBOT_VERSION=2.9.2
-RUN cd /opt && curl -fLg "https://releases.jfrog.io/artifactory/frogbot/v2/${FROGBOT_VERSION}/getFrogbot.sh" | sh
+RUN cd /opt && curl -fLg "https://releases.jfrog.io/artifactory/frogbot/v2/${FROGBOT_VERSION}/getFrogbot.sh" | sh && chown 1000:1000 frogbot
