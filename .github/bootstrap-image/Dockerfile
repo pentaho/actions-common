@@ -22,3 +22,6 @@ RUN apt-get update && \
     apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+ARG FROGBOT_VERSION=2.9.2
+RUN cd /opt && curl -fLg "https://releases.jfrog.io/artifactory/frogbot/v2/${FROGBOT_VERSION}/getFrogbot.sh" | sh
