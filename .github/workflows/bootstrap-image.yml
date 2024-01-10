@@ -4,9 +4,9 @@ on:
   push:
     paths: [ .github/bootstrap-image/** ]
 env:
-  ARTIFACTORY: cicd-oci-release-orl.repo.orl.eng.hitachivantara.com
-  ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
-  ARTIFACTORY_API_KEY: ${{ secrets.ARTIFACTORY_API_KEY }}
+  ARTIFACTORY: one.hitachivantara.com/devops-docker-release
+  ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
   IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
 jobs:
 
@@ -21,22 +21,23 @@ jobs:
           IMAGE_TAG=$(date +'%Y%m%d').${{ github.run_number }}
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "IMAGE=${{ env.IMAGE }}:$IMAGE_TAG" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3  
+      
+      # Build and Push Image with docker buildx 
+      - name: Build and Push to Artifactory
         id: build-image
-        run: docker build -t "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}" -f .github/bootstrap-image/Dockerfile .
+        run: docker buildx build -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} --push -f .github/bootstrap-image/Dockerfile --secret id=myuser,env=ARTIFACTORY_USER --secret id=mytoken,env=ARTIFACTORY_API_KEY .
 
-      - name: Push to Artifactory
-        id: push-to-artifactory
-        run: |
-          echo "${{ env.ARTIFACTORY_API_KEY }}" | docker login ${{ env.ARTIFACTORY }} --username ${{ env.ARTIFACTORY_USER }} --password-stdin
-          docker push "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
       - name: Summary
         run: |
           echo ":frog: Image pushed!" >> $GITHUB_STEP_SUMMARY
           echo "Pull it from '${{ env.ARTIFACTORY }}/${{ env.IMAGE }}'" >> $GITHUB_STEP_SUMMARY
+
       - uses: rickstaa/action-create-tag@v1
         with:
           tag: "build-image-${{ env.IMAGE_TAG }}"
