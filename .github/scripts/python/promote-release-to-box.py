@@ -396,7 +396,10 @@ if __name__ == '__main__':
     builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth,
                                                                          rt_base_url=rt_base_url,
                                                                          jf_cli_rt_name=jf_cli_rt_name)
-    file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_suffix, manifest_file=manifest_file_path))
+
+    d=get_manifest_yaml(build_suffix, manifest_file=manifest_file_path)
+    print("value of manifest ", d)
+    file_folder_dict = process_manifest_yaml(d)
     logging.info(f'Read manifest {file_folder_dict}')
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth,
