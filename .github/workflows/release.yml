@@ -136,7 +136,7 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: stable
+          ref: HNC-538
 
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}

@@ -398,7 +398,7 @@ if __name__ == '__main__':
                                                                          jf_cli_rt_name=jf_cli_rt_name)
 
     d=get_manifest_yaml(build_suffix, manifest_file=manifest_file_path)
-    print("value of manifest ", d)
+    logging.info(f'value of manifest {d}')
     file_folder_dict = process_manifest_yaml(d)
     logging.info(f'Read manifest {file_folder_dict}')
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
