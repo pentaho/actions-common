@@ -402,6 +402,7 @@ if __name__ == '__main__':
     file_folder_dict = process_manifest_yaml(d)
     logging.info(f'Read manifest {file_folder_dict}')
     artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
+    logging.info(f'value of manifest {artifacts_to_release}')
     downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth,
                                                  rt_base_url=rt_base_url)
 
