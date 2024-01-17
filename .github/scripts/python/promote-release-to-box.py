@@ -215,6 +215,7 @@ def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
         d[file_to_release] = file_folder_dict[file_to_release]
         d[file_to_release + '.sum'] = file_folder_dict[file_to_release]
     return d
+    print(d)
 
 def set_box_client(client_id, client_secret, box_subject_id):
 
