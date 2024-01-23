@@ -115,7 +115,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean install -DskipTests -amd \
+            mvn clean install -DnodeDownloadRoot=https://one.hitachivantara.com/artifactory/nodejs-generic-remote/ -DnpmDownloadRoot=https://one.hitachivantara.com/artifactory/npm-release/npm/-/ -DskipTests -amd \
             -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: BUILD
