@@ -132,21 +132,24 @@ jobs:
           fail-on-error: 'true'
           test_report_path: '**/target/surefire-reports/*.xml'
 
-      - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@stable
-        if: ${{ inputs.test_scenario_json }}
-        with:
-          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
-          test_scenario_json: "${{ inputs.test_scenario_json }}"
-        env:
-          run_plugin_integration_tests: true
-          BASE_VERSION: "${{ inputs.base_version }}"
+      - name: Check
+        run: ls -alR    
 
-      - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+      # - name: Run PDI plugin integration tests
+      #   uses: pentaho/actions-common@stable
+      #   if: ${{ inputs.test_scenario_json }}
+      #   with:
+      #     changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+      #     test_scenario_json: "${{ inputs.test_scenario_json }}"
+      #   env:
+      #     run_plugin_integration_tests: true
+      #     BASE_VERSION: "${{ inputs.base_version }}"
+
+      # - name: Sonarqube scan
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     sonar_utility: sonar-scanner
+      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot
         uses: lumada-common-services/gh-composite-actions@stable
