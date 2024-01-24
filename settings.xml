@@ -42,6 +42,8 @@
 
         <!-- let the build become unstable with failed tests instead of failing -->
         <maven.test.failure.ignore>true</maven.test.failure.ignore>
+        <nodeDownloadRoot>https://one.hitachivantara.com/artifactory/nodejs-generic-remote/</nodeDownloadRoot>
+        <npmDownloadRoot>https://one.hitachivantara.com/artifactory/npm-release/npm/-/</npmDownloadRoot>
       </properties>
       <repositories>
         <repository>
