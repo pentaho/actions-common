@@ -120,6 +120,9 @@ jobs:
         env:
           cmd_type: BUILD
 
+      - name: Check the path
+        run: ls -alR
+      
       - name: Run unit-tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
