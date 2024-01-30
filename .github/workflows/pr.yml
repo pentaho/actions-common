@@ -115,12 +115,15 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@HNC-550
         with:
           command: |
-            mvn clean install -DskipTests -e -amd \
+            mvn clean install verify -B -e -Daudit -amd \
             -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}" 
             
 
         env:
           cmd_type: BUILD_UNIT_TEST
+          reporter: 'java-junit'
+          fail-on-error: 'true'
+          test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Check the path
       #   run: ls -alR
