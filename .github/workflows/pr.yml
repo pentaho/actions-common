@@ -115,7 +115,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@HNC-550
         with:
           command: |
-            mvn clean install verify -B -e -Daudit -amd \
+            mvn clean  verify -B -e -Daudit  -Dagilebi -amd \
             -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}" 
             
 
