@@ -18,6 +18,26 @@
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
+    <server>
+      <id>pentaho.public.release.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.public.snapshot.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.private.release.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
+    <server>
+      <id>pentaho.private.snapshot.repo</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
   </servers>
 
   <profiles>
