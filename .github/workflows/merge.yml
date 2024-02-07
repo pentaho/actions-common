@@ -248,6 +248,12 @@ jobs:
           python3 -m venv /venv
           source /venv/bin/activate
           echo "/venv/bin" >> $GITHUB_PATH
+
+      - name: Update Citadel Config file with Version
+        run: |
+          cat citadel-config.yaml
+          sed -i 's/{{IMAGE_VERSION}}/${{ steps.version.outputs.current-version }}/' citadel-config.yaml
+          cat citadel-config.yaml                 
           
       - name: Trigger Citadel scan
         id: Citadel
