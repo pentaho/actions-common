@@ -199,16 +199,16 @@ jobs:
             distribution.version=${{ steps.version.outputs.current-version }} \
             project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
-              -amd ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+      #         -amd ${{ inputs.additional_mvn_directives }}
+      #   env:
+      #     cmd_type: BUILD
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
@@ -255,14 +255,14 @@ jobs:
           sed -i 's/{{IMAGE_VERSION}}/${{ steps.version.outputs.current-version }}/' ./citadel-config.yaml
           cat citadel-config.yaml                 
           
-      - name: Trigger Citadel scan
-        id: Citadel
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          TRIGGER_CITADEL_SCAN: true
-          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
+      # - name: Trigger Citadel scan
+      #   id: Citadel
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     TRIGGER_CITADEL_SCAN: true
+      #     CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+      #     SECRETS_CONTEXT: ${{ toJson(secrets) }}
+      #     VARS_CONTEXT: ${{ toJson(vars) }}
 
       # - name: Sonarqube scan
       #   continue-on-error: true
