@@ -98,60 +98,60 @@ env:
 
 jobs:
 
-  setup-maven-settings:
-    name: Setup Maven settings
+  # setup-maven-settings:
+  #   name: Setup Maven settings
 
-    runs-on: [ k8s ]
+  #   runs-on: [ k8s ]
 
-    container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
-      volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
+  #   container:
+  #     image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+  #     volumes:
+  #       - /home/runner/caches/pentaho/.m2:/root/.m2
 
-    steps:
+  #   steps:
 
-      - name: Retrieve settings file
-        id: common-maven
-        uses: pentaho/actions-common@1.0.0
+  #     - name: Retrieve settings file
+  #       id: common-maven
+  #       uses: pentaho/actions-common@1.0.0
 
-      - name: Copy settings.xml to .m2 directory
-        shell: sh
-        run: |
-          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
+  #     - name: Copy settings.xml to .m2 directory
+  #       shell: sh
+  #       run: |
+  #         cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
-  snapshot:
-    name: Update Snapshots
-    needs: setup-maven-settings
+  # snapshot:
+  #   name: Update Snapshots
+  #   needs: setup-maven-settings
 
-    runs-on: [ k8s ]
+  #   runs-on: [ k8s ]
 
-    container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
-      volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
-    steps:
+  #   container:
+  #     image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+  #     volumes:
+  #       - /home/runner/caches/pentaho/.m2:/root/.m2
+  #   steps:
 
-      - run: |
-          echo ${{ needs.setup-maven-settings.env }}
+  #     - run: |
+  #         echo ${{ needs.setup-maven-settings.env }}
 
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Determine which changes occurred
-        if: ${{ inputs.modules_to_build == '' }}
-        id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.1
+  #     - name: Determine which changes occurred
+  #       if: ${{ inputs.modules_to_build == '' }}
+  #       id: change_detection
+  #       uses: hv-actions/change-detection-builder@1.0.1
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean install -DskipTests -amd \
-            -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
-        env:
-          cmd_type: BUILD
+  #     - name: Build code and deploy artifacts
+  #       uses: lumada-common-services/gh-composite-actions@stable
+  #       with:
+  #         command: |
+  #           mvn clean install -DskipTests -amd \
+  #           -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
+  #       env:
+  #         cmd_type: BUILD
 
   release-candidate:
     name: Build Release Candidate
@@ -183,32 +183,32 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version="${{ env.VERSION }}-${{ github.run_number }}"
+          version="${{ env.VERSION }}-347"
           echo "current-version=$version" >> $GITHUB_OUTPUT
 
-      - name: Version set
-        run: |
-          sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
-          sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
+      # - name: Version set
+      #   run: |
+      #     sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
+      #     sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
           
-          java -DRELEASE_MODE=true -jar /version-merger.jar . \
-            -f .github/release-versions.properties \
-            commit project.revision=${{ steps.version.outputs.current-version }} \
-            project.version=${{ steps.version.outputs.current-version }} \
-            version=${{ steps.version.outputs.current-version }} \
-            distribution.version=${{ steps.version.outputs.current-version }} \
-            project.stage=master
+      #     java -DRELEASE_MODE=true -jar /version-merger.jar . \
+      #       -f .github/release-versions.properties \
+      #       commit project.revision=${{ steps.version.outputs.current-version }} \
+      #       project.version=${{ steps.version.outputs.current-version }} \
+      #       version=${{ steps.version.outputs.current-version }} \
+      #       distribution.version=${{ steps.version.outputs.current-version }} \
+      #       project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
-              -amd ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+      #         -amd ${{ inputs.additional_mvn_directives }}
+      #   env:
+      #     cmd_type: BUILD
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
@@ -242,27 +242,27 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
       
-      - name: Setting Env For Citadel
-        shell: bash
-        run: |
-          python3 -m venv /venv
-          source /venv/bin/activate
-          echo "/venv/bin" >> $GITHUB_PATH
+      # - name: Setting Env For Citadel
+      #   shell: bash
+      #   run: |
+      #     python3 -m venv /venv
+      #     source /venv/bin/activate
+      #     echo "/venv/bin" >> $GITHUB_PATH
 
-      - name: Update Citadel Config file with Version
-        run: |
-          cat citadel-config.yaml
-          sed -i 's/{{IMAGE_VERSION}}/${{ steps.version.outputs.current-version }}/g' ./citadel-config.yaml
-          cat citadel-config.yaml                 
+      # - name: Update Citadel Config file with Version
+      #   run: |
+      #     cat citadel-config.yaml
+      #     sed -i 's/{{IMAGE_VERSION}}/${{ steps.version.outputs.current-version }}/g' ./citadel-config.yaml
+      #     cat citadel-config.yaml                 
           
-      - name: Trigger Citadel scan
-        id: Citadel
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          TRIGGER_CITADEL_SCAN: true
-          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
+      # - name: Trigger Citadel scan
+      #   id: Citadel
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     TRIGGER_CITADEL_SCAN: true
+      #     CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+      #     SECRETS_CONTEXT: ${{ toJson(secrets) }}
+      #     VARS_CONTEXT: ${{ toJson(vars) }}
 
       # - name: Sonarqube scan
       #   continue-on-error: true
@@ -285,14 +285,22 @@ jobs:
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
           
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
+          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
             "*-${{ steps.version.outputs.current-version }}.zip")
+
+          echo "$resp"
           
           echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
           echo "|:----:|" >> $GITHUB_STEP_SUMMARY
           
           echo "$resp" | jq -r '.[].path' | while read -r path; do
             link_text=$(echo "$path" | sed 's/.*\///')
+
+            echo "link_text"
+            echo "$link_text"
+
+            echo "path - $path"
+
             echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
           done
           
