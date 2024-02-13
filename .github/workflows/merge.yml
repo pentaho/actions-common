@@ -261,26 +261,27 @@ jobs:
             "*-${{ steps.version.outputs.current-version }}.zip")
 
           plugin_names=""
-          artifact_urls=""
-            
-          echo "$resp" | jq -r '.[].path' | while read -r path; do
-            plugin_names=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+          paths=""
 
-            if [ -z "$plugin_names" ]; then
-                plugin_names="$plugin_name"
-            else
-                plugin_names="$plugin_names,$plugin_name"
-            fi
-            
-            if [ -z "$paths" ]; then
-                paths="$path"
-            else
-                paths="$paths,$path"
-            fi
+          echo "$resp" | jq -r '.[].path' | while IFS= read -r path; do
+              plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+
+              if [ -z "$plugin_names" ]; then
+                  plugin_names="$plugin_name"
+              else
+                  plugin_names="$plugin_names,$plugin_name"
+              fi
+
+              if [ -z "$paths" ]; then
+                  paths="$path"
+              else
+                  paths="$paths,$path"
+              fi
           done
-          
+
           echo "Plugin Names: $plugin_names"
           echo "Paths: $paths"
+
           
           
       # - name: Update Citadel Config file with Version
