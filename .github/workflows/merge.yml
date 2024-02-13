@@ -260,29 +260,21 @@ jobs:
           resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
             "*-${{ steps.version.outputs.current-version }}.zip")
 
-          plugin_names=""
-          paths=""
+          plugin_names=()
+          paths=()
 
-          echo "$resp" | jq -r '.[].path' | while IFS= read -r path; do
+          while IFS= read -r path; do
               plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+              plugin_names+=("$plugin_name")
+              paths+=("$path")
+          done < <(echo "$resp" | jq -r '.[].path')
 
-              if [ -z "$plugin_names" ]; then
-                  plugin_names="$plugin_name"
-              else
-                  plugin_names="$plugin_names,$plugin_name"
-              fi
+          plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
+          paths_list=$(IFS=,; echo "${paths[*]}")
 
-              if [ -z "$paths" ]; then
-                  paths="$path"
-              else
-                  paths="$paths,$path"
-              fi
-          done
+          echo "Plugin Names: $plugin_names_list"
+          echo "Paths: $paths_list"
 
-          echo "Plugin Names: $plugin_names"
-          echo "Paths: $paths"
-
-          
           
       # - name: Update Citadel Config file with Version
       #   run: |
