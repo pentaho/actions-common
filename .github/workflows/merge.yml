@@ -249,6 +249,29 @@ jobs:
       #     source /venv/bin/activate
       #     echo "/venv/bin" >> $GITHUB_PATH
 
+      - name: Fetching Artifact url and Build plugins names
+        shell: bash
+        run: |
+          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+            --user ${{ env.NEXUS_DEPLOY_USER }}
+          
+          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
+            "*-${{ steps.version.outputs.current-version }}.zip")
+
+          echo "$resp"
+          
+          
+          echo "$resp" | jq -r '.[].path' | while read -r path; do
+            link_text=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+
+            echo "$link_text"
+            echo "$path"
+   
+          done
+          
+          
       # - name: Update Citadel Config file with Version
       #   run: |
       #     cat citadel-config.yaml
