@@ -293,6 +293,7 @@ jobs:
           VARS_CONTEXT: ${{ toJson(vars) }}
           ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
           PLUGIN_NAMES: ${{ steps.citadel_info.outputs.plugin_names }}
+          CODEDX_BRANCH: 'master'
 
       # - name: Sonarqube scan
       #   continue-on-error: true
