@@ -242,12 +242,12 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
       
-      # - name: Setting Env For Citadel
-      #   shell: bash
-      #   run: |
-      #     python3 -m venv /venv
-      #     source /venv/bin/activate
-      #     echo "/venv/bin" >> $GITHUB_PATH
+      - name: Setting Env For Citadel
+        shell: bash
+        run: |
+          python3 -m venv /venv
+          source /venv/bin/activate
+          echo "/venv/bin" >> $GITHUB_PATH
 
       - name: Fetching Artifact url and Build plugins names
         id: citadel_info
@@ -281,22 +281,18 @@ jobs:
       #   run: |
       #     cat citadel-config.yaml
       #     sed -i 's/{{IMAGE_VERSION}}/${{ steps.version.outputs.current-version }}/g' ./citadel-config.yaml
-      #     cat citadel-config.yaml   
-
-      - name: check
-        run: |
-          echo "names - ${{ steps.citadel_info.outputs.plugin_names }}"
-          echo "url - ${{ steps.citadel_info.outputs.artifact_urls }}"
-                                      
-          
+      #     cat citadel-config.yaml     
+        
       - name: Trigger Citadel scan
         id: Citadel
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-556
         env:
           TRIGGER_CITADEL_SCAN: true
           CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
           VARS_CONTEXT: ${{ toJson(vars) }}
+          ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+          PLUGIN_NAMES: ${{ steps.citadel_info.outputs.plugin_names }}
 
       # - name: Sonarqube scan
       #   continue-on-error: true
