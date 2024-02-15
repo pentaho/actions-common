@@ -310,10 +310,7 @@ jobs:
 
       - name: Create artifacts download links
         shell: bash
-        run: |
-
-
-          
+        run: |       
           resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
             "*-${{ steps.version.outputs.current-version }}.zip")
 
