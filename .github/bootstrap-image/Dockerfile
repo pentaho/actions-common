@@ -24,5 +24,5 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 RUN apt-get  update && \
-    apt-get install -y nodejs npm && \
+    apt-get install -y nodejs && \
     apt-get clean
