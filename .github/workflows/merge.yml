@@ -249,32 +249,32 @@ jobs:
           source /venv/bin/activate
           echo "/venv/bin" >> $GITHUB_PATH
 
-      - name: Fetching Artifact url and Build plugins names
-        id: citadel_info
-        shell: bash
-        run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
-            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-            --user ${{ env.NEXUS_DEPLOY_USER }}
+      # - name: Fetching Artifact url and Build plugins names
+      #   id: citadel_info
+      #   shell: bash
+      #   run: |
+      #     jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+      #       --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+      #       --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+      #       --user ${{ env.NEXUS_DEPLOY_USER }}
           
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
-            "*-${{ steps.version.outputs.current-version }}.zip")
+      #     resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=347" \
+      #       "*-${{ steps.version.outputs.current-version }}.zip")
 
-          plugin_names=()
-          paths=()
+      #     plugin_names=()
+      #     paths=()
 
-          while IFS= read -r path; do
-              plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
-              plugin_names+=("$plugin_name")
-              paths+=("$path")
-          done < <(echo "$resp" | jq -r '.[].path')
+      #     while IFS= read -r path; do
+      #         plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+      #         plugin_names+=("$plugin_name")
+      #         paths+=("$path")
+      #     done < <(echo "$resp" | jq -r '.[].path')
 
-          plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
-          paths_list=$(IFS=,; echo "${paths[*]}")
+      #     plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
+      #     paths_list=$(IFS=,; echo "${paths[*]}")
 
-          echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
-          echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
+      #     echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
+      #     echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
 
           
       # - name: Update Citadel Config file with Version
@@ -287,13 +287,23 @@ jobs:
         id: Citadel
         uses: lumada-common-services/gh-composite-actions@HNC-556
         env:
-          TRIGGER_CITADEL_SCAN: true
-          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
-          ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
-          REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
-          CODEDX_BRANCH: 'master'
+          BUILD_NAME: ${{ env.BUILD_NAME }}
+          BUILD_NUMBER: 347
+          BUILD_VERSION: ${{ env.VERSION }}
+          ARTIFACTORY_USER: ${{ secrets.ARTIFACTORY_USER }}
+          ARTIFACTORY_API_KEY : ${{ secrets.ARTIFACTORY_API_KEY }}
+          ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
+          JF_CLI_RT_NAME: artifactory
+          LOGGING_LEVEL: DEBUG
+
+
+          # TRIGGER_CITADEL_SCAN: true
+          # CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+          # SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          # VARS_CONTEXT: ${{ toJson(vars) }}
+          # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+          # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
+          # CODEDX_BRANCH: 'master'
 
       # - name: Sonarqube scan
       #   continue-on-error: true
