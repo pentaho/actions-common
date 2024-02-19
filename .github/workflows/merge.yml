@@ -295,9 +295,8 @@ jobs:
           ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
           JF_CLI_RT_NAME: artifactory
           LOGGING_LEVEL: INFO
-
-
-          # TRIGGER_CITADEL_SCAN: true
+          TRIGGER_CITADEL_SCAN: true
+          
           # CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
           # SECRETS_CONTEXT: ${{ toJson(secrets) }}
           # VARS_CONTEXT: ${{ toJson(vars) }}
