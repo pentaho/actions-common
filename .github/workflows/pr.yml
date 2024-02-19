@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@HNC-550
+        uses: lumada-common-services/gh-composite-actions@HNC-553
         with:
           command: |
             mvn clean  verify -B -e -Daudit  -Dagilebi -amd \
@@ -120,10 +120,10 @@ jobs:
             
 
         env:
-          cmd_type: BUILD_UNIT_TEST
-          reporter: 'java-junit'
-          fail-on-error: 'true'
-          test_report_path: '**/target/surefire-reports/*.xml'
+          cmd_type: BUILD,UNIT_TEST
+          unit_reporter: 'java-junit'
+          unit_fail-on-error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Check the path
       #   run: ls -alR
