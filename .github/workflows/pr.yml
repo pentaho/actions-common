@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@HNC-553
+        uses: lumada-common-services/gh-composite-actions@HNC-550
         with:
           command: |
             mvn clean  verify -B -e -Daudit  -Dagilebi -amd \
