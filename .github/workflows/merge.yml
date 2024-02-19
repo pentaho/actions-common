@@ -294,7 +294,7 @@ jobs:
           ARTIFACTORY_API_KEY : ${{ secrets.ARTIFACTORY_API_KEY }}
           ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
           JF_CLI_RT_NAME: artifactory
-          LOGGING_LEVEL: DEBUG
+          LOGGING_LEVEL: INFO
 
 
           # TRIGGER_CITADEL_SCAN: true
