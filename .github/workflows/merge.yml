@@ -293,7 +293,7 @@ jobs:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
           VARS_CONTEXT: ${{ toJson(vars) }}
           ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
-          PLUGIN_NAMES: ${{ steps.citadel_info.outputs.plugin_names }}
+          REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
           CODEDX_BRANCH: 'master'
 
           # BUILD_NAME: pdi-plugins-ee-10.1.0.0
