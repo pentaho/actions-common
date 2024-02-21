@@ -292,19 +292,18 @@ jobs:
           CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
           VARS_CONTEXT: ${{ toJson(vars) }}
-          ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
-          REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
+          # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+          # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
           CODEDX_BRANCH: 'master'
-
-          # BUILD_NAME: pdi-plugins-ee-10.1.0.0
-          # BUILD_NUMBER: 342
-          # BUILD_VERSION: 10.1.0.0
-          # ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-          # ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-          # ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
-          # LOGGING_LEVEL: INFO
-          # JF_CLI_RT_NAME: artifactory
-          # MANIFEST_PATH: ".github/artifacts-manifest.yaml"
+          BUILD_NAME: pdi-plugins-ee-10.1.0.0
+          BUILD_NUMBER: 342
+          BUILD_VERSION: 10.1.0.0
+          ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
+          LOGGING_LEVEL: INFO
+          JF_CLI_RT_NAME: artifactory
+          MANIFEST_PATH: ".github/artifacts-manifest.yaml"
 
 
       # - name: Sonarqube scan
@@ -320,21 +319,21 @@ jobs:
       #     Tag_version: "${{ steps.version.outputs.current-version }}"
       #     push_tag_only: true
 
-      - name: Create artifacts download links
-        shell: bash
-        run: |  
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
-            "*-${{ steps.version.outputs.current-version }}.zip")
+      # - name: Create artifacts download links
+      #   shell: bash
+      #   run: |  
+      #     resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
+      #       "*-${{ steps.version.outputs.current-version }}.zip")
           
-          echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
-          echo "|:----:|" >> $GITHUB_STEP_SUMMARY
+      #     echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
+      #     echo "|:----:|" >> $GITHUB_STEP_SUMMARY
           
-          echo "$resp" | jq -r '.[].path' | while read -r path; do
-            link_text=$(echo "$path" | sed 's/.*\///')
-            echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
-          done
+      #     echo "$resp" | jq -r '.[].path' | while read -r path; do
+      #       link_text=$(echo "$path" | sed 's/.*\///')
+      #       echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
+      #     done
           
-          echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
+      #     echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
 
       # - name: Report notifications
       #   if: always()
