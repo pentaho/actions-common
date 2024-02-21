@@ -121,42 +121,42 @@ jobs:
         run: |
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
-  snapshot:
-    name: Update Snapshots
-    needs: setup-maven-settings
+  # snapshot:
+  #   name: Update Snapshots
+  #   needs: setup-maven-settings
 
-    runs-on: [ k8s ]
+  #   runs-on: [ k8s ]
 
-    container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
-      credentials:
-        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-      volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
-    steps:
+  #   container:
+  #     image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+  #     credentials:
+  #       username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  #       password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+  #     volumes:
+  #       - /home/runner/caches/pentaho/.m2:/root/.m2
+  #   steps:
 
-      - run: |
-          echo ${{ needs.setup-maven-settings.env }}
+  #     - run: |
+  #         echo ${{ needs.setup-maven-settings.env }}
 
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Determine which changes occurred
-        if: ${{ inputs.modules_to_build == '' }}
-        id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+  #     - name: Determine which changes occurred
+  #       if: ${{ inputs.modules_to_build == '' }}
+  #       id: change_detection
+  #       uses: hv-actions/change-detection-builder@stable
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean deploy -DskipTests -amd \
-            -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
-        env:
-          cmd_type: BUILD
+  #     - name: Build code and deploy artifacts
+  #       uses: lumada-common-services/gh-composite-actions@stable
+  #       with:
+  #         command: |
+  #           mvn clean deploy -DskipTests -amd \
+  #           -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
+  #       env:
+  #         cmd_type: BUILD
 
   release-candidate:
     name: Build Release Candidate
@@ -183,63 +183,63 @@ jobs:
 
       - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
 
-      - name: Determine which changes occurred
-        if: ${{ inputs.modules_to_build == '' }}
-        id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+      # - name: Determine which changes occurred
+      #   if: ${{ inputs.modules_to_build == '' }}
+      #   id: change_detection
+      #   uses: hv-actions/change-detection-builder@stable
 
       - name: Determine version
         id: version
         run: |
-          version="${{ env.VERSION }}-${{ github.run_number }}"
+          version="${{ env.VERSION }}-332"
           echo "current-version=$version" >> $GITHUB_OUTPUT
 
-      - name: Version set
-        run: |
-          sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
-          sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
+      # - name: Version set
+      #   run: |
+      #     sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
+      #     sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
           
-          java -DRELEASE_MODE=true -jar /version-merger.jar . \
-            -f .github/release-versions.properties \
-            commit project.revision=${{ steps.version.outputs.current-version }} \
-            project.version=${{ steps.version.outputs.current-version }} \
-            version=${{ steps.version.outputs.current-version }} \
-            distribution.version=${{ steps.version.outputs.current-version }} \
-            project.stage=master
+      #     java -DRELEASE_MODE=true -jar /version-merger.jar . \
+      #       -f .github/release-versions.properties \
+      #       commit project.revision=${{ steps.version.outputs.current-version }} \
+      #       project.version=${{ steps.version.outputs.current-version }} \
+      #       version=${{ steps.version.outputs.current-version }} \
+      #       distribution.version=${{ steps.version.outputs.current-version }} \
+      #       project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean deploy -DskipTests \
-              -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
-              -amd ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: BUILD
+      # - name: Build code and deploy artifacts
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn clean deploy -DskipTests \
+      #         -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+      #         -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+      #         -amd ${{ inputs.additional_mvn_directives }}
+      #   env:
+      #     cmd_type: BUILD
 
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
-              -amd
-        env:
-          cmd_type: UNIT_TEST
-          reporter: 'java-junit'
-          fail-on-error: 'true'
-          test_report_path: '**/target/surefire-reports/*.xml'
+      # - name: Run unit-tests
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn verify -B -Daudit \
+      #         -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+      #         -amd
+      #   env:
+      #     cmd_type: UNIT_TEST
+      #     reporter: 'java-junit'
+      #     fail-on-error: 'true'
+      #     test_report_path: '**/target/surefire-reports/*.xml'
 
-      - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@stable
-        if: ${{ inputs.test_scenario_json }}
-        with:
-          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
-          test_scenario_json: "${{ inputs.test_scenario_json }}"
-        env:
-          run_plugin_integration_tests: true
-          BASE_VERSION: "${{ inputs.base_version }}"
+      # - name: Run PDI plugin integration tests
+      #   uses: pentaho/actions-common@stable
+      #   if: ${{ inputs.test_scenario_json }}
+      #   with:
+      #     changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+      #     test_scenario_json: "${{ inputs.test_scenario_json }}"
+      #   env:
+      #     run_plugin_integration_tests: true
+      #     BASE_VERSION: "${{ inputs.base_version }}"
 
       #- name: Blackduck Scan
       #  uses: lumada-common-services/gh-composite-actions@1.2.0
@@ -250,20 +250,15 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
-      - name: Sonarqube scan
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+      - name: Setting Env For Citadel
+        shell: bash
+        run: |
+          python3 -m venv /venv
+          source /venv/bin/activate
+          echo "/venv/bin" >> $GITHUB_PATH
 
-      - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          Tag_version: "${{ steps.version.outputs.current-version }}"
-          push_tag_only: true
-
-      - name: Create artifacts download links
+      - name: Fetching Artifact url and Build plugins names
+        id: citadel_info
         shell: bash
         run: |
           jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
@@ -271,7 +266,65 @@ jobs:
             --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
             --user ${{ env.NEXUS_DEPLOY_USER }}
           
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
+          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
+            "*-${{ steps.version.outputs.current-version }}.zip")
+
+          plugin_names=()
+          paths=()
+
+          while IFS= read -r path; do
+              plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+              plugin_names+=("$plugin_name")
+              paths+=("$path")
+          done < <(echo "$resp" | jq -r '.[].path')
+
+          plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
+          paths_list=$(IFS=,; echo "${paths[*]}")
+
+          echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
+          echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
+
+      - name: Trigger Citadel scan
+        id: Citadel
+        uses: lumada-common-services/gh-composite-actions@HNC-556
+        env:
+          TRIGGER_CITADEL_SCAN: true
+          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+          ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+          PLUGIN_NAMES: ${{ steps.citadel_info.outputs.plugin_names }}
+          CODEDX_BRANCH: 'master'
+
+          # BUILD_NAME: pdi-plugins-ee-10.1.0.0
+          # BUILD_NUMBER: 342
+          # BUILD_VERSION: 10.1.0.0
+          # ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          # ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          # ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
+          # LOGGING_LEVEL: INFO
+          # JF_CLI_RT_NAME: artifactory
+          # MANIFEST_PATH: ".github/artifacts-manifest.yaml"
+
+
+      # - name: Sonarqube scan
+      #   continue-on-error: true
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     sonar_utility: sonar-scanner
+      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+
+      # - name: Tag release
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     Tag_version: "${{ steps.version.outputs.current-version }}"
+      #     push_tag_only: true
+
+      - name: Create artifacts download links
+        shell: bash
+        run: |
+           
+          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
             "*-${{ steps.version.outputs.current-version }}.zip")
           
           echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
@@ -284,10 +337,10 @@ jobs:
           
           echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
 
-      - name: Report notifications
-        if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
-          report: true
+      # - name: Report notifications
+      #   if: always()
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     Slack_Token: ${{ secrets.SLACK_TOKEN }}
+      #     Slack_Channel: ${{ env.SLACK_CHANNEL }}
+      #     report: true
