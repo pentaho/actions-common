@@ -150,11 +150,11 @@ jobs:
       #     run_plugin_integration_tests: true
       #     BASE_VERSION: "${{ inputs.base_version }}"
 
-       - name: Sonarqube scan
-         uses: lumada-common-services/gh-composite-actions@HNC-550
-         env:
-           sonar_utility: sonar-scanner
-           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+      - name: Sonarqube scan
+        uses: lumada-common-services/gh-composite-actions@HNC-550
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       # - name: FrogBot
       #   uses: lumada-common-services/gh-composite-actions@HNC-550
