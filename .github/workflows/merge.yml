@@ -296,7 +296,7 @@ jobs:
           # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
           CODEDX_BRANCH: 'master'
           BUILD_NAME: pdi-plugins-ee-10.1.0.0
-          BUILD_NUMBER: 324
+          BUILD_NUMBER: 342
           BUILD_VERSION: 10.1.0.0
           ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
