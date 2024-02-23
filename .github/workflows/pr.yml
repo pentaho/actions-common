@@ -148,12 +148,12 @@ jobs:
       #     sonar_utility: sonar-scanner
       #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
-      # - name: FrogBot
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   env:
-      #     JF_URL: https://one.hitachivantara.com
-      #     JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-      #     JF_GIT_TOKEN: ${{ github.token }}
+      - name: FrogBot
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          JF_URL: https://one.hitachivantara.com
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+          JF_GIT_TOKEN: ${{ github.token }}
 
       - name: Report notifications
         if: always()
