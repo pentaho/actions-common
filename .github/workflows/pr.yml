@@ -112,53 +112,53 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-553
         with:
           command: |
-            mvn clean install -DskipTests -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
         env:
-          cmd_type: BUILD
+          cmd_type: BUILD,UNIT_TEST
 
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn verify -B -Daudit -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
-        env:
-          cmd_type: UNIT_TEST
-          reporter: 'java-junit'
-          fail-on-error: 'true'
-          test_report_path: '**/target/surefire-reports/*.xml'
+      # - name: Run unit-tests
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn verify -B -Daudit -amd \
+      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+      #   env:
+      #     cmd_type: UNIT_TEST
+      #     reporter: 'java-junit'
+      #     fail-on-error: 'true'
+      #     test_report_path: '**/target/surefire-reports/*.xml'
 
-      - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@stable
-        if: ${{ inputs.test_scenario_json }}
-        with:
-          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
-          test_scenario_json: "${{ inputs.test_scenario_json }}"
-        env:
-          run_plugin_integration_tests: true
-          BASE_VERSION: "${{ inputs.base_version }}"
+      # - name: Run PDI plugin integration tests
+      #   uses: pentaho/actions-common@stable
+      #   if: ${{ inputs.test_scenario_json }}
+      #   with:
+      #     changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+      #     test_scenario_json: "${{ inputs.test_scenario_json }}"
+      #   env:
+      #     run_plugin_integration_tests: true
+      #     BASE_VERSION: "${{ inputs.base_version }}"
 
-      - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+      # - name: Sonarqube scan
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     sonar_utility: sonar-scanner
+      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
-      - name: FrogBot
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          JF_URL: https://one.hitachivantara.com
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ github.token }}
+      # - name: FrogBot
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     JF_URL: https://one.hitachivantara.com
+      #     JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      #     JF_GIT_TOKEN: ${{ github.token }}
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@HNC-553
         env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          # Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          # Slack_Channel: ${{ env.SLACK_CHANNEL }}
           report: true
