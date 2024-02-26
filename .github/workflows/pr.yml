@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@HNC-553
+        uses: lumada-common-services/gh-composite-actions@develop
         with:
           command: |
             mvn clean verify -B -e -Daudit  -Dagilebi -amd \
@@ -120,12 +120,10 @@ jobs:
         env:
           cmd_type: BUILD,UNIT_TEST
 
-      - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@HNC-553
+      - name: Integration Test
+        uses: lumada-common-services/gh-composite-actions@develop
         with:
-          command: |
-            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+          command: mvn verify -DrunITs
         env:
           cmd_type: INTEGRATION_TEST
 
