@@ -119,6 +119,8 @@ jobs:
             -pl "${{ steps.change_detection.outputs.changed_modules }}" 
         env:
           cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
