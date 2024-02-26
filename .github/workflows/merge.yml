@@ -227,9 +227,9 @@ jobs:
               -amd
         env:
           cmd_type: UNIT_TEST
-          reporter: 'java-junit'
-          fail-on-error: 'true'
-          test_report_path: '**/target/surefire-reports/*.xml'
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       - name: Run PDI plugin integration tests
         uses: pentaho/actions-common@stable
