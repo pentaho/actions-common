@@ -120,6 +120,17 @@ jobs:
         env:
           cmd_type: BUILD,UNIT_TEST
 
+      - name: Build the project
+        uses: lumada-common-services/gh-composite-actions@HNC-553
+        with:
+          command: |
+            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+        env:
+          cmd_type: INTEGRATION_TEST
+
+      
+
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
       #   with:
