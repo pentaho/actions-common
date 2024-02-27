@@ -153,7 +153,7 @@ jobs:
         env:
           JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ github.token }}
+          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
 
       - name: Report notifications
         if: always()
