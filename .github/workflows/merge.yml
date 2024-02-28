@@ -126,8 +126,8 @@ jobs:
           #subfolder_path: "/maven"
           #tag_prefix: "mvn"
           predefined_version: '${{ env.VERSION }}'
-          artifactory_username: ${{ secrets.JFROG_JARJAR_SERVICE_USERNAME }}
-          artifactory_token: ${{ secrets.JFROG_JARJAR_SERVICE_TOKEN }}       
+          artifactory_username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          artifactory_token: ${{ secrets.PENTAHO_CICD_ONE_KEY }}       
 
 
       - name: Build the project
