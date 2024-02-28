@@ -112,6 +112,13 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
+      - name: Setting Env
+        shell: bash
+        run: |
+          python3 -m venv /venv
+          source /venv/bin/activate
+          echo "/venv/bin" >> $GITHUB_PATH
+
       - name: Version Set
         uses: hv-actions/version-manager@stable
         with:
