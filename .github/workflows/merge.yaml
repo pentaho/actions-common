@@ -1,0 +1,194 @@
+name: Pentaho pull request workflow
+on:
+  workflow_call:
+    inputs:
+      slack_channels:
+        type: string
+        required: true
+        description: "Slack channel(s) to send notifications to."
+      arti_host:
+        required: false
+        type: string
+        default: https://one.hitachivantara.com
+        description: "Artifactory's Host name"
+      sonar_project_key:
+        required: true
+        type: string
+        description: "Sonar's project identifier key"
+      sonar_url:
+        required: false
+        type: string
+        description: "Sonar's URL"
+        default: https://sonar.orl.eng.hitachivantara.com
+      test_scenario_json:
+        required: false
+        type: string
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
+      base_version:
+        type: string
+        required: false
+        description: "Base version to be taken in consideration for dependencies"
+      modules_to_always_build_in_addition_to_those_with_changes:
+        type: string
+        required: false
+        description: "List of modules to build in addition to those that have changes."
+
+env:
+  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
+  SONAR_HOST_URL: ${{ inputs.sonar_url }}
+  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
+
+  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/maven
+
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
+  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
+
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
+
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+
+  SLACK_CHANNEL: "${{ inputs.slack_channels }}"
+  VERSION: 1.0.0
+
+jobs:
+
+  setup-maven-settings:
+    name: Setup Maven settings
+
+    runs-on: [ k8s ]
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240219.129
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@1.0.0
+
+      - name: Copy settings.xml to .m2 directory
+        shell: sh
+        run: |
+          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
+    
+
+  common-job:
+    name: Common Checks
+    needs: setup-maven-settings
+    runs-on: [ k8s ]
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Determine which changes occurred
+        id: change_detection
+        uses: hv-actions/change-detection-builder@stable
+
+      - name: Version Set
+        uses: hv-actions/version-manager@stable
+        with:
+          project_type: 'MVN'
+          #subfolder_path: "/maven"
+          #tag_prefix: "mvn"
+          predefined_version: '${{ env.VERSION }}'
+          artifactory_username: ${{ secrets.JFROG_JARJAR_SERVICE_USERNAME }}
+          artifactory_token: ${{ secrets.JFROG_JARJAR_SERVICE_TOKEN }}       
+
+
+      - name: Build the project
+        uses: lumada-common-services/gh-composite-actions@HNC-550
+        with:
+          command: |
+             mvn clean verify -B -e -Daudit -amd -DnodeDownloadRoot=https://one.hitachivantara.com/artifactory/nodejs-generic-remote/ -DnpmDownloadRoot=https://one.hitachivantara.com/artifactory/npm-release/npm/-/
+            
+
+        env:
+          cmd_type: BUILD,UNIT_TEST
+          unit_reporter: 'java-junit'
+          unit_fail-on-error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+
+      #- name: Check the path
+      #  run: ls -alR
+      
+      # - name: Run unit-tests
+      #   uses: lumada-common-services/gh-composite-actions@HNC-550
+      #   # with:
+      #   #   command: |
+      #       # mvn verify -B -e -Daudit -amd \
+      #       # -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+      #   env:
+      #     cmd_type: UNIT_TEST
+      #     reporter: 'java-junit'
+      #     fail-on-error: 'true'
+      #     test_report_path: '**/target/surefire-reports/*.xml'
+ 
+
+      # - name: Run PDI plugin integration tests
+      #   uses: pentaho/actions-common@HNC-550
+      #   if: ${{ inputs.test_scenario_json }}
+      #   with:
+      #     changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+      #     test_scenario_json: "${{ inputs.test_scenario_json }}"
+      #   env:
+      #     run_plugin_integration_tests: true
+      #     BASE_VERSION: "${{ inputs.base_version }}"
+
+      - name: Trigger Citadel scan
+        uses: lumada-common-services/gh-composite-actions@develop
+        env:
+          TRIGGER_CITADEL_SCAN: true
+          # PROJECT_PATH: ./maven # not mandatory
+          CITADEL_URL: 'https://citadel.orl.eng.hitachivantara.com/citadel'
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+
+
+      - name: Sonarqube scan
+        uses: lumada-common-services/gh-composite-actions@HNC-550
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+
+      - name: Git Tag
+        id: Git_Tag
+        uses: lumada-common-services/gh-composite-actions@develop
+        env:
+         Tag_version: "mvn-${{ env.MVN_VERSION_SET }}"
+         push_tag_only: true
+
+      - name: Report notifications
+        if: always()
+        uses: lumada-common-services/gh-composite-actions@HNC-550
+        env:
+          Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          report: true
