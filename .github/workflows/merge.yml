@@ -168,7 +168,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240219.129
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -183,10 +183,25 @@ jobs:
 
       - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
 
-      - name: Determine which changes occurred
-        if: ${{ inputs.modules_to_build == '' }}
-        id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+      # - name: Determine which changes occurred
+      #   if: ${{ inputs.modules_to_build == '' }}
+      #   id: change_detection
+      #   uses: hv-actions/change-detection-builder@stable
+
+      - name: Setting Env
+        shell: bash
+        run: |
+          python3 -m venv /venv
+          source /venv/bin/activate
+          echo "/venv/bin" >> $GITHUB_PATH
+
+      - name: Run version manager
+        uses: hv-actions/version-manager@stable
+        with:
+          project_type: 'MAVEN'
+          predefined_version: 1.0.0
+          artifactory_username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          artifactory_token: ${{ secrets.PENTAHO_CICD_ONE_KEY }}       
 
       # - name: Determine version
       #   id: version
