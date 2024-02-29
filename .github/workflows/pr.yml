@@ -107,20 +107,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Determine which changes occurred
-      #   id: change_detection
-      #   uses: hv-actions/change-detection-builder@stable
+      - name: Determine which changes occurred
+        id: change_detection
+        uses: hv-actions/change-detection-builder@stable
 
-      # - name: Build the project
-      #   uses: lumada-common-services/gh-composite-actions@develop
-      #   with:
-      #     command: |
-      #       mvn clean verify -B -e -Daudit  -Dagilebi -amd \
-      #       -pl "${{ steps.change_detection.outputs.changed_modules }}" 
-      #   env:
-      #     cmd_type: BUILD,UNIT_TEST
-      #     unit_test_reporter: 'java-junit'
-      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
+      - name: Build and Unit Test
+        uses: lumada-common-services/gh-composite-actions@develop
+        with:
+          command: |
+            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+        env:
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
@@ -144,11 +144,11 @@ jobs:
       #     run_plugin_integration_tests: true
       #     BASE_VERSION: "${{ inputs.base_version }}"
 
-      # - name: Sonarqube scan
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   env:
-      #     sonar_utility: sonar-scanner
-      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+      - name: Sonarqube scan
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot
         uses: lumada-common-services/gh-composite-actions@stable
