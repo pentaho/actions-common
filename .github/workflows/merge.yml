@@ -184,7 +184,6 @@ jobs:
       - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
 
       - name: Determine which changes occurred
-        if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
@@ -277,7 +276,6 @@ jobs:
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
       - name: Sonarqube scan
-        continue-on-error: true
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
