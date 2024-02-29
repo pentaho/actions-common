@@ -198,7 +198,7 @@ jobs:
       - name: Run version manager
         uses: hv-actions/version-manager@stable
         with:
-          project_type: 'MAVEN'
+          project_type: 'MVN'
           predefined_version: 1.0.0
           artifactory_username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           artifactory_token: ${{ secrets.PENTAHO_CICD_ONE_KEY }}       
