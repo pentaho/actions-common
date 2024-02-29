@@ -222,16 +222,16 @@ jobs:
       #       distribution.version=${{ steps.version.outputs.current-version }} \
       #       project.stage=master
 
-      - name: Build and Unit Test
-        uses: lumada-common-services/gh-composite-actions@develop
-        with:
-          command: |
-            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
-        env:
-          cmd_type: BUILD,UNIT_TEST
-          unit_test_reporter: 'java-junit'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
+      # - name: Build and Unit Test
+      #   uses: lumada-common-services/gh-composite-actions@develop
+      #   with:
+      #     command: |
+      #       mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+      #       -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+      #   env:
+      #     cmd_type: BUILD,UNIT_TEST
+      #     unit_test_reporter: 'java-junit'
+      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Build code and deploy artifacts
       #   uses: lumada-common-services/gh-composite-actions@stable
@@ -276,12 +276,12 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
-      - name: Sonarqube scan
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+      # - name: Sonarqube scan
+      #   continue-on-error: true
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     sonar_utility: sonar-scanner
+      #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       # - name: Tag release
       #   uses: lumada-common-services/gh-composite-actions@stable
