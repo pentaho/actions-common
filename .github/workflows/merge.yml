@@ -169,14 +169,14 @@ jobs:
       #     run_plugin_integration_tests: true
       #     BASE_VERSION: "${{ inputs.base_version }}"
 
-    #   - name: Trigger Citadel scan
-    #     uses: lumada-common-services/gh-composite-actions@develop
-    #     env:
-    #       TRIGGER_CITADEL_SCAN: true
-    #       PROJECT_PATH: ./maven # not mandatory
-    #       CITADEL_URL: 'https://citadel.orl.eng.hitachivantara.com/citadel'
-    #       SECRETS_CONTEXT: ${{ toJson(secrets) }}
-    #       VARS_CONTEXT: ${{ toJson(vars) }}
+      - name: Trigger Citadel scan
+        uses: lumada-common-services/gh-composite-actions@develop
+        env:
+          TRIGGER_CITADEL_SCAN: true
+          PROJECT_PATH: ./maven # not mandatory
+          CITADEL_URL: 'https://citadel.orl.eng.hitachivantara.com/citadel'
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
 
 
     #   - name: Sonarqube scan
