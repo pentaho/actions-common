@@ -302,7 +302,7 @@ jobs:
           ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
           ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
           LOGGING_LEVEL: INFO
-          JF_CLI_RT_NAME: artifactory
+          # JF_CLI_RT_NAME: artifactory
           MANIFEST_PATH: ".github/artifacts-manifest.yaml"
 
 
