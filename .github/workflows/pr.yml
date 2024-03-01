@@ -111,28 +111,37 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      - name: Build and Unit Test
-        uses: lumada-common-services/gh-composite-actions@develop
+      - name: Build the project
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+            mvn clean install -DskipTests -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
         env:
-          cmd_type: BUILD,UNIT_TEST
-          unit_test_reporter: 'java-junit'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
+          cmd_type: BUILD
 
-      # - name: Run unit-tests
-      #   uses: lumada-common-services/gh-composite-actions@stable
+      # - name: Build and Unit Test
+      #   uses: lumada-common-services/gh-composite-actions@develop
       #   with:
       #     command: |
-      #       mvn verify -B -Daudit -amd \
-      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+      #       mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+      #       -pl "${{ steps.change_detection.outputs.changed_modules }}" 
       #   env:
-      #     cmd_type: UNIT_TEST
-      #     reporter: 'java-junit'
-      #     fail-on-error: 'true'
-      #     test_report_path: '**/target/surefire-reports/*.xml'
+      #     cmd_type: BUILD,UNIT_TEST
+      #     unit_test_reporter: 'java-junit'
+      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
+
+      - name: Run unit-tests
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean verify -B -Daudit -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+        env:
+          cmd_type: UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Run PDI plugin integration tests
       #   uses: pentaho/actions-common@stable
