@@ -189,7 +189,7 @@ jobs:
         id: Git_Tag
         uses: lumada-common-services/gh-composite-actions@develop
         env:
-         Tag_version: "mvn-${{ env.MVN_VERSION_SET }}"
+         Tag_version: "mvn-${{ env.VERSION_SET }}"
          push_tag_only: true
 
       - name: Report notifications
