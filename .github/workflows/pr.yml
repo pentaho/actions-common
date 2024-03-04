@@ -93,7 +93,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240219.129
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -103,7 +103,7 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -111,25 +111,25 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      # - name: Build the project
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   with:
-      #     command: |
-      #       mvn clean install -DskipTests -amd \
-      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
-      #   env:
-      #     cmd_type: BUILD
+      - name: Build the project
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean install -DskipTests -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+        env:
+          cmd_type: BUILD
 
-      # - name: Build and Unit Test
-      #   uses: lumada-common-services/gh-composite-actions@develop
-      #   with:
-      #     command: |
-      #       mvn clean verify -B -e -Daudit  -Dagilebi -amd \
-      #       -pl "${{ steps.change_detection.outputs.changed_modules }}" 
-      #   env:
-      #     cmd_type: BUILD,UNIT_TEST
-      #     unit_test_reporter: 'java-junit'
-      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
+      - name: Build and Unit Test
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean verify -B -e -Daudit  -Dagilebi -amd \
+            -pl "${{ steps.change_detection.outputs.changed_modules }}" 
+        env:
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
@@ -166,10 +166,10 @@ jobs:
       #     JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
       #     JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
 
-      # - name: Report notifications
-      #   if: always()
-      #   uses: lumada-common-services/gh-composite-actions@HNC-553
-      #   env:
-      #     # Slack_Token: ${{ secrets.SLACK_TOKEN }}
-      #     # Slack_Channel: ${{ env.SLACK_CHANNEL }}
-      #     report: true
+      - name: Report notifications
+        if: always()
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          # Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          # Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          report: true
