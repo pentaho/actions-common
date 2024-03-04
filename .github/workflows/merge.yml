@@ -284,26 +284,26 @@ jobs:
           echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
           echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
 
-      # - name: Trigger Citadel scan
-      #   id: Citadel
-      #   uses: lumada-common-services/gh-composite-actions@HNC-556
-      #   env:
-      #     TRIGGER_CITADEL_SCAN: true
-      #     CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-      #     SECRETS_CONTEXT: ${{ toJson(secrets) }}
-      #     VARS_CONTEXT: ${{ toJson(vars) }}
-      #     # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
-      #     # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
-      #     CODEDX_BRANCH: 'master'
-      #     BUILD_NAME: pdi-plugins-ee-10.1.0.0
-      #     BUILD_NUMBER: 342
-      #     BUILD_VERSION: 10.1.0.0
-      #     ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-      #     ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-      #     ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
-      #     LOGGING_LEVEL: INFO
-      #     # JF_CLI_RT_NAME: artifactory
-      #     MANIFEST_PATH: ".github/artifacts-manifest.yaml"
+      - name: Trigger Citadel scan
+        id: Citadel
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          TRIGGER_CITADEL_SCAN: true
+          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+          # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+          # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
+          CODEDX_BRANCH: 'master'
+          BUILD_NAME: pdi-plugins-ee-10.1.0.0
+          BUILD_NUMBER: 342
+          BUILD_VERSION: 10.1.0.0
+          ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
+          # LOGGING_LEVEL: INFO
+          # JF_CLI_RT_NAME: artifactory
+          MANIFEST_PATH: ".github/artifacts-manifest.yaml"
 
 
       # - name: Sonarqube scan
