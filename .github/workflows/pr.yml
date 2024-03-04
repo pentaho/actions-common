@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build the project
-        uses: lumada-common-services/gh-composite-actions@HNC-550
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
              mvn clean verify -B -e -Daudit -amd -DnodeDownloadRoot=https://one.hitachivantara.com/artifactory/nodejs-generic-remote/ -DnpmDownloadRoot=https://one.hitachivantara.com/artifactory/npm-release/npm/-/
@@ -151,13 +151,13 @@ jobs:
       #     BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@HNC-550
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot
-        uses: lumada-common-services/gh-composite-actions@HNC-550
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
            JF_URL: https://one.hitachivantara.com
            JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
@@ -165,7 +165,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@HNC-550
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
