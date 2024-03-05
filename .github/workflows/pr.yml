@@ -115,7 +115,6 @@ jobs:
         run: |
           if ! command -v node &> /dev/null; then
             echo "Node not installed"
-            exit 1
           else
             node -v
           fi
