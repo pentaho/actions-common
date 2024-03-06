@@ -103,7 +103,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -168,7 +168,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -193,6 +193,17 @@ jobs:
         run: |
           version="${{ env.VERSION }}-332"
           echo "current-version=$version" >> $GITHUB_OUTPUT
+      
+      - name: Build and Unit Test
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean verify -DskipTests=false -Daudit -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+        env:
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Version set
       #   run: |
@@ -250,60 +261,60 @@ jobs:
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
-      - name: Setting Env For Citadel
-        shell: bash
-        run: |
-          python3 -m venv /venv
-          source /venv/bin/activate
-          echo "/venv/bin" >> $GITHUB_PATH
+      # - name: Setting Env For Citadel
+      #   shell: bash
+      #   run: |
+      #     python3 -m venv /venv
+      #     source /venv/bin/activate
+      #     echo "/venv/bin" >> $GITHUB_PATH
 
-      - name: Fetching Artifact url and Build plugins names
-        id: citadel_info
-        shell: bash
-        run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
-            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-            --user ${{ env.NEXUS_DEPLOY_USER }}
+      # - name: Fetching Artifact url and Build plugins names
+      #   id: citadel_info
+      #   shell: bash
+      #   run: |
+      #     jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
+      #       --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
+      #       --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
+      #       --user ${{ env.NEXUS_DEPLOY_USER }}
           
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
-            "*-${{ steps.version.outputs.current-version }}.zip")
+      #     resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=332" \
+      #       "*-${{ steps.version.outputs.current-version }}.zip")
 
-          plugin_names=()
-          paths=()
+      #     plugin_names=()
+      #     paths=()
 
-          while IFS= read -r path; do
-              plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
-              plugin_names+=("$plugin_name")
-              paths+=("$path")
-          done < <(echo "$resp" | jq -r '.[].path')
+      #     while IFS= read -r path; do
+      #         plugin_name=$(echo "$path" | sed 's/.*\/\([^\/]*\)\/[0-9].*/\1/')
+      #         plugin_names+=("$plugin_name")
+      #         paths+=("$path")
+      #     done < <(echo "$resp" | jq -r '.[].path')
 
-          plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
-          paths_list=$(IFS=,; echo "${paths[*]}")
+      #     plugin_names_list=$(IFS=,; echo "${plugin_names[*]}")
+      #     paths_list=$(IFS=,; echo "${paths[*]}")
 
-          echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
-          echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
+      #     echo "plugin_names=$plugin_names_list" >> $GITHUB_OUTPUT
+      #     echo "artifact_urls=$paths_list" >> $GITHUB_OUTPUT
 
-      - name: Trigger Citadel scan
-        id: Citadel
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          TRIGGER_CITADEL_SCAN: true
-          CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
-          # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
-          # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
-          CODEDX_BRANCH: 'master'
-          BUILD_NAME: pdi-plugins-ee-10.1.0.0
-          BUILD_NUMBER: 324
-          BUILD_VERSION: 10.1.0.0
-          ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-          ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-          ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
-          # LOGGING_LEVEL: INFO
-          # JF_CLI_RT_NAME: artifactory
-          MANIFEST_PATH: ".github/artifacts-manifest.yaml"
+      # - name: Trigger Citadel scan
+      #   id: Citadel
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     TRIGGER_CITADEL_SCAN: true
+      #     CITADEL_URL: 'https://citadel.wal.eng.hitachivantara.com/citadel' 
+      #     SECRETS_CONTEXT: ${{ toJson(secrets) }}
+      #     VARS_CONTEXT: ${{ toJson(vars) }}
+      #     # ARTIFACT_URLS: ${{ steps.citadel_info.outputs.artifact_urls }}
+      #     # REPO_PATHS_INCLUDES: ${{ steps.citadel_info.outputs.plugin_names }}
+      #     CODEDX_BRANCH: 'master'
+      #     BUILD_NAME: pdi-plugins-ee-10.1.0.0
+      #     BUILD_NUMBER: 324
+      #     BUILD_VERSION: 10.1.0.0
+      #     ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+      #     ARTIFACTORY_API_KEY : ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      #     ARTIFACTORY_BASE_URL: ${{ env.ARTIFACTORY_BASE_URL }} 
+      #     # LOGGING_LEVEL: INFO
+      #     # JF_CLI_RT_NAME: artifactory
+      #     MANIFEST_PATH: ".github/artifacts-manifest.yaml"
 
 
       # - name: Sonarqube scan
