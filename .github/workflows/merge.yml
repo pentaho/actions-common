@@ -114,7 +114,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@1.0.0
+        uses: pentaho/actions-common@stable
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -140,7 +140,7 @@ jobs:
           echo ${{ needs.setup-maven-settings.env }}
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -177,7 +177,7 @@ jobs:
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
