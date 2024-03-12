@@ -32,6 +32,11 @@ on:
         type: string
         required: false
         description: "List of modules to build in addition to those that have changes."
+      additional_mvn_directives:
+        required: false
+        type: string
+        description: "Extra additional directives for the Maven command"
+        default: ""
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
