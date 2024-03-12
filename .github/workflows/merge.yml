@@ -103,7 +103,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -128,7 +128,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -168,7 +168,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -207,26 +207,16 @@ jobs:
             distribution.version=${{ steps.version.outputs.current-version }} \
             project.stage=master
 
-      - name: Build code and deploy artifacts
+      - name: Build code, deploy artifacts & run unit-tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean deploy -DskipTests \
+            mvn clean deploy -DskipTests=false -B -Daudit \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
               -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD
-
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
-              -amd
-        env:
-          cmd_type: UNIT_TEST
+          cmd_type: BUILD,UNIT_TEST
           unit_test_reporter: 'java-junit'
           unit_test_fail_on_error: 'true'
           unit_test_report_path: '**/target/surefire-reports/*.xml'
