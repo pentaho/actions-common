@@ -126,16 +126,16 @@ jobs:
           fi
         shell: bash
 
-      - name: Set cmd_type and unit_test variables
+      - name: update cmd_type
         if: env.SET_CMD_TYPE == null
         run: |
           if [[ -z "${{ inputs.additional_mvn_directives }}" || "${{ inputs.additional_mvn_directives }}" != *"-DrunITs"* ]]; then
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
           else
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
-            echo "SET_INT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
-            echo "SET_INT_TEST_REPORT_PATH=**/target/failsafe-reports/TEST*.xml" >> $GITHUB_ENV
-            echo "SET_INT_TEST_FAIL_ON_ERROR=true" >> $GITHUB_ENV
+            # echo "SET_INT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
+            # echo "SET_INT_TEST_REPORT_PATH=**/target/failsafe-reports/TEST*.xml" >> $GITHUB_ENV
+            # echo "SET_INT_TEST_FAIL_ON_ERROR=true" >> $GITHUB_ENV
           fi
         shell: bash
 
@@ -160,9 +160,13 @@ jobs:
           unit_test_reporter: 'java-junit'
           unit_test_fail_on_error: 'true'
           unit_test_report_path: '**/target/surefire-reports/*.xml'
-          int_test_reporter: ${{ env.SET_INT_TEST_REPORTER }}
-          int_test_fail_on_error: ${{ env.SET_INT_TEST_FAIL_ON_ERROR }}
-          int_test_report_path: ${{ env.SET_INT_TEST_REPORT_PATH }}
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+
+          # int_test_reporter: ${{ env.SET_INT_TEST_REPORTER }}
+          # int_test_fail_on_error: ${{ env.SET_INT_TEST_FAIL_ON_ERROR }}
+          # int_test_report_path: ${{ env.SET_INT_TEST_REPORT_PATH }}
 
 
       # - name: Run unit-tests
