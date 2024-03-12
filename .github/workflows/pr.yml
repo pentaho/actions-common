@@ -131,7 +131,7 @@ jobs:
         with:
           command: echo "Dump"
         env:
-          cmd_type: ${{ contains(inputs.additional_mvn_directives, '-DrunITs') ? 'BUILD,INTEGRATION_TEST' : 'BUILD' }}
+          cmd_type: ${{ if env.ADDITIONAL_DIRECTIVES !='' }}BUILD,UNIT_TEST${{ else }}BUILD${{ endif }}
         
 
       # - name: Build the project
