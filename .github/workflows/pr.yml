@@ -129,51 +129,37 @@ jobs:
       - name: Set cmd_type and unit_test variables
         if: env.SET_CMD_TYPE == null
         run: |
-          if [[ -z "${{ inputs.additional_mvn_directives }}" ]]; then
+          if [[ -z "${{ inputs.additional_mvn_directives }}" || "${{ inputs.additional_mvn_directives }}" != *"-DrunITs"* ]]; then
             echo "SET_CMD_TYPE=BUILD" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORTER=" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORT_PATH=" >> $GITHUB_ENV
-          elif [[ "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+          else
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
             echo "SET_UNIT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
             echo "SET_UNIT_TEST_REPORT_PATH=**/target/surefire-reports/*.xml" >> $GITHUB_ENV
-          else
-            echo "SET_CMD_TYPE=BUILD" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORTER=" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORT_PATH=" >> $GITHUB_ENV
+            echo "SET_UNIT_TEST_FAIL_ON_ERROR=true" >> $GITHUB_ENV
           fi
         shell: bash
-
-      - name: Build and Unit Test
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: echo "Dump"
-        env:
-          cmd_type: ${{ env.SET_CMD_TYPE }}
-          unit_test_reporter: ${{ env.SET_UNIT_TEST_REPORTER }}
-          unit_test_report_path: ${{ env.SET_UNIT_TEST_REPORT_PATH }}
-
-              
-
-      # - name: Build the project
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   with:
-      #     command: |
-      #       mvn clean install -DskipTests -amd \
-      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
-      #   env:
-      #     cmd_type: BUILD
 
       # - name: Build and Unit Test
       #   uses: lumada-common-services/gh-composite-actions@stable
       #   with:
-      #     command: |
-      #       mvn clean verify -DskipTests=false -Daudit -amd \
-      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+      #     command: echo "Dump"
       #   env:
-      #     cmd_type: BUILD,UNIT_TEST
-      #     unit_test_reporter: 'java-junit'
-      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
+      #     cmd_type: ${{ env.SET_CMD_TYPE }}
+      #     unit_test_reporter: ${{ env.SET_UNIT_TEST_REPORTER }}
+      #     unit_test_fail_on_error: ${{ env.SET_UNIT_TEST_FAIL_ON_ERROR }}
+      #     unit_test_report_path: ${{ env.SET_UNIT_TEST_REPORT_PATH }}
+
+      - name: Build and Unit Test
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean verify -DskipTests=false -Daudit -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+        env:
+          cmd_type: ${{ env.SET_CMD_TYPE }}
+          unit_test_reporter: ${{ env.SET_UNIT_TEST_REPORTER }}
+          unit_test_fail_on_error: ${{ env.SET_UNIT_TEST_FAIL_ON_ERROR }}
+          unit_test_report_path: ${{ env.SET_UNIT_TEST_REPORT_PATH }}
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
