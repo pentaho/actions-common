@@ -134,7 +134,7 @@ jobs:
             echo "SET_UNIT_TEST_REPORTER=" >> $GITHUB_ENV
             echo "SET_UNIT_TEST_REPORT_PATH=" >> $GITHUB_ENV
           elif [[ "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
-            echo "SET_CMD_TYPE=BUILD,INTEGRATION_TEST" >> $GITHUB_ENV
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
             echo "SET_UNIT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
             echo "SET_UNIT_TEST_REPORT_PATH=**/target/surefire-reports/*.xml" >> $GITHUB_ENV
           else
@@ -143,7 +143,7 @@ jobs:
             echo "SET_UNIT_TEST_REPORT_PATH=" >> $GITHUB_ENV
           fi
         shell: bash
-        
+
       - name: Build and Unit Test
         uses: lumada-common-services/gh-composite-actions@stable
         with:
