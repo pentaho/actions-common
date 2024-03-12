@@ -130,12 +130,12 @@ jobs:
         if: env.SET_CMD_TYPE == null
         run: |
           if [[ -z "${{ inputs.additional_mvn_directives }}" || "${{ inputs.additional_mvn_directives }}" != *"-DrunITs"* ]]; then
-            echo "SET_CMD_TYPE=BUILD" >> $GITHUB_ENV
-          else
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_REPORT_PATH=**/target/surefire-reports/*.xml" >> $GITHUB_ENV
-            echo "SET_UNIT_TEST_FAIL_ON_ERROR=true" >> $GITHUB_ENV
+          else
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+            echo "SET_INT_TEST_REPORTER=java-junit" >> $GITHUB_ENV
+            echo "SET_INT_TEST_REPORT_PATH=**/target/failsafe-reports/TEST*.xml" >> $GITHUB_ENV
+            echo "SET_INT_TEST_FAIL_ON_ERROR=true" >> $GITHUB_ENV
           fi
         shell: bash
 
@@ -157,9 +157,13 @@ jobs:
             -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
-          unit_test_reporter: ${{ env.SET_UNIT_TEST_REPORTER }}
-          unit_test_fail_on_error: ${{ env.SET_UNIT_TEST_FAIL_ON_ERROR }}
-          unit_test_report_path: ${{ env.SET_UNIT_TEST_REPORT_PATH }}
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: ${{ env.SET_INT_TEST_REPORTER }}
+          int_test_fail_on_error: ${{ env.SET_INT_TEST_FAIL_ON_ERROR }}
+          int_test_report_path: ${{ env.SET_INT_TEST_REPORT_PATH }}
+
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
