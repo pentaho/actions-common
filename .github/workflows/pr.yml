@@ -62,6 +62,7 @@ env:
   DOCKER_PULL_HOST: one.hitachivantara.com/docker/
   DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+  ADDITIONAL_DIRECTIVES: "${{ inputs.additional_mvn_directives }}"
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
@@ -130,7 +131,7 @@ jobs:
         with:
           command: echo "Dump"
         env:
-          cmd_type: ${{ if contains(inputs.additional_mvn_directives, '-DrunITs') }}BUILD,INTEGRATION_TEST${{ else }}BUILD${{ endif }}
+          cmd_type: ${{ contains(inputs.additional_mvn_directives, '-DrunITs') ? 'BUILD,INTEGRATION_TEST' : 'BUILD' }}
         
 
       # - name: Build the project
