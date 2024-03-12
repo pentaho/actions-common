@@ -120,6 +120,14 @@ jobs:
           fi
         shell: bash
 
+      - name: Build and Unit Test
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: echo "Dump"
+        env:
+          cmd_type: ${{ if contains(inputs.additional_mvn_directives, '-DrunITs') }}BUILD,INTEGRATION_TEST${{ else }}BUILD${{ endif }}
+        
+
       # - name: Build the project
       #   uses: lumada-common-services/gh-composite-actions@stable
       #   with:
@@ -129,16 +137,16 @@ jobs:
       #   env:
       #     cmd_type: BUILD
 
-      - name: Build and Unit Test
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
-        env:
-          cmd_type: BUILD,UNIT_TEST
-          unit_test_reporter: 'java-junit'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
+      # - name: Build and Unit Test
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   with:
+      #     command: |
+      #       mvn clean verify -DskipTests=false -Daudit -amd \
+      #       -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+      #   env:
+      #     cmd_type: BUILD,UNIT_TEST
+      #     unit_test_reporter: 'java-junit'
+      #     unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       # - name: Run unit-tests
       #   uses: lumada-common-services/gh-composite-actions@stable
