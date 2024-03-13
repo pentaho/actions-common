@@ -79,7 +79,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@HNC-571
+        uses: pentaho/actions-common@stable
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build & Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@a748aad86c664d913cbc6e7ecc58e9c04fa28297
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
@@ -124,7 +124,7 @@ jobs:
           unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@HNC-571
+        uses: pentaho/actions-common@stable
         if: ${{ inputs.test_scenario_json }}
         with:
           changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
@@ -134,7 +134,7 @@ jobs:
           BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@a748aad86c664d913cbc6e7ecc58e9c04fa28297
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
