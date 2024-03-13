@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build & Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@554
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
@@ -124,7 +124,7 @@ jobs:
           unit_test_report_path: '**/target/surefire-reports/*.xml'
 
       - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@stable
+        uses: pentaho/actions-common@554
         if: ${{ inputs.test_scenario_json }}
         with:
           changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
@@ -134,7 +134,7 @@ jobs:
           BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@554
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
@@ -147,11 +147,3 @@ jobs:
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           JF_FAIL: "FALSE"
           JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
-
-      # - name: Report notifications
-      #   if: always()
-      #   uses: lumada-common-services/gh-composite-actions@stable
-      #   env:
-      #     Slack_Token: ${{ secrets.SLACK_TOKEN }}
-      #     Slack_Channel: ${{ env.SLACK_CHANNEL }}
-      #     report: true
