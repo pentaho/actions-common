@@ -148,10 +148,10 @@ jobs:
           JF_FAIL: "FALSE"
           JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
 
-      - name: Report notifications
-        if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
-          report: true
+      # - name: Report notifications
+      #   if: always()
+      #   uses: lumada-common-services/gh-composite-actions@stable
+      #   env:
+      #     Slack_Token: ${{ secrets.SLACK_TOKEN }}
+      #     Slack_Channel: ${{ env.SLACK_CHANNEL }}
+      #     report: true
