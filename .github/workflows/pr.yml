@@ -112,7 +112,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build & Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@HNC-554
+        uses: lumada-common-services/gh-composite-actions@a748aad86c664d913cbc6e7ecc58e9c04fa28297
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
@@ -134,7 +134,7 @@ jobs:
           BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@HNC-554
+        uses: lumada-common-services/gh-composite-actions@a748aad86c664d913cbc6e7ecc58e9c04fa28297
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
