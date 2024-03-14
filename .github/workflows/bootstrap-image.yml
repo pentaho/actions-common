@@ -1,44 +1,44 @@
-name: Build and Push Container Image
+# name: Build and Push Container Image
 
-on:
-  push:
-    paths: [ .github/bootstrap-image/** ]
-env:
-  ARTIFACTORY: one.hitachivantara.com/devops-docker-release
-  ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-  ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-  IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
-jobs:
+# on:
+#   push:
+#     paths: [ .github/bootstrap-image/** ]
+# env:
+#   ARTIFACTORY: one.hitachivantara.com/devops-docker-release
+#   ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+#   ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+#   IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+# jobs:
 
-  bootstrap-image:
-    name: CI Image build and push [${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name }}]
-    runs-on: [ self-hosted, Linux, k8s ]
-    steps:
+#   bootstrap-image:
+#     name: CI Image build and push [${{ github.repository_owner }}/${{ github.event.repository.name }}:${{ github.ref_name }}]
+#     runs-on: [ self-hosted, Linux, k8s ]
+#     steps:
 
-      # sets the image name and tag to something like: <owner>/<repo>:<current_date_as_YYYYYMMDD>.<build-number>
-      - name: Update image tag
-        run: |
-          IMAGE_TAG=$(date +'%Y%m%d').${{ github.run_number }}
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-          echo "IMAGE=${{ env.IMAGE }}:$IMAGE_TAG" >> $GITHUB_ENV
+#       # sets the image name and tag to something like: <owner>/<repo>:<current_date_as_YYYYYMMDD>.<build-number>
+#       - name: Update image tag
+#         run: |
+#           IMAGE_TAG=$(date +'%Y%m%d').${{ github.run_number }}
+#           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+#           echo "IMAGE=${{ env.IMAGE }}:$IMAGE_TAG" >> $GITHUB_ENV
 
-      - name: Checkout code
-        uses: actions/checkout@v3
+#       - name: Checkout code
+#         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3  
       
-      # Build and Push Image with docker buildx 
-      - name: Build and Push to Artifactory
-        id: build-image
-        run: docker buildx build -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} --push -f .github/bootstrap-image/Dockerfile --secret id=myuser,env=ARTIFACTORY_USER --secret id=mytoken,env=ARTIFACTORY_API_KEY .
+#       # Build and Push Image with docker buildx 
+#       - name: Build and Push to Artifactory
+#         id: build-image
+#         run: docker buildx build -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} --push -f .github/bootstrap-image/Dockerfile --secret id=myuser,env=ARTIFACTORY_USER --secret id=mytoken,env=ARTIFACTORY_API_KEY .
 
-      - name: Summary
-        run: |
-          echo ":frog: Image pushed!" >> $GITHUB_STEP_SUMMARY
-          echo "Pull it from '${{ env.ARTIFACTORY }}/${{ env.IMAGE }}'" >> $GITHUB_STEP_SUMMARY
+#       - name: Summary
+#         run: |
+#           echo ":frog: Image pushed!" >> $GITHUB_STEP_SUMMARY
+#           echo "Pull it from '${{ env.ARTIFACTORY }}/${{ env.IMAGE }}'" >> $GITHUB_STEP_SUMMARY
 
-      - uses: rickstaa/action-create-tag@v1
-        with:
-          tag: "build-image-${{ env.IMAGE_TAG }}"
-          message: "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
+#       - uses: rickstaa/action-create-tag@v1
+#         with:
+#           tag: "build-image-${{ env.IMAGE_TAG }}"
+#           message: "${{ env.ARTIFACTORY }}/${{ env.IMAGE }}"
