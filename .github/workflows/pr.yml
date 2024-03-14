@@ -146,4 +146,4 @@ jobs:
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           JF_FAIL: "FALSE"
-          JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+          # JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
