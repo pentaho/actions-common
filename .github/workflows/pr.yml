@@ -138,12 +138,19 @@ jobs:
       #   env:
       #     sonar_utility: sonar-scanner
       #     sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
-
+     
       - name: FrogBot
-        uses: jfrog/frogbot@v2.8.8
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
-          JF_FAIL: "FALSE"
-          # JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+          
+      # - name: FrogBot
+      #   uses: jfrog/frogbot@v2.8.8
+      #   env:
+      #     JF_URL: https://one.hitachivantara.com
+      #     JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      #     JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+      #     JF_FAIL: "FALSE"
+      #     # JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
