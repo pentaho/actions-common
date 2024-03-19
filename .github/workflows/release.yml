@@ -153,7 +153,7 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: stable
+          ref: HNC-573
 
       - name: Create Release Bundle
         if: ${{ inputs.create_release_bundle == true }}
