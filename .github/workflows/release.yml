@@ -32,10 +32,10 @@ on:
         type: boolean
         default: true
         description: "Dry run. No real changes should occur."
-      promote_artifacts:
-        type: boolean
-        default: true
-        description: "Promote artifacts in Artifactory."
+      # promote_artifacts:
+      #   type: boolean
+      #   default: true
+      #   description: "Promote artifacts in Artifactory."
       logging_level:
         type: string
         default: INFO
@@ -53,12 +53,12 @@ on:
       #   description: "The GPG/RSA key-pair name given in Artifactory."
       #   required: false
       #   type: string 
-      release_method:
-        description: "Source type to create release bundle (i.e builds or artifacts)."
-        required: false
-        default: artifacts
-        type: string       
-      # box_upload:
+      # release_method:
+      #   description: "Source type to create release bundle (i.e builds or artifacts)."
+      #   required: false
+      #   default: artifacts
+      #   type: string       
+      # # box_upload:
       #   type: boolean
       #   default: true
       #   description: "Box upload."
@@ -132,7 +132,7 @@ jobs:
             --user ${{ env.NEXUS_DEPLOY_USER }}
 
       - name: Promote artifacts
-        if: ${{ inputs.promote_artifacts == true }}
+        # if: ${{ inputs.promote_artifacts == true }}
         run: |
           rt_repo='pntpub-maven-release'
 
@@ -178,9 +178,9 @@ jobs:
           --logging_level ${{inputs.logging_level }} \
           --release_bundle_name ${{inputs.release_bundle_name }} \
           --release_bundle_version ${{inputs.release_bundle_version }} \
-          --signing_key_name ${{ inputs.signing_key_name }} \
+          --signing_key_name "frog" \
           --arti_host ${{ env.ARTIFACTORY_HOST }} \
-          --release_method ${{ inputs.release_method }}
+          --release_method "artifacts"
       
       # - name: Push artifacts to Box
       #   if: ${{ inputs.box_upload == true }}
