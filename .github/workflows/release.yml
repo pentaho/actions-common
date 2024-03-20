@@ -41,14 +41,14 @@ on:
         default: INFO
         required: false 
         description: "Sets the logging level to get more detailed info."  
-      release_bundle_name:
-        description: "Release Bundle Name"
-        required: false
-        type: string
-      release_bundle_version:
-        description: "Release Bundle Version"
-        required: false
-        type: string 
+      # release_bundle_name:
+      #   description: "Release Bundle Name"
+      #   required: false
+      #   type: string
+      # release_bundle_version:
+      #   description: "Release Bundle Version"
+      #   required: false
+      #   type: string 
       # signing_key_name:
       #   description: "The GPG/RSA key-pair name given in Artifactory."
       #   required: false
@@ -176,8 +176,8 @@ jobs:
           --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
           --dry_run ${{ inputs.dry_run }} \
           --logging_level ${{inputs.logging_level }} \
-          --release_bundle_name ${{inputs.release_bundle_name }} \
-          --release_bundle_version ${{inputs.release_bundle_version }} \
+          --release_bundle_name ${{ env.BUILD_NAME }} \
+          --release_bundle_version ${{ env.BUILD_NUMBER }} \
           --signing_key_name "frog" \
           --arti_host ${{ env.ARTIFACTORY_HOST }} \
           --release_method "artifacts"
