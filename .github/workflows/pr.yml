@@ -156,3 +156,4 @@ jobs:
           JF_FAIL: "FALSE"
           JF_GIT_PROVIDER: 'github'
           JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+          JF_GIT_OWNER: '$.pull_request.user.login'
