@@ -157,3 +157,6 @@ jobs:
           JF_GIT_PROVIDER: 'github'
           JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
           JF_GIT_OWNER: '$.pull_request.user.login'
+          JF_GIT_REPO: '$.repository.name'
+          JF_GIT_PULL_REQUEST_ID : '$.number'
+          TRIGGER_KEY: '$.action'
