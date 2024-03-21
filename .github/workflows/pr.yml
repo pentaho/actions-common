@@ -147,6 +147,7 @@ jobs:
       #     JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           
       - name: FrogBot
+        id: frogbot
         run: /opt/frogbot scan-pull-request
         shell: bash
         env:
@@ -159,6 +160,13 @@ jobs:
           JF_GIT_OWNER: ${{github.repository_owner}}
           JF_GIT_REPO: ${{ github.event.repository.name }}
           JF_GIT_PULL_REQUEST_ID : ${{github.event.number}}
-          JF_PULL_REQUEST_TITLE_TEMPLATE: "[🐸 Frogbot] Upgrade {IMPACTED_PACKAGE} to to {FIX_VERSION}"
-          JF_PR_COMMENT_TITLE: "New Pull Request."
           # TRIGGER_KEY: '$.action
+
+      - uses: LouisBrunner/checks-action@v2.0.0
+        if: always()
+        with:
+          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+          name: Frogbot
+          conclusion: ${{ job.status }}
+          output: |
+            {"summary":"${{ steps.frogbot.outputs.summary }}"}    
