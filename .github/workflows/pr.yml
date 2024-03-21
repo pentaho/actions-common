@@ -159,4 +159,6 @@ jobs:
           JF_GIT_OWNER: ${{github.repository_owner}}
           JF_GIT_REPO: ${{ github.event.repository.name }}
           JF_GIT_PULL_REQUEST_ID : ${{github.event.number}}
+          JF_PULL_REQUEST_TITLE_TEMPLATE: "[🐸 Frogbot] Upgrade {IMPACTED_PACKAGE} to to {FIX_VERSION}"
+          JF_PR_COMMENT_TITLE: "New Pull Request."
           # TRIGGER_KEY: '$.action
