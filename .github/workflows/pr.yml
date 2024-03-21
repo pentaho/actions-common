@@ -159,4 +159,4 @@ jobs:
           JF_GIT_OWNER: '$.pull_request.user.login'
           JF_GIT_REPO: '$.repository.name'
           JF_GIT_PULL_REQUEST_ID : ${{github.event.number}}
-          TRIGGER_KEY: '$.action
+          # TRIGGER_KEY: '$.action
