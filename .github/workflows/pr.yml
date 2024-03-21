@@ -147,7 +147,8 @@ jobs:
       #     JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           
       - name: FrogBot
-        uses: jfrog/frogbot@v2.8.8
+        run: /opt/frogbot scan-pull-request
+        shell: bash
         env:
           JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
