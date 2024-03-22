@@ -165,11 +165,11 @@ jobs:
           JF_GIT_PULL_REQUEST_ID : ${{github.event.number}}
           # TRIGGER_KEY: '$.action
 
-      - name: Report PHPUnit Conclusion
+      - uses: LouisBrunner/checks-action@v2.0.0
         if: always()
-        uses: dflydev/check-runs-action@v1
         with:
-          name: "jfrog"
           token: ${{ secrets.GITHUB_TOKEN }}
-          id: frogbot
-          conclusion: ${{ steps.frogbot.outcome }}
+          name: Jfrog
+          conclusion: ${{ job.status }}
+          output: |
+            {"summary":"${{ steps.frogbot.outputs.summary }}"}
