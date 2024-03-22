@@ -170,6 +170,6 @@ jobs:
         uses: dflydev/check-runs-action@v1
         with:
           name: "jfrog"
-          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           id: frogbot
           conclusion: ${{ steps.frogbot.outcome }}
