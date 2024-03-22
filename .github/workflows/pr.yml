@@ -169,6 +169,7 @@ jobs:
         if: always()
         uses: dflydev/check-runs-action@v1
         with:
+          name: forgbot check
           token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           id: frogbot
           conclusion: ${{ steps.frogbot.outcome }}
