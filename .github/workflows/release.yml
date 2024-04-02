@@ -155,32 +155,7 @@ jobs:
           path: actions-common
           ref: HNC-573
 
-      - name: Create Release Bundle
-        if: ${{ inputs.create_release_bundle == true }}
-        shell: bash
-        run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip3 install -q pyyaml dohq-artifactory requests
-
-          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
-
-          python3 actions-common/.github/scripts/python/release-bundle.py \
-          --build_name ${{ env.BUILD_NAME }} \
-          --build_number ${{ env.BUILD_NUMBER }} \
-          --build_version  ${{ env.BUILD_VERSION }} \
-          --rt_auth_username ${{ secrets.PENTAHO_CICD_ONE_USER }} \
-          --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
-          --manifest_file_path ${{ env.MANIFEST_PATH}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
-          --dry_run ${{ inputs.dry_run }} \
-          --logging_level ${{inputs.logging_level }} \
-          --release_bundle_name ${{ env.BUILD_NAME }} \
-          --release_bundle_version ${{ env.BUILD_NUMBER }} \
-          --signing_key_name "frog" \
-          --arti_host ${{ env.ARTIFACTORY_HOST }} \
-          --release_method "artifacts"
+     
       
       - name: Push artifacts to Box
       #  if: ${{ inputs.box_upload == true }}
@@ -197,7 +172,7 @@ jobs:
           --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
           --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
           --build_name ${{ env.BUILD_NAME }} \
-          --build_number ${{ env.BUILD_NUMBER }} \
+          /p/.--build_number ${{ env.BUILD_NUMBER }} \
           --build_version  ${{ env.BUILD_VERSION }} \
           --rt_auth_username ${{  secrets.PENTAHO_CICD_ONE_USER }} \
           --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
@@ -217,5 +192,32 @@ jobs:
             box_summary="[Dry run] "
           fi
           
+          
+          - name: Create Release Bundle
+          if: ${{ inputs.create_release_bundle == true }}
+          shell: bash
+          run: |
+            python3 -m venv env
+            source env/bin/activate
+            pip3 install -q pyyaml dohq-artifactory requests
+  
+            echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
+  
+            python3 actions-common/.github/scripts/python/release-bundle.py \
+            --build_name ${{ env.BUILD_NAME }} \
+            --build_number ${{ env.BUILD_NUMBER }} \
+            --build_version  ${{ env.BUILD_VERSION }} \
+            --rt_auth_username ${{ secrets.PENTAHO_CICD_ONE_USER }} \
+            --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
+            --manifest_file_path ${{ env.MANIFEST_PATH}} \
+            --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+            --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
+            --dry_run ${{ inputs.dry_run }} \
+            --logging_level ${{inputs.logging_level }} \
+            --release_bundle_name ${{ env.BUILD_NAME }} \
+            --release_bundle_version ${{ env.BUILD_NUMBER }} \
+            --signing_key_name "frog" \
+            --arti_host ${{ env.ARTIFACTORY_HOST }} \
+            --release_method "artifacts"
           # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
           # echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
