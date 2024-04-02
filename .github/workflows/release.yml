@@ -132,7 +132,7 @@ jobs:
             --user ${{ env.NEXUS_DEPLOY_USER }}
 
       - name: Promote artifacts
-        # if: ${{ inputs.promote_artifacts == true }}
+        if: ${{ inputs.promote_artifacts == true }}
         run: |
           rt_repo='pntpub-maven-release'
 
@@ -182,13 +182,13 @@ jobs:
           --arti_host ${{ env.ARTIFACTORY_HOST }} \
           --release_method "artifacts"
       
-      # - name: Push artifacts to Box
-      #   if: ${{ inputs.box_upload == true }}
-      #   shell: bash
-      #   run: |
-      #     python3 -m venv env
-      #     source env/bin/activate
-      #     pip3 install -q pyyaml dohq-artifactory requests boxsdk tqdm
+      - name: Push artifacts to Box
+        if: ${{ inputs.box_upload == true }}
+        shell: bash
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip3 install -q pyyaml dohq-artifactory requests boxsdk tqdm
           
       #     echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
 
