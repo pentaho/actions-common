@@ -279,7 +279,7 @@ jobs:
           sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-9915
         env:
           Tag_version: "${{ steps.version.outputs.current-tag }}"
           push_tag_only: true
