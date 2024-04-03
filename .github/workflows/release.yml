@@ -172,7 +172,7 @@ jobs:
           --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
           --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
           --build_name ${{ env.BUILD_NAME }} \
-          /p/.--build_number ${{ env.BUILD_NUMBER }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
           --build_version  ${{ env.BUILD_VERSION }} \
           --rt_auth_username ${{  secrets.PENTAHO_CICD_ONE_USER }} \
           --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
