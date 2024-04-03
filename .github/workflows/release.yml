@@ -32,10 +32,10 @@ on:
         type: boolean
         default: true
         description: "Dry run. No real changes should occur."
-      # promote_artifacts:
-      #   type: boolean
-      #   default: true
-      #   description: "Promote artifacts in Artifactory."
+      promote_artifacts:
+        type: boolean
+        default: true
+        description: "Promote artifacts in Artifactory."
       logging_level:
         type: string
         default: INFO
@@ -58,10 +58,10 @@ on:
       #   required: false
       #   default: artifacts
       #   type: string       
-      # # box_upload:
-      #   type: boolean
-      #   default: true
-      #   description: "Box upload."
+      box_upload:
+         type: boolean
+         default: true
+         description: "Box upload."
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
@@ -136,12 +136,12 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: stable
+          ref: HNC-573
 
      
       
       - name: Push artifacts to Box
-      #  if: ${{ inputs.box_upload == true }}
+        if: ${{ inputs.box_upload == true }}
         shell: bash
         run: |
           python3 -m venv env
@@ -175,7 +175,7 @@ jobs:
             box_summary="[Dry run] "
           fi
       - name: Promote artifacts
-        #if: ${{ inputs.promote_artifacts == true }}
+        if: ${{ inputs.promote_artifacts == true }}
         run: |
           rt_repo='pntpub-maven-release'
 
