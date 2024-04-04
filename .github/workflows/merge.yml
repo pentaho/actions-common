@@ -74,6 +74,14 @@ on:
         type: boolean
         default: true
         description: 'should the versioning run on the RC build'
+      checkout_repo:
+        required: false
+        description: 'owner/repo to checkout'
+        type: string
+      checkout_ref:
+        required: false
+        description: 'branch or other reference to checkout'
+        type: string
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -209,6 +217,8 @@ jobs:
         with:
           token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           fetch-depth: ${{ steps.initial-setup.outputs.checkout_depth }}
+          repository: ${{ inputs.checkout_repo }}
+          ref: ${{ inputs.checkout_ref }}
 
       - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
 
