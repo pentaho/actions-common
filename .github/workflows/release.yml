@@ -40,24 +40,7 @@ on:
         type: string
         default: INFO
         required: false 
-        description: "Sets the logging level to get more detailed info."  
-      # release_bundle_name:
-      #   description: "Release Bundle Name"
-      #   required: false
-      #   type: string
-      # release_bundle_version:
-      #   description: "Release Bundle Version"
-      #   required: false
-      #   type: string 
-      # signing_key_name:
-      #   description: "The GPG/RSA key-pair name given in Artifactory."
-      #   required: false
-      #   type: string 
-      # release_method:
-      #   description: "Source type to create release bundle (i.e builds or artifacts)."
-      #   required: false
-      #   default: artifacts
-      #   type: string       
+        description: "Sets the logging level to get more detailed info."       
       box_upload:
          type: boolean
          default: true
@@ -119,7 +102,6 @@ jobs:
         run: |
           version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
           build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
-          
           echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV 
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
           echo "BUILD_VERSION=${version}" >> $GITHUB_ENV 
@@ -138,7 +120,6 @@ jobs:
           path: actions-common
           ref: HNC-573
 
-     
       
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
@@ -174,6 +155,11 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then  
             box_summary="[Dry run] "
           fi
+       # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
+          # echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+
+
+
       - name: Promote artifacts
         if: ${{ inputs.promote_artifacts == true }}
         run: |
@@ -190,8 +176,7 @@ jobs:
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
           
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY 
-    
-          
+        
       - name: Create Release Bundle
         if: ${{ inputs.create_release_bundle == true }}
         shell: bash
@@ -199,9 +184,7 @@ jobs:
           python3 -m venv env
           source env/bin/activate
           pip3 install -q pyyaml dohq-artifactory requests
-  
-          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
-  
+          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}  
           python3 actions-common/.github/scripts/python/release-bundle.py \
           --build_name ${{ env.BUILD_NAME }} \
           --build_number ${{ env.BUILD_NUMBER }} \
@@ -218,5 +201,4 @@ jobs:
           --signing_key_name "frog" \
           --arti_host ${{ env.ARTIFACTORY_HOST }} \
           --release_method "artifacts"
-          # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
-          # echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+         
