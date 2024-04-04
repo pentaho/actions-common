@@ -32,6 +32,12 @@ on:
         type: string
         required: false
         description: "List of modules to build in addition to those that have changes."
+      additional_mvn_directives:
+        required: false
+        type: string
+        description: "Extra additional directives for the Maven command"
+        default: ""
+
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
@@ -107,21 +113,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Update cmd_type as per the mvn_directives
+        if: env.SET_CMD_TYPE == null
+        run: |
+          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+          else
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
+          fi
+        shell: bash
+
       - name: Determine which changes occurred
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      - name: Build & Run unit-tests
+      - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}" \
+            ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD,UNIT_TEST
+          cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
           unit_test_fail_on_error: 'true'
           unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Run PDI plugin integration tests
         uses: pentaho/actions-common@stable
