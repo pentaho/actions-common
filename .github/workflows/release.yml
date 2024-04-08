@@ -118,7 +118,7 @@ jobs:
         with:
           repository: pentaho/actions-common
           path: actions-common
-          ref: HNC-573
+          ref: stable
 
       
       - name: Push artifacts to Box
@@ -129,7 +129,7 @@ jobs:
           source env/bin/activate
           pip3 install -q pyyaml dohq-artifactory requests boxsdk tqdm
           
-           echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
+          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
 
           python3 actions-common/.github/scripts/python/promote-release-to-box.py \
           --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
@@ -155,7 +155,7 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then  
             box_summary="[Dry run] "
           fi
-              echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+            echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
 
 
 
