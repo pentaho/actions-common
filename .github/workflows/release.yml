@@ -42,9 +42,9 @@ on:
         required: false 
         description: "Sets the logging level to get more detailed info."       
       box_upload:
-         type: boolean
-         default: true
-         description: "Box upload."
+        type: boolean
+        default: true
+        description: "Box upload."
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
@@ -155,8 +155,7 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then  
             box_summary="[Dry run] "
           fi
-       # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
-          # echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+              echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
 
 
 
