@@ -74,6 +74,11 @@ on:
         type: boolean
         default: true
         description: 'should the versioning run on the RC build'
+      run_release_candidate:
+        required: true
+        type: boolean
+        default: false
+        description: 'should the RC build'
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -134,7 +139,7 @@ jobs:
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
   snapshot:
-    if: ${{ inputs.run_snapshot == 'true' }}
+    if: ${{ inputs.run_snapshot == true }}
     name: Update Snapshots
     needs: setup-maven-settings
 
@@ -166,12 +171,31 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean deploy -DskipTests -amd \
+            mvn clean deploy -amd \
             -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
         env:
-          cmd_type: BUILD
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+
+      - name: Sonarqube scan
+        continue-on-error: true
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+
+      - name: Report notifications
+        if: always()
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          report: true
 
   release-candidate:
+    if: ${{ inputs.run_release_candidate == true }}
     name: Build Release Candidate
     needs: setup-maven-settings
 
@@ -234,7 +258,7 @@ jobs:
           echo "current-version=$version" >> $GITHUB_OUTPUT
 
       - name: Version set
-        if: ${{ inputs.run_versioning == 'true' }}
+        if: ${{ inputs.run_versioning == true }}
         run: |
           sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
           sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
@@ -272,6 +296,7 @@ jobs:
           BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
+        if: ${{ inputs.run_snapshot == false }}
         continue-on-error: true
         uses: lumada-common-services/gh-composite-actions@stable
         env:
