@@ -200,4 +200,4 @@ jobs:
           --signing_key_name "frog" \
           --arti_host ${{ env.ARTIFACTORY_HOST }} \
           --release_method "artifacts"
-         
+           
