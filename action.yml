@@ -17,7 +17,8 @@ runs:
   steps:
 
     - name: Checkout code
-      uses: actions/checkout@v3
+      if: ${{ env.run_plugin_integration_tests == '' }}
+      uses: actions/checkout@v4
 
     - name: Return settings.xml
       id: settings-file
@@ -40,15 +41,16 @@ runs:
         repository: pentaho/actions-common
         path: actions-common
         ref: stable
+        clean: false
 
     - name: Run plugin integration tests
       if: ${{ env.run_plugin_integration_tests && inputs.test_scenario_json && inputs.changed_modules }}
       uses: lumada-common-services/gh-composite-actions@stable
       env:
         cmd_type: INTEGRATION_TEST
-        test_report_path: '**/target/failsafe-reports/TEST*.xml'
-        reporter: 'java-junit'
-        fail-on-error: 'true'
+        int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+        int_test_reporter: 'java-junit'
+        int_test_fail_on_error: 'true'
       with:
         command: |
           actions-common/.github/scripts/sh/run-pdi-plugin-integration-tests.sh \
