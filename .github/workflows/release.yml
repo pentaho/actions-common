@@ -87,18 +87,21 @@ jobs:
       - name: Update versions in manifest
         shell: bash
         run: |
-          sed -i "s/\${RELEASE_VERSION}/${{ inputs.release_version }}/g" ${{ env.MANIFEST_PATH }}
+          release_version="${{ inputs.release_version }}"
           
-          major_version=$(echo "${{ inputs.release_version }}" | cut -d '.' -f1,2)
+          sed -i "s/\${RELEASE_VERSION}/$release_version/g" ${{ env.MANIFEST_PATH }}
+          
+          major_version=$(echo "$release_version" | cut -d '.' -f1,2)
           sed -i 's/\${SHORT_VERSION}/'"$major_version"'/g' ${{ env.MANIFEST_PATH }}
           
-          no_build_nbr_version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1)
+          no_build_nbr_version=$(echo "$release_version" | cut -d '-' -f1)
           sed -i 's/\${MAJOR_VERSION}/'"$no_build_nbr_version"'/g' ${{ env.MANIFEST_PATH }}
         
           cat ${{ env.MANIFEST_PATH }}
 
       # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
+        shell: bash
         run: |
           version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
           build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
