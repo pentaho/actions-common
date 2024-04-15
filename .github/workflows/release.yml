@@ -175,7 +175,16 @@ jobs:
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
           
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY 
-        
+         
+
+      - name : Set RBv2 manifest
+        shell: bash
+        run: |
+          export RBV2_MANIFEST=$GITHUB_WORKSPACE/.github/"test.json"
+          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
+          echo "BUILD_VERSION=${version}" >> $GITHUB_ENV 
+          
+
       - name: Create Release Bundle
         if: ${{ inputs.create_release_bundle == true }}
         shell: bash
