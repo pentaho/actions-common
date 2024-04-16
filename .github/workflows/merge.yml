@@ -122,6 +122,7 @@ jobs:
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
   snapshot:
+    if: ${{ inputs.run_snapshot == true }}
     name: Update Snapshots
     needs: setup-maven-settings
 
@@ -156,9 +157,28 @@ jobs:
             mvn clean deploy -DskipTests -amd \
             -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
         env:
-          cmd_type: BUILD
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+
+      - name: Sonarqube scan
+        continue-on-error: true
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+
+      - name: Report notifications
+        if: always()
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          report: true
 
   release-candidate:
+    if: ${{ inputs.run_release_candidate == true }}
     name: Build Release Candidate
     needs: setup-maven-settings
 
@@ -176,10 +196,26 @@ jobs:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
 
+      - id: initial-setup
+        shell: bash
+        run: |
+          checkout_depth=0
+          build_name=${{ env.BUILD_NAME }}
+          build_number="${{ github.run_number }}"
+
+          if [[ "${{ inputs.modules_to_build }}" != "" ]]; then
+            checkout_depth=1
+          fi
+          
+          echo "build_name=$build_name" >> $GITHUB_OUTPUT
+          echo "build_number=$build_number" >> $GITHUB_OUTPUT
+          echo "checkout_depth=$checkout_depth" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+          fetch-depth: ${{ steps.initial-setup.outputs.checkout_depth }}
 
       - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
 
@@ -190,11 +226,22 @@ jobs:
 
       - name: Determine version
         id: version
+        shell: bash
         run: |
-          version="${{ env.VERSION }}-${{ github.run_number }}"
+          version="${{ env.VERSION }}"
+          tag="$version"
+          if [[ "${{ inputs.run_versioning }}" == "true" ]]; then
+            version="$version-${{ github.run_number }}"
+            tag="$version"
+          else
+            tag="$version-R"
+          fi
+          
+          echo "current-tag=$tag" >> $GITHUB_OUTPUT
           echo "current-version=$version" >> $GITHUB_OUTPUT
 
       - name: Version set
+        if: ${{ inputs.run_versioning == true }}
         run: |
           sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
           sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
@@ -211,8 +258,13 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
+<<<<<<< HEAD
             mvn clean deploy -DskipTests=false -B -Daudit \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
+=======
+            mvn clean deploy -B -Daudit \
+              -Pcicd-release -Drelease -Dbuild.name=${{ steps.initial-setup.outputs.build_name }} -Dbuild.number=${{ steps.initial-setup.outputs.build_number }} \
+>>>>>>> 6e1092b5a1ed0e12781654cfd7e9eecf49cc15cc
               -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:
@@ -230,6 +282,7 @@ jobs:
         env:
           run_plugin_integration_tests: true
           BASE_VERSION: "${{ inputs.base_version }}"
+<<<<<<< HEAD
 
       #- name: Blackduck Scan
       #  uses: lumada-common-services/gh-composite-actions@1.2.0
@@ -239,40 +292,27 @@ jobs:
       #    BlackDuck_Api_Token: "${{ secrets.ORION_BLACKDUCK_TOKEN }}"
       #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
       #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
+=======
+>>>>>>> 6e1092b5a1ed0e12781654cfd7e9eecf49cc15cc
 
       - name: Sonarqube scan
+        if: ${{ inputs.run_snapshot == false }}
         continue-on-error: true
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          Tag_version: "${{ steps.version.outputs.current-version }}"
+          Tag_version: "${{ steps.version.outputs.current-tag }}"
           push_tag_only: true
 
       - name: Create artifacts download links
         shell: bash
         run: |
-          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
-            --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-            --user ${{ env.NEXUS_DEPLOY_USER }}
-          
-          resp=$(jf rt search --props "build.name=${{ env.BUILD_NAME }};build.number=${{ github.run_number }}" \
-            "*-${{ steps.version.outputs.current-version }}.zip")
-          
-          echo "| :gift: Files |" >> $GITHUB_STEP_SUMMARY
-          echo "|:----:|" >> $GITHUB_STEP_SUMMARY
-          
-          echo "$resp" | jq -r '.[].path' | while read -r path; do
-            link_text=$(echo "$path" | sed 's/.*\///')
-            echo "| [ $link_text ](${{ env.ARTIFACTORY_BASE_URL }}/$path) |" >> $GITHUB_STEP_SUMMARY; 
-          done
-          
-          echo "|[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ github.run_number }})|" >> $GITHUB_STEP_SUMMARY
+          echo "[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ steps.initial-setup.outputs.build_name }}/${{ steps.initial-setup.outputs.build_number }})" >> $GITHUB_STEP_SUMMARY
 
       - name: Report notifications
         if: always()
