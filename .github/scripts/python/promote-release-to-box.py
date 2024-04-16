@@ -1,0 +1,427 @@
+import os
+import re
+import sys
+import json
+import yaml
+import argparse
+import requests
+import logging
+import subprocess
+from tqdm import tqdm
+from boxsdk import OAuth2, Client
+from boxsdk.object.folder import Folder
+from boxsdk.object.file import File
+from artifactory import ArtifactoryPath
+from requests.auth import HTTPBasicAuth
+from boxsdk.exception import BoxAPIException
+
+
+def get_artifact_info_json(build_name, build_number, rt_auth=(None, None), rt_base_url=None, jf_cli_rt_name=None):
+    ''' 
+    Expected Jfrog CLI is availble in the system.
+    Executes these:
+    1. jf config add one-artifactory --interactive=false \
+        --enc-password=false --basic-auth-only \
+        --artifactory-url https://one.hitachivantara.com/artifactory \
+        --password --user buildguy
+
+    2. jf rt search --server-id one-artifactory \
+        --props "build.name=pdi-xxx-9.5.1.0;build.number=86" "*-9.5.1.0-86.zip" \
+        > builds.json
+
+    Alternative way: Use ArtifactoryBuildManager https://github.com/devopshq/artifactory#builds
+    
+    ^^^^^^^^^^^^^
+    from artifactory import ArtifactoryBuildManager
+
+    arti_build = ArtifactoryBuildManager(
+        orl_url, auth=auth_orl)
+
+    # Get all builds,space turns into %
+    all_builds = arti_build.builds
+    print(all_builds)
+    ^^^^^^^^^^^^^
+    '''
+
+    if jf_cli_rt_name is None:
+        jf_cli_rt_name = 'artifactory'
+
+        # adding artifactory cli config
+        logging.info(f'Adding artifactory CLI name {jf_cli_rt_name}')
+
+        # Define the command and arguments
+        command = [
+            'jf', 'config', 'add', f'{jf_cli_rt_name}',
+            '--interactive=false', '--enc-password=false', '--basic-auth-only',
+            '--artifactory-url', f'{rt_base_url}/',
+            '--user', f'{rt_auth[0]}',
+            '--password', f'{rt_auth[1]}'
+        ]
+        # Execute the command and capture the output
+        result = subprocess.run(command, capture_output=True, text=True)
+
+        logging.debug(result)
+
+    # Define jf command and arguments
+    command = ['jf', 'rt', 'search', '--server-id', f'{jf_cli_rt_name}', '--props',
+               f'build.name={build_name};build.number={build_number}',
+               f'*']
+
+    output_file = 'artifacts.json'
+
+    # Execute the command and capture the output
+    result = subprocess.run(command, capture_output=True, text=True)
+
+    # log result
+    logging.debug(f'jf execution result {result}')
+
+    # Parse the command output as JSON
+    output_json = json.loads(result.stdout)
+
+    # Save the JSON object to a file
+    with open(output_file, 'w') as file:
+        json.dump(output_json, file, indent=4)
+
+    logging.debug(f'Artifacts in artifactory with build.name={build_name};build.number={build_number}: {output_json}')
+
+    return output_json, set([artifact['path'].split('/')[-1] for artifact in output_json])
+
+
+def download_artifacts_v3(artifacts_to_release, builds_output_json, auth=(None, None), rt_base_url=None):
+    release_artifact_downloaded = []
+    release_artifact_check_sum=[]
+
+    # For all the builds in artifactory that meets the build number and number name
+    # we only want to download the ones that is present in the manifest file
+    # Example of builds_output_json:
+    # [
+    # {
+    #     "path": "pntpub-maven-release/pentaho/psw-ce/9.3.0.4-739/psw-ce-9.3.0.4-739.zip",
+    #     "sha1": "bb1cda483ce7de00d1a59a00f7aac52b5f5206ea",
+    #     "sha256": "2b197f5f40b06b10a07ec1e864abaecbced4247ddbab4f789d6492f753900201",
+    #     "md5": "ca3945763c73c5b128126f2d0837d73b",
+    # },
+    # {
+    #     "path": "pntprv-maven-release/pentaho/psw-ee/9.3.0.4-739/psw-ee-9.3.0.4-739-dist.zip",
+    #     "sha1": "4d63449b3d658a1a25215fa9c8d9614f9dd0971d",
+    #     "sha256": "946881250d2c073654fea5ade952cb281222809164cc7805cbaaa7c3ecd5a37f",
+    #     "md5": "e4df9f24a93cface78bdeada19ae4bf2",
+    # ...
+
+    # Example of artifacts_to_release:
+    # {'pad-ee-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    #  'pdi-ee-client-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    #  'pentaho-analysis-ee-9.3.0.4-739-dist.zip': 'ee/client-tools',
+    # ...
+
+    for build_artifact in tqdm(builds_output_json):
+        file_name = build_artifact['path']
+        if build_artifact['path'].split('/')[-1] in artifacts_to_release.keys():
+
+            path = build_artifact['path']
+            sha1 = build_artifact['sha1']
+            sha256 = build_artifact['sha256']
+            md5 = build_artifact['md5']
+
+            file_name = build_artifact['path'].split('/')[-1]
+            check_sum_file_name = path.split('/')[-1] + '.sum'
+
+            # download artifact
+            rt_path = ArtifactoryPath(
+                f"{rt_base_url}/" + path, auth=auth, auth_type=HTTPBasicAuth
+            )
+            
+            # Only download artifact if it doesn't exists
+            if not os.path.exists(file_name):
+                logging.info(f'Downloading {file_name} from {rt_path}.')
+
+                # rt_path.writeto(out=file_name, progress_func=None)
+
+                with rt_path.open() as fd, open(file_name, "wb") as out:
+                    out.write(fd.read())
+                logging.info(f'Download complete.')
+            
+            # Only download artifact if it doesn't exists
+            if not os.path.exists(check_sum_file_name):
+                logging.info(f'Saving check sum file {check_sum_file_name}')
+                with open(check_sum_file_name, 'w') as f:
+                    f.write('sha1=' + sha1 + '\n')
+                    f.write('sha256=' + sha256 + '\n')
+                    f.write('md5=' + md5 + '\n')
+
+            # Moved it to the inner loop as the it was giving all the artifactory same as of the build_json output 
+            release_artifact_downloaded.append(file_name)
+            release_artifact_check_sum.append(check_sum_file_name)
+
+    logging.info(f'Release artifacts {release_artifact_downloaded}')
+    logging.info(f'Release artifacts Check Sum Files {release_artifact_check_sum}')
+    
+    return release_artifact_downloaded
+
+
+def replace_versions(text, replacement_word):
+    pattern = r'\${.*?}'
+    return re.sub(pattern, replacement_word, text)
+
+
+def get_manifest_yaml(version, manifest_file=None):
+    with open(manifest_file, 'r') as f:
+        file_content = f.read()
+
+    new_file_content = replace_versions(file_content, version)
+    yaml_obj = yaml.safe_load(new_file_content)
+    return yaml_obj
+
+
+def process_manifest_yaml(yaml_data, parent=None):
+    '''
+    Returns a dict with parent as value, child as key.
+    {'pad-ee-9.5.1.0-dist.zip': 'ee/client-tools',
+     'pdi-ee-client-9.5.1.0-dist.zip': 'ee/client-tools',
+     'pentaho-analysis-ee-9.5.1.0-dist.zip': 'ee/client-tools',
+     'pentaho-big-data-ee-package-9.5.1.0-dist.zip': 'ee/client-tools',
+     'pme-ee-9.5.1.0-dist.zip': 'ee/client-tools',
+     'prd-ee-9.5.1.0-dist.zip': 'ee/client-tools',
+     ...}
+    '''
+    result = {}
+    for key, value in yaml_data.items():
+        current_key = key if parent is None else f"{parent}/{key}"
+        if isinstance(value, dict):
+            result.update(process_manifest_yaml(value, parent=current_key))
+        elif isinstance(value, list):
+            for item in value:
+                if '$' not in item or '{' not in item:
+                    result[item] = current_key
+    return result
+
+def get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json):
+    # This function picks the artifacts that's only both in builds_output_json and file_folder_dict
+    # returns a dictionary of files to release as key, and the path correspond to box as value
+    d = {}
+    files_to_be_promoted = set(file_folder_dict.keys()).intersection(
+        set([artifact['path'].split('/')[-1] for artifact in builds_output_json]))
+
+    # Sanity check
+    files_only_in_manifest = set(file_folder_dict.keys()) - set(
+        [artifact['path'].split('/')[-1] for artifact in builds_output_json])
+
+    if files_only_in_manifest:
+        logging.warning(f'Found some artifacts only present in manifest file {files_only_in_manifest}')
+
+    logging.info(f'Files to be downloaded and promoted {files_to_be_promoted}')
+
+    for file_to_release in files_to_be_promoted:
+        d[file_to_release] = file_folder_dict[file_to_release]
+        d[file_to_release + '.sum'] = file_folder_dict[file_to_release]
+    return d
+
+def set_box_client(client_id, client_secret, box_subject_id):
+
+    if dry_run is True:
+        logging.info(f'[Dry run]: Create Box Client')
+        return None
+       
+    token = generate_access_token(client_id, client_secret, box_subject_id)
+    oauth = OAuth2(
+        client_id=client_id,
+        client_secret=client_secret,
+        access_token=token,
+    )
+    return Client(oauth)
+
+
+def upload_one_artifact_to_box(folder_id, file_name, client):
+    if dry_run is True:
+        logging.info(f'[Dry run]: Uploaded file: {file_name} into folder id: {folder_id}')
+    else:
+        try:
+            with open(file_name, 'rb') as file:
+                box_file = client.folder(folder_id).upload_stream(file, file_name)
+                logging.info(f'Uploaded file: {file_name} into folder id: {folder_id}')
+
+        except BoxAPIException as e:
+            # if the file already exists, update the contents of it
+            if e.status == 409:
+                logging.warning(f'File exist name {file_name} already exist.')
+                file_id = e.context_info['conflicts']['id']
+                if dry_run is True:
+                    logging.info('[Dry run]: ')
+                    updated_file = File(client, file_name)
+                    updated_file.id = file_id
+                else:
+                    updated_file = client.file(file_id).update_contents(file_name)
+
+                logging.info(f'{file_name} updated.')
+                return updated_file
+        except Exception as e:
+            logging.warning(f'error uploading to box {e}')
+
+
+def generate_access_token(client_id, client_secret, box_subject_id):
+    url = "https://api.box.com/oauth2/token"
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "client_credentials",
+        "box_subject_type": "enterprise",
+        "box_subject_id": box_subject_id,
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+    response_data = response.json()
+    return response_data['access_token']
+
+
+def box_create_one_folder(parent_folder_id, folder_name_to_create, client):
+    try:
+        if dry_run is True:
+            folder = Folder(client, folder_name_to_create)
+            folder.id = ''.join(str(ord(c)) for c in folder_name_to_create)
+            logging.info(f'[Dry run] : Create folder {folder_name_to_create}')
+        else:
+            folder = client.folder(parent_folder_id).create_subfolder(folder_name_to_create)
+            logging.info(f'Create folder {folder_name_to_create}')
+        return folder
+    except BoxAPIException as e:
+        # if the folder already exists, return the Folder object
+        if e.status == 409:
+            logging.info(f'Folder name {folder_name_to_create} already exist.')
+            folder = client.folder(folder_id=e.context_info['conflicts'][0]['id']).get()
+            return folder
+        return None
+
+
+def box_create_folder(client, yaml_data, box_folder_parent_id=None, path='', result={}):
+    for key, value in yaml_data.items():
+        if isinstance(value, dict):
+            folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
+            logging.info(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
+            result[os.path.join(path, key)] = folder_obj
+            box_create_folder(client, yaml_data[key], box_folder_parent_id=folder_obj.id, path=os.path.join(path, key),
+                              result=result)
+
+        elif isinstance(value, list):
+            folder_obj = box_create_one_folder(box_folder_parent_id, key, client)
+            logging.info(f'Created folder with parent id as {box_folder_parent_id} with name {key}')
+            current_path = os.path.join(path, key)
+            result[os.path.join(path, key)] = folder_obj
+
+    return result
+
+def upload_to_box(client, artifacts_to_release, artifact_to_box_path):
+    final_folder_id = -1
+    for artifact, target_box_path in tqdm(artifacts_to_release.items()):
+        logging.info(f'Uploading {artifact} up to {artifact_to_box_path[target_box_path]}')
+        final_folder_id = artifact_to_box_path[target_box_path].id
+        upload_one_artifact_to_box(final_folder_id, artifact, client)
+
+    env_file = os.getenv('GITHUB_ENV')
+
+    with open(env_file, "a") as myfile:
+        myfile.write('BOX_FOLDER_ID=' + final_folder_id)
+
+if __name__ == '__main__':
+
+    ########### Parse args #################
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--client_id", action="store")
+    parser.add_argument("--client_secret", action="store", help="box client secret")
+    parser.add_argument("--box_subject_id", action="store", help="box box subject id")
+    parser.add_argument("--build_name", action="store", help="build name")
+    parser.add_argument("--build_version", action="store", help="build version such as: 9.5.1.0")
+    parser.add_argument("--build_number", action="store", help="artifactory build_number")
+    parser.add_argument("--rt_auth_username", action="store", default="buildguy", help="box client secret")
+    parser.add_argument("--rt_auth_password", action="store", help="artifactory password")
+    parser.add_argument("--box_parent_folder_id", action="store",
+                        help="Parent folder id to the artifacts on box, example: 9.5.0.0")
+    parser.add_argument("--manifest_file_path", action="store",
+                        help="pass in a manifest file path relative to current workingdir")
+    parser.add_argument("--rt_base_url", action="store", help="artifactory base url, ending with /artifactory ")
+    parser.add_argument("--jf_cli_rt_name", action="store",
+                        help="From the jf CLI config, the alias of the artifactory build info resides")
+    parser.add_argument("--logging_level", action="store", default="INFO", help="Set logging level")
+    parser.add_argument("--dry_run", default=True, type=lambda x: (str(x).lower() == 'true'),
+                        help="Executes the workflow as a dry run in the release. No real changes should occur.")
+
+    args = parser.parse_args()
+
+    client_id = args.client_id
+    client_secret = args.client_secret
+    box_subject_id = args.box_subject_id
+    build_name = args.build_name  # for rt buildinfo query
+    build_number = args.build_number  # for rt buildinfo query
+    build_version = args.build_version
+    rt_auth = (args.rt_auth_username, args.rt_auth_password)
+    box_parent_folder_id = args.box_parent_folder_id
+    manifest_file_path = args.manifest_file_path
+    rt_base_url = args.rt_base_url
+    jf_cli_rt_name = args.jf_cli_rt_name
+    logging_level = args.logging_level
+    dry_run = args.dry_run
+
+    ############ End parsing args #############
+
+    ######### logging ############
+    string_to_level = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL
+    }
+
+    logging.basicConfig(
+        level=string_to_level[logging_level],
+        format='[%(asctime)s] [%(filename)s:%(lineno)d] %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    logging.getLogger('boxsdk').setLevel(string_to_level[logging_level])
+
+    ####### End of logging #######
+
+    ####### Upload to box ##########
+    # determine the build suffix 9.5.1.0-124
+
+    build_suffix = build_version + '-' + build_number
+
+    # downloads artifacts
+    builds_output_json, artifacts_in_build_info = get_artifact_info_json(build_name, build_number, rt_auth=rt_auth,
+                                                                         rt_base_url=rt_base_url,
+                                                                         jf_cli_rt_name=jf_cli_rt_name)
+    file_folder_dict = process_manifest_yaml(get_manifest_yaml(build_suffix, manifest_file=manifest_file_path))
+    logging.info(f'Read manifest {file_folder_dict}')
+    artifacts_to_release = get_manifest_buildinfo_intersect(file_folder_dict, builds_output_json)
+    downloaded_artifacts = download_artifacts_v3(artifacts_to_release, builds_output_json, auth=rt_auth,
+                                                 rt_base_url=rt_base_url)
+
+    # if there are no files to deploy, exit process
+    if not artifacts_to_release:
+        logging.warning(
+            f'There are no artifacts to be promoted with build name:{build_name}, build number: {build_number}, build '
+            f'version {build_version}')
+        sys.exit(1)
+
+    # set up box client
+    box_client = set_box_client(client_id, client_secret, box_subject_id)
+   
+
+    # create root folder, defaults to CI
+    # root_folder = box_create_one_folder('0', box_root_folder_name, box_client)
+    # parent_folder = box_create_one_folder(root_folder.id, box_parent_folder_name, box_client)
+    # parent_folder = box_create_one_folder(261814384, box_parent_folder_name, box_client)
+
+    # uploading to box
+    yaml_data = get_manifest_yaml(build_number, manifest_file=manifest_file_path)
+    if dry_run is True:
+        logging.info(f'[Dry run]: {yaml_data}')
+
+    artifact_to_box_path = box_create_folder(box_client, yaml_data, box_folder_parent_id=box_parent_folder_id)
+    upload_to_box(box_client, artifacts_to_release, artifact_to_box_path)
+    ######## End upload to box #########

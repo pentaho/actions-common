@@ -5,7 +5,15 @@ on:
       modules_to_build:
         type: string
         required: false
-        description: "The modules to build when running from the root of the project. Defaults to everything ('.')"
+        description: >
+          The modules to build when running from the root of the project. Defaults to everything ('.').
+          Using this option builds only the modules you specify, regardless of whether those modules have changes.
+      modules_to_always_build_in_addition_to_those_with_changes:
+        type: string
+        required: false
+        description: >
+          When using the default behavior of building only changed modules (i.e., 'modules_to_build' is NOT specified),
+          use this option to list any modules you want to build in addition to those that have changes.
       version:
         type: string
         required: true
@@ -21,7 +29,7 @@ on:
       arti_host:
         required: false
         type: string
-        default: https://repo.orl.eng.hitachivantara.com
+        default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       sonar_project_key:
         required: true
@@ -32,6 +40,30 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
+      blackduck_project_key:
+        required: false
+        type: string
+        description: "Project key for Blackduck"
+        default: "Pentaho"  # it's either "Pentaho" or "Pentaho SHIMS" on Orion
+      blackduck_server_url:
+        required: false
+        type: string
+        description: "Server URL for Blackduck"
+        default: https://orion.orl.eng.hitachivantara.com
+      blackduck_additional_args:
+        required: false
+        type: string
+        description: "Extra additional args for blackduck scan"
+        default: ""
+      additional_mvn_directives:
+        required: false
+        type: string
+        description: "Extra additional directives for the Maven command"
+        default: ""
+      test_scenario_json:
+        required: false
+        type: string
+        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -46,22 +78,22 @@ env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/maven
 
-  NEXUS_DEPLOY_USER: ${{ secrets.ARTIFACTORY_USER }}
-  NEXUS_DEPLOY_PASSWORD: ${{ secrets.ARTIFACTORY_API_KEY }}
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
-  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-dev-orl
-  PRIVATE_RELEASE_REPO: pntprv-mvn-dev-orl
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
   PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
 
-  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-mvn-snapshot-orl
-  PRIVATE_SNAPSHOT_REPO: pntprv-mvn-snapshot-orl
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: pnt-docker.repo.orl.eng.hitachivantara.com/
-  DOCKER_PUBLIC_PUSH_HOST: pntpub-docker-dev-orl.repo.orl.eng.hitachivantara.com
-  DOCKER_PRIVATE_PUSH_HOST: pntprv-docker-dev-orl.repo.orl.eng.hitachivantara.com
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
 
 jobs:
 
@@ -71,7 +103,10 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
 
@@ -79,7 +114,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@1.0.0
+        uses: pentaho/actions-common@stable
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -93,7 +128,10 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
@@ -102,19 +140,21 @@ jobs:
           echo ${{ needs.setup-maven-settings.env }}
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.1
+        uses: hv-actions/change-detection-builder@stable
 
       - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
-          command: mvn clean deploy -DskipTests -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          command: |
+            mvn clean deploy -DskipTests -amd \
+            -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}"
         env:
           cmd_type: BUILD
 
@@ -128,13 +168,16 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: docker.repo.orl.eng.hitachivantara.com/pentaho/actions-common:20230712.10
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
 
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -143,7 +186,7 @@ jobs:
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@1.0.1
+        uses: hv-actions/change-detection-builder@stable
 
       - name: Determine version
         id: version
@@ -164,34 +207,48 @@ jobs:
             distribution.version=${{ steps.version.outputs.current-version }} \
             project.stage=master
 
-      - name: Build code and deploy artifacts
-        uses: lumada-common-services/gh-composite-actions@slack-open
+      - name: Build code, deploy artifacts & run unit-tests
+        uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean deploy -DskipTests \
+            mvn clean deploy -DskipTests=false -B -Daudit \
               -Pcicd-release -Drelease -Dbuild.name=${{ env.BUILD_NAME }} -Dbuild.number=${{ github.run_number }} \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+              -pl "${{ inputs.modules_to_build || format('{0},{1}', inputs.modules_to_always_build, steps.change_detection.outputs.changed_modules) }}" \
+              -amd ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD
+          cmd_type: BUILD,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
 
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@slack-open
+      - name: Run PDI plugin integration tests
+        uses: pentaho/actions-common@stable
+        if: ${{ inputs.test_scenario_json }}
         with:
-          command: |
-            mvn verify -B -Daudit \
-              -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" -amd
+          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
+          test_scenario_json: "${{ inputs.test_scenario_json }}"
         env:
-          cmd_type: UNIT_TEST
+          run_plugin_integration_tests: true
+          BASE_VERSION: "${{ inputs.base_version }}"
+
+      #- name: Blackduck Scan
+      #  uses: lumada-common-services/gh-composite-actions@1.2.0
+      #  env:
+      #    BlackDuck_Project_Version: ${{ steps.version.outputs.current-version }}
+      #    BlackDuck_Project_Name: "${{ inputs.blackduck_project_key }}"
+      #    BlackDuck_Api_Token: "${{ secrets.ORION_BLACKDUCK_TOKEN }}"
+      #    BlackDuck_Url: "${{ inputs.blackduck_server_url }}"
+      #    ADDITIONAL_ARGS: ${{ inputs.blackduck_additional_args }}
 
       - name: Sonarqube scan
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           Tag_version: "${{ steps.version.outputs.current-version }}"
           push_tag_only: true
@@ -219,7 +276,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@slack-open
+        uses: lumada-common-services/gh-composite-actions@stable
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
