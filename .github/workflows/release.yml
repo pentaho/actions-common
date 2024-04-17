@@ -183,7 +183,7 @@ jobs:
         run: |
           python3 -m venv env
           source env/bin/activate
-          pip3 install -q pyyaml dohq-artifactory requests  `
+          pip3 install -q pyyaml dohq-artifactory requests
           echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}  
           python3 actions-common/.github/scripts/python/release-bundle.py \
           --build_name ${{ env.BUILD_NAME }} \
