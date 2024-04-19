@@ -20,18 +20,6 @@ on:
         type: string
         description: "Sonar's URL"
         default: https://sonar.orl.eng.hitachivantara.com
-      test_scenario_json:
-        required: false
-        type: string
-        description: "For PDI plugin integration tests, path to the json file containing test scenarios for each plugin"
-      base_version:
-        type: string
-        required: false
-        description: "Base version to be taken in consideration for dependencies"
-      modules_to_always_build_in_addition_to_those_with_changes:
-        type: string
-        required: false
-        description: "List of modules to build in addition to those that have changes."
       additional_mvn_directives:
         required: false
         type: string
@@ -132,7 +120,7 @@ jobs:
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}" \
+            -pl "${{ steps.change_detection.outputs.changed_modules }}" \
             ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
@@ -142,16 +130,6 @@ jobs:
           int_test_reporter: 'java-junit'
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
-
-      - name: Run PDI plugin integration tests
-        uses: pentaho/actions-common@stable
-        if: ${{ inputs.test_scenario_json }}
-        with:
-          changed_modules: "${{ steps.change_detection.outputs.changed_modules }}"
-          test_scenario_json: "${{ inputs.test_scenario_json }}"
-        env:
-          run_plugin_integration_tests: true
-          BASE_VERSION: "${{ inputs.base_version }}"
 
       - name: Sonarqube scan
         uses: lumada-common-services/gh-composite-actions@stable
