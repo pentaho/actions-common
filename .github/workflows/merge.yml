@@ -157,17 +157,31 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      - name: Build code and deploy artifacts
+      - name: Update cmd_type as per the mvn_directives
+        if: env.SET_CMD_TYPE == null
+        run: |
+          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+          else
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Build code, deploy artifacts & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
             mvn clean deploy -amd \
-            -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}"
+            -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
+             ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD,UNIT_TEST
+          cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
           unit_test_fail_on_error: 'true'
           unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
         continue-on-error: true
@@ -261,7 +275,17 @@ jobs:
             distribution.version=${{ steps.version.outputs.current-version }} \
             project.stage=master
 
-      - name: Build code, deploy artifacts & run unit-tests
+      - name: Update cmd_type as per the mvn_directives
+        if: env.SET_CMD_TYPE == null
+        run: |
+          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+          else
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Build code, deploy artifacts & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
@@ -270,10 +294,13 @@ jobs:
               -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD,UNIT_TEST
+          cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
           unit_test_fail_on_error: 'true'
           unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
         if: ${{ inputs.run_snapshot == false }}
