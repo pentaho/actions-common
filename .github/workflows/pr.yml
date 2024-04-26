@@ -32,6 +32,12 @@ on:
         type: string
         required: false
         description: "List of modules to build in addition to those that have changes."
+      additional_mvn_directives:
+        required: false
+        type: string
+        description: "Extra additional directives for the Maven command"
+        default: ""
+
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
@@ -68,7 +74,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -79,7 +85,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@1.0.0
+        uses: pentaho/actions-common@stable
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -93,7 +99,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -107,30 +113,35 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Update cmd_type as per the mvn_directives
+        if: env.SET_CMD_TYPE == null
+        run: |
+          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+          else
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
+          fi
+        shell: bash
+
       - name: Determine which changes occurred
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      - name: Build the project
+      - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean install -DskipTests -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
+            mvn clean verify -DskipTests=false -Daudit -amd \
+            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}" \
+            ${{ inputs.additional_mvn_directives }}
         env:
-          cmd_type: BUILD
-
-      - name: Run unit-tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn verify -B -Daudit -amd \
-            -pl "${{ format('{0},{1}', inputs.modules_to_always_build_in_addition_to_those_with_changes, steps.change_detection.outputs.changed_modules) }}"
-        env:
-          cmd_type: UNIT_TEST
-          reporter: 'java-junit'
-          fail-on-error: 'true'
-          test_report_path: '**/target/surefire-reports/*.xml'
+          cmd_type: ${{ env.SET_CMD_TYPE }}
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Run PDI plugin integration tests
         uses: pentaho/actions-common@stable
@@ -153,7 +164,7 @@ jobs:
         env:
           JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ github.token }}
+          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
 
       - name: Report notifications
         if: always()

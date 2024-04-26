@@ -11,10 +11,10 @@ on:
         type: string
         default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
-      box_upload:
+      create_release_bundle:
         type: boolean
         default: true
-        description: "Box upload."
+        description: "Create Release Bundle."
       manifest_file_path:
         required: false
         type: string
@@ -41,7 +41,27 @@ on:
         default: INFO
         required: false 
         description: "Sets the logging level to get more detailed info."  
-
+      release_bundle_name:
+        description: "Release Bundle Name"
+        required: false
+        type: string
+      release_bundle_version:
+        description: "Release Bundle Version"
+        required: false
+        type: string 
+      signing_key_name:
+        description: "The GPG/RSA key-pair name given in Artifactory."
+        required: false
+        type: string 
+      release_method:
+        description: "Source type to create release bundle (i.e builds or artifacts)."
+        required: false
+        default: artifacts
+        type: string       
+      box_upload:
+        type: boolean
+        default: true
+        description: "Box upload."
 env:
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
@@ -75,7 +95,6 @@ jobs:
           ref: ${{ inputs.ref }}
 
       - name: Check if manifest file is present
-        if: ${{ inputs.box_upload == true }}
         run: |
           if [ ! -f ${{ env.MANIFEST_PATH }} ]; then
             echo "Manifest file does not exist."
@@ -83,26 +102,46 @@ jobs:
           fi
 
       - name: Update versions in manifest
-        if: ${{ inputs.box_upload == true }}
         shell: bash
         run: |
-          sed -i "s/\${RELEASE_VERSION}/${{ inputs.release_version }}/g" ${{ env.MANIFEST_PATH }}
+          release_version="${{ inputs.release_version }}"
           
-          major_version=$(echo "${{ inputs.release_version }}" | cut -d '.' -f1,2)
+          sed -i "s/\${RELEASE_VERSION}/$release_version/g" ${{ env.MANIFEST_PATH }}
+          
+          major_version=$(echo "$release_version" | cut -d '.' -f1,2)
           sed -i 's/\${SHORT_VERSION}/'"$major_version"'/g' ${{ env.MANIFEST_PATH }}
           
-          no_build_nbr_version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1)
+          no_build_nbr_version=$(echo "$release_version" | cut -d '-' -f1)
           sed -i 's/\${MAJOR_VERSION}/'"$no_build_nbr_version"'/g' ${{ env.MANIFEST_PATH }}
         
           cat ${{ env.MANIFEST_PATH }}
 
       # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
+        shell: bash
         run: |
-          version=$(echo "${{ inputs.release_version }}" | cut -d '-' -f1 | xargs)
-          build_nbr=$(echo "${{ inputs.release_version }}" | cut -d '-' -f2 | xargs)
+          release_version="${{ inputs.release_version }}"
+          version=$(echo "$release_version" | cut -d '-' -f1 | xargs)
+          build_nbr=$(echo "$release_version" | cut -d '-' -f2 | xargs)
           
-          echo "BUILD_NAME=${{ github.event.repository.name }}-${version}" >> $GITHUB_ENV 
+          build_name="${{ github.event.repository.name }}-${version}"
+          buildinfo_name="${{ github.event.repository.name }}-${release_version}"
+          
+          # check if there is a build-info with the passed version as 'build.name'
+          build_aql="builds.find({\"name\": \"$buildinfo_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
+          buildinfo_data=$(curl -L -u "${{ env.NEXUS_DEPLOY_USER }}:${{ env.NEXUS_DEPLOY_PASSWORD }}" -X POST -H "Content-Type:text/plain" ${{ env.ARTIFACTORY_BASE_URL }}/api/search/aql -d "$build_aql")
+          echo "$buildinfo_data"
+          
+          buildinfo_number=$(echo $buildinfo_data | jq -r '.results[0]."build.number"')
+
+          # if a build number is found in buildinfo, we use that
+          if [[ "$buildinfo_number" != "" && "$buildinfo_number" != "null" ]]; then
+            build_name="$buildinfo_name"
+            build_nbr="$buildinfo_number"
+            version="$release_version"  
+          fi
+          
+          echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
           echo "BUILD_VERSION=${version}" >> $GITHUB_ENV 
 
@@ -131,13 +170,39 @@ jobs:
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY
 
       - name: Checkout reusable workflow source repo
-        if: ${{ inputs.box_upload == true }}
         uses: actions/checkout@v4
         with:
           repository: pentaho/actions-common
           path: actions-common
           ref: stable
 
+      - name: Create Release Bundle
+        if: ${{ inputs.create_release_bundle == true }}
+        shell: bash
+        run: |
+          python3 -m venv env
+          source env/bin/activate
+          pip3 install -q pyyaml dohq-artifactory requests
+
+          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
+
+          python3 actions-common/.github/scripts/python/release-bundle.py \
+          --build_name ${{ env.BUILD_NAME }} \
+          --build_number ${{ env.BUILD_NUMBER }} \
+          --build_version  ${{ env.BUILD_VERSION }} \
+          --rt_auth_username ${{ secrets.PENTAHO_CICD_ONE_USER }} \
+          --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
+          --manifest_file_path ${{ env.MANIFEST_PATH}} \
+          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
+          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
+          --dry_run ${{ inputs.dry_run }} \
+          --logging_level ${{inputs.logging_level }} \
+          --release_bundle_name ${{inputs.release_bundle_name }} \
+          --release_bundle_version ${{inputs.release_bundle_version }} \
+          --signing_key_name ${{ inputs.signing_key_name }} \
+          --arti_host ${{ env.ARTIFACTORY_HOST }} \
+          --release_method ${{ inputs.release_method }}
+      
       - name: Push artifacts to Box
         if: ${{ inputs.box_upload == true }}
         shell: bash
@@ -155,8 +220,8 @@ jobs:
           --build_name ${{ env.BUILD_NAME }} \
           --build_number ${{ env.BUILD_NUMBER }} \
           --build_version  ${{ env.BUILD_VERSION }} \
-          --rt_auth_username ${{ secrets.ARTIFACTORY_USER }} \
-          --rt_auth_password ${{ secrets.ARTIFACTORY_API_KEY }} \
+          --rt_auth_username ${{  secrets.PENTAHO_CICD_ONE_USER }} \
+          --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
           --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
           --manifest_file_path ${{ env.MANIFEST_PATH}} \
           --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \

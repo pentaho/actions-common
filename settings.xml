@@ -38,6 +38,12 @@
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
+    <!-- Relevant when using io.fabric8:docker-maven-plugin -->
+    <server>
+      <id>one.hitachivantara.com</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
   </servers>
 
   <profiles>
@@ -74,7 +80,7 @@
           </releases>
           <snapshots>
             <enabled>true</enabled>
-            <updatePolicy>never</updatePolicy>
+            <updatePolicy>always</updatePolicy>
           </snapshots>
         </repository>
       </repositories>
