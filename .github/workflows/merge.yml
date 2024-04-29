@@ -55,17 +55,17 @@ on:
         description: "Extra additional directives for the Maven command"
         default: ""
       run_snapshot:
-        required: true
+        required: false
         type: boolean
         default: true
         description: 'should the snapshot build run'
       run_versioning:
-        required: true
+        required: false
         type: boolean
         default: true
         description: 'should the versioning run on the RC build'
       run_release_candidate:
-        required: true
+        required: false
         type: boolean
         default: false
         description: 'should the RC build'
