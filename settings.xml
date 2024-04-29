@@ -80,7 +80,7 @@
           </releases>
           <snapshots>
             <enabled>true</enabled>
-            <updatePolicy>never</updatePolicy>
+            <updatePolicy>always</updatePolicy>
           </snapshots>
         </repository>
       </repositories>
