@@ -1,4 +1,4 @@
-FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/11
+FROM one.hitachivantara.com/docker/jenkins-build/maven/open-jdk/17
 
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
@@ -17,7 +17,7 @@ RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${
     mv jq-linux64 /usr/local/bin/jq && \
     chmod +x /usr/local/bin/jq
 
-# Install Python and Pip
+# Install Python and Pip 
 RUN apt-get update && \
     apt-get install -y python3-pip python3.11-venv && \
     apt-get clean && \
