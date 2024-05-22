@@ -113,7 +113,7 @@ jobs:
 
       - name: Determine which changes occurred
         id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+        uses: hv-actions/change-detection-builder@HNC-596
 
       - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable

@@ -155,7 +155,7 @@ jobs:
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+        uses: hv-actions/change-detection-builder@HNC-596
 
       - name: Update cmd_type as per the mvn_directives
         if: env.SET_CMD_TYPE == null
@@ -243,7 +243,7 @@ jobs:
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
-        uses: hv-actions/change-detection-builder@stable
+        uses: hv-actions/change-detection-builder@HNC-596
 
       - name: Determine version
         id: version
