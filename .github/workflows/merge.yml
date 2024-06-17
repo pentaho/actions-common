@@ -152,6 +152,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
+
       - name: Determine which changes occurred
         if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
