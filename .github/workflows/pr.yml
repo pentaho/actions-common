@@ -121,6 +121,12 @@ jobs:
           command: |
             docker container ls
 
+      - name: Trying to fix 0a
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            docker container ls --filter ancestor=actions-common
+
       - name: Trying to fix 1
         uses: lumada-common-services/gh-composite-actions@stable
         with:
