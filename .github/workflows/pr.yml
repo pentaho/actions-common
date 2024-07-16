@@ -115,7 +115,19 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
-      - name: Trying to fix
+      - name: Trying to fix 1
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            docker container ls --filter ancestor=one.hitachivantara.com/devops-docker-release/pentaho/actions-common --latest -q
+
+      - name: Trying to fix 2
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            docker container ls --filter ancestor=one.hitachivantara.com/devops-docker-release/pentaho/actions-common --latest -q | xargs -I % docker inspect %
+
+      - name: Trying to fix 3
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
