@@ -115,6 +115,12 @@ jobs:
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
+      - name: Trying to fix 0
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            docker container ls
+
       - name: Trying to fix 1
         uses: lumada-common-services/gh-composite-actions@stable
         with:
