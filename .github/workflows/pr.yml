@@ -145,6 +145,12 @@ jobs:
           command: |
             docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}'
 
+      - name: Trying to fix 4
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command:  |
+            rm -rf /root/.m2/repository/pentaho-kettle/kettle-core
+        
       - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
