@@ -96,6 +96,32 @@ jobs:
 
     steps:
 
+      - name: Load Job metadata into Env vars
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        run: |
+          process_json() {
+            local prefix=$1
+            local json_data=$2
+
+            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+              # Check if the value is a JSON object or array
+              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+              if [[ $is_json == 0 ]]; then
+                # If it's an object or array, call the function recursively
+                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+              else
+                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+              fi
+            done
+          }
+          # Start processing JSON from the root
+          echo "Dealing with ${{ env.JOB_CONTEXT }}"
+          process_json '' '${{ env.JOB_CONTEXT }}'
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
