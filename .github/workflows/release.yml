@@ -6,57 +6,16 @@ on:
         description: ""
         required: true
         type: string
-      arti_host:
-        required: false
-        type: string
-        default: https://one.hitachivantara.com
-        description: "Artifactory's Host name"
-      create_release_bundle:
-        type: boolean
-        default: true
-        description: "Create Release Bundle."
-      manifest_file_path:
-        required: false
-        type: string
-        default: ".github/artifacts-manifest.yaml"
-      jf_cli_rt_name:
-        required: false
-        type: string
-        default: artifactory
-      ref:
-        required: false
-        default: ''
-        type: string
-        description: "ref to which the repo calls this workflow"
       dry_run:
         type: boolean
         default: true
         description: "Dry run. No real changes should occur."
-      promote_artifacts:
-        type: boolean
-        default: true
-        description: "Promote artifacts in Artifactory."
-      logging_level:
-        type: string
-        default: INFO
-        required: false 
-        description: "Sets the logging level to get more detailed info."       
-      box_upload:
-        type: boolean
-        default: true
-        description: "Box upload."
+
 env:
-  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
-
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
-
-  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-
-  MANIFEST_PATH: $GITHUB_WORKSPACE/${{ inputs.manifest_file_path }}
-
-  BOX_CI_FOLDER_ID: 261814384
+  ARTIFACTORY_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  ARTIFACTORY_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
 jobs:
 
@@ -65,7 +24,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240108.115
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -74,30 +33,6 @@ jobs:
 
       - name: Checkout source repo
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
-
-      - name: Check if manifest file is present
-        run: |
-          if [ ! -f ${{ env.MANIFEST_PATH }} ]; then
-            echo "Manifest file does not exist."
-            exit 1 # fails the build
-          fi
-
-      - name: Update versions in manifest
-        shell: bash
-        run: |
-          release_version="${{ inputs.release_version }}"
-          
-          sed -i "s/\${RELEASE_VERSION}/$release_version/g" ${{ env.MANIFEST_PATH }}
-          
-          major_version=$(echo "$release_version" | cut -d '.' -f1,2)
-          sed -i 's/\${SHORT_VERSION}/'"$major_version"'/g' ${{ env.MANIFEST_PATH }}
-          
-          no_build_nbr_version=$(echo "$release_version" | cut -d '-' -f1)
-          sed -i 's/\${MAJOR_VERSION}/'"$no_build_nbr_version"'/g' ${{ env.MANIFEST_PATH }}
-        
-          cat ${{ env.MANIFEST_PATH }}
 
       # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
@@ -108,81 +43,24 @@ jobs:
           build_nbr=$(echo "$release_version" | cut -d '-' -f2 | xargs)
           
           build_name="${{ github.event.repository.name }}-${version}"
-          buildinfo_name="${{ github.event.repository.name }}-${release_version}"
-          
-          # check if there is a build-info with the passed version as 'build.name'
-          build_aql="builds.find({\"name\": \"$buildinfo_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
-          buildinfo_data=$(curl -L -u "${{ env.NEXUS_DEPLOY_USER }}:${{ env.NEXUS_DEPLOY_PASSWORD }}" -X POST -H "Content-Type:text/plain" ${{ env.ARTIFACTORY_BASE_URL }}/api/search/aql -d "$build_aql")
-          echo "$buildinfo_data"
-          
-          buildinfo_number=$(echo $buildinfo_data | jq -r '.results[0]."build.number"')
-
-          # if a build number is found in buildinfo, we use that
-          if [[ "$buildinfo_number" != "" && "$buildinfo_number" != "null" ]]; then
-            build_name="$buildinfo_name"
-            build_nbr="$buildinfo_number"
-            version="$release_version"  
-          fi
           
           echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
-          echo "BUILD_VERSION=${version}" >> $GITHUB_ENV 
 
       - name: Config Artifactory in jFrog CLI
         run: |
-          jf config add ${{ inputs.jf_cli_rt_name}} --interactive=false --enc-password=false --basic-auth-only \
+          jf config add artifactory --interactive=false --enc-password=false --basic-auth-only \
             --artifactory-url ${{ env.ARTIFACTORY_BASE_URL }} \
-            --password ${{ env.NEXUS_DEPLOY_PASSWORD }} \
-            --user ${{ env.NEXUS_DEPLOY_USER }}
+            --password ${{ env.ARTIFACTORY_DEPLOY_PASSWORD }} \
+            --user ${{ env.ARTIFACTORY_DEPLOY_USER }}
 
-      - name: Checkout reusable workflow source repo
-        uses: actions/checkout@v4
-        with:
-          repository: pentaho/actions-common
-          path: actions-common
-          ref: stable
-
-      
-      - name: Push artifacts to Box
-        if: ${{ inputs.box_upload == true }}
-        shell: bash
-        run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip3 install -q pyyaml dohq-artifactory requests boxsdk tqdm
-          
-          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}
-
-          python3 actions-common/.github/scripts/python/promote-release-to-box.py \
-          --client_id ${{ vars.BOX_APP_CLIENT_ID}} \
-          --client_secret ${{ secrets.BOX_APP_CLIENT_SECRET }} \
-          --box_subject_id ${{ vars.BOX_SUBJECT_ID }}  \
-          --build_name ${{ env.BUILD_NAME }} \
-          --build_number ${{ env.BUILD_NUMBER }} \
-          --build_version  ${{ env.BUILD_VERSION }} \
-          --rt_auth_username ${{  secrets.PENTAHO_CICD_ONE_USER }} \
-          --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
-          --box_parent_folder_id ${{ env.BOX_CI_FOLDER_ID }} \
-          --manifest_file_path ${{ env.MANIFEST_PATH}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
-          --dry_run ${{ inputs.dry_run }} \
-          --logging_level ${{inputs.logging_level }}
-
-      - name: Set Box Summary
-        if: ${{ inputs.box_upload == true }}
-        shell: bash
-        run: |
-          box_summary=""
-          if [ "${{ inputs.dry_run }}" = "true" ]; then  
-            box_summary="[Dry run] "
-          fi
-          
-          # BOX_FOLDER_ID is an env var that is set inside the promote-release-to-box.py script file
-          echo "$box_summary :ballot_box: ${{ inputs.release_version }} was uploaded to https://pentaho.app.box.com/folder/$BOX_FOLDER_ID" >> $GITHUB_STEP_SUMMARY
+      # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
+      - name: Get Repository Metadata
+        uses: varunsridharan/action-repository-meta@2.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Promote artifacts
-        if: ${{ inputs.promote_artifacts == true }}
         run: |
           rt_repo='pntpub-maven-release'
 
@@ -196,29 +74,4 @@ jobs:
           fi
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
           
-          echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to ${rt_repo}" >> $GITHUB_STEP_SUMMARY 
-        
-      - name: Create Release Bundle
-        if: ${{ inputs.create_release_bundle == true }}
-        shell: bash
-        run: |
-          python3 -m venv env
-          source env/bin/activate
-          pip3 install -q pyyaml dohq-artifactory requests
-          echo ${{ env.BUILD_NAME }} ${{ env.BUILD_NUMBER }} ${{ env.BUILD_VERSION }}  
-          python3 actions-common/.github/scripts/python/release-bundle.py \
-          --build_name ${{ env.BUILD_NAME }} \
-          --build_number ${{ env.BUILD_NUMBER }} \
-          --build_version  ${{ env.BUILD_VERSION }} \
-          --rt_auth_username ${{ secrets.PENTAHO_CICD_ONE_USER }} \
-          --rt_auth_password ${{ secrets.PENTAHO_CICD_ONE_KEY }} \
-          --manifest_file_path ${{ env.MANIFEST_PATH}} \
-          --rt_base_url ${{ env.ARTIFACTORY_BASE_URL }} \
-          --jf_cli_rt_name ${{ inputs.jf_cli_rt_name }} \
-          --dry_run ${{ inputs.dry_run }} \
-          --logging_level ${{inputs.logging_level }} \
-          --release_bundle_name ${{ env.BUILD_NAME }} \
-          --release_bundle_version ${{ env.BUILD_NUMBER }} \
-          --signing_key_name "frog" \
-          --arti_host ${{ env.ARTIFACTORY_HOST }} \
-          --release_method "artifacts"
+          echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY 
