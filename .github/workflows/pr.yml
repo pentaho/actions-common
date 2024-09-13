@@ -28,6 +28,8 @@ on:
 
 
 env:
+  PUBLISH_REGISTRY: //one.hitachivantara.com/artifactory/api/npm/pntprv-npm-dev/
+
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
@@ -140,6 +142,15 @@ jobs:
       - name: Determine which changes occurred
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
+
+      - name: NPM authentication
+        # Run the command outside the workspace as work around for "npm ERR! code ENOWORKSPACES"
+        working-directory: ""
+        run: |
+          PASSWORD=$(echo -n ${{ secrets.PENTAHO_CICD_ONE_KEY }} | base64 | tr -d " \t\n\r")
+          npm config set ${{ env.PUBLISH_REGISTRY }}:_password=$PASSWORD
+          npm config set ${{ env.PUBLISH_REGISTRY }}:username=${{ secrets.PENTAHO_CICD_ONE_USER }}
+        shell: bash
 
       - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
