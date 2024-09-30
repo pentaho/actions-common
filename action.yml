@@ -1,22 +1,66 @@
-name: "Common Pentaho Maven Settings file"
-description: "Common Pentaho Maven Settings file"
-
+name: Common Pentaho Maven Settings file
+description: Common Pentaho Maven Settings file
 outputs:
   settings-file-path:
-    description: "Maven settings file path"
+    description: Maven settings file path
     value: ${{ steps.settings-file.outputs.path }}
-
+on:
+  workflow_call:
+    inputs:
+      eid:
+        required: false
+        type: string
+      oid:
+        required: false
+        type: string
+      scpid:
+        required: false
+        type: string
+      app-name:
+        required: false
+        type: string
+        default: ${{ github.repository }}
+      trx-host:
+        required: false
+        type: string
+        default: https://app.threatrix.io
+    secrets:
+      TOKEN:
+        required: true
+      THREATRIX_SERVER_API_KEY:
+        required: true
+      THREATRIX_EID:
+        required: false
+      THREATRIX_OID:
+        required: false
+      THREATRIX_SCP_ID:
+        required: false
 runs:
-  using: "composite"
+  using: composite
+  env:
+    TRX_EID: ${{ inputs.eid != '' && inputs.eid || secrets.THREATRIX_EID }}
+    TRX_OID: ${{ inputs.oid != '' && inputs.oid || secrets.THREATRIX_OID }}
+    SCP_ID: ${{ inputs.scpid != '' && inputs.scpid || secrets.THREATRIX_SCP_ID }}
   steps:
-
     - name: Checkout code
       uses: actions/checkout@v4
-
+    - name: Run scan with threat-agent
+      uses: threatrix/threat-agent-scan@master
+      with:
+        eid: ${{ env.TRX_EID }}
+        oid: ${{ env.TRX_OID }}
+        scpid: ${{ env.SCP_ID != '' && env.SCP_ID || 'UNDEFINED' }}
+        server-url: ${{ inputs.trx-host }}
+        scm-token: ${{ secrets.TOKEN }}
+        api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+        app-name: ${{ inputs.app-name }}
+        branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+        pr-num: ${{ github.event.pull_request.number != '' &&
+          github.event.pull_request.number || 'UNDEFINED' }}
     - name: Return settings.xml
       id: settings-file
       shell: sh
       run: |
         file_path="$GITHUB_ACTION_PATH/settings.xml"
-        
+
         echo "path=${file_path}" >> $GITHUB_OUTPUT
