@@ -25,7 +25,7 @@ on:
         type: string
         default: https://app.threatrix.io
     secrets:
-      TOKEN:
+      HV_ACTIONS_GIT_TOKEN:
         required: true
       THREATRIX_SERVER_API_KEY:
         required: true
@@ -51,7 +51,7 @@ runs:
         oid: ${{ env.TRX_OID }}
         scpid: ${{ env.SCP_ID != '' && env.SCP_ID || 'UNDEFINED' }}
         server-url: ${{ inputs.trx-host }}
-        scm-token: ${{ secrets.TOKEN }}
+        scm-token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
         api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
         app-name: ${{ inputs.app-name }}
         branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
