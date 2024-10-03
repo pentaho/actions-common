@@ -157,8 +157,8 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
       - run: |
-          curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
-          java -jar threat-agent-latest.jar --verbose --progress --app-name=${{ github.event.repository.name }} --repo-owner=pentaho --repo-name=${{ github.event.repository.name }} --oid=${{ secrets.THREATRIX_OID }} --eid=${{ secrets.THREATRIX_EID }} --api-key=${{ secrets.THREATRIX_SERVER_API_KEY }} .
+           curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
+           java -jar threat-agent-latest.jar --verbose --progress --app-name=${{ github.event.repository.name }} --repo-owner=pentaho --repo-name=${{ github.event.repository.name }} --oid=${{ secrets.THREATRIX_OID }} --eid=${{ secrets.THREATRIX_EID }} --api-key=${{ secrets.THREATRIX_SERVER_API_KEY }} .
 
       - name: Sonarqube scan
         uses: lumada-common-services/gh-composite-actions@stable
