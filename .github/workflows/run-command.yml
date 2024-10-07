@@ -1,0 +1,109 @@
+name: Run
+on:
+  workflow_call:
+    inputs:
+      command:
+        required: true
+        type: string
+
+env:
+
+  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pntprv-custom2-maven/
+
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
+  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
+
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
+
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+
+jobs:
+
+  setup-maven-settings:
+    name: Setup Maven settings
+
+    runs-on: [ k8s ]
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho-features/.m2:/root/.m2
+
+    steps:
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@stable
+
+      - name: Copy settings.xml to .m2 directory
+        shell: sh
+        run: |
+          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
+
+
+  common-job:
+    name: Common Checks
+    needs: setup-maven-settings
+    runs-on: [ k8s ]
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho-features/.m2:/root/.m2
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        #        TODO this would need to check out the right version
+        with:
+          fetch-depth: 0
+      #          ref: ${{ inputs.branch?}}
+
+      - name: Update cmd_type as per the mvn_directives
+        if: env.SET_CMD_TYPE == null
+        run: |
+          echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Run a command
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            ${{ inputs.command }}
+        #            echo "mvn clean verify -DskipTests=false -Daudit -amd \
+        #            -pl ${{ inputs.plugin-name }} \
+        #            -am \
+        #            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}')
+        #            -Dmaven.test.redirectTestOutputToFile=false \
+        #            -DrunITs \
+        #            -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-111 \
+        #            -DsetVmMaxMapCountForElasticsearch
+        #TODO testing
+        #TODO can I set all these environment variables in the caller to keep this resusable action super generic?
+#        env:
+#          cmd_type: ${{ env.SET_CMD_TYPE }}
+#          unit_test_reporter: 'java-junit'
+#          unit_test_fail_on_error: 'true'
+#          unit_test_report_path: '**/target/surefire-reports/*.xml'
+#          int_test_reporter: 'java-junit'
+#          int_test_fail_on_error: 'true'
+#          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+
