@@ -104,8 +104,9 @@ env:
 
 jobs:
 
-  setup-maven-settings:
-    name: Setup Maven settings
+  snapshot:
+    if: ${{ inputs.run_snapshot == true }}
+    name: Update Snapshots
 
     runs-on: [ k8s ]
 
@@ -127,25 +128,6 @@ jobs:
         shell: sh
         run: |
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
-
-  snapshot:
-    if: ${{ inputs.run_snapshot == true }}
-    name: Update Snapshots
-    needs: setup-maven-settings
-
-    runs-on: [ k8s ]
-
-    container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
-      credentials:
-        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-      volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
-    steps:
-
-      - run: |
-          echo ${{ needs.setup-maven-settings.env }}
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -185,12 +167,12 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+#      - name: Sonarqube scan
+#        continue-on-error: true
+#        uses: lumada-common-services/gh-composite-actions@stable
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Report notifications
         if: always()
@@ -203,7 +185,6 @@ jobs:
   release-candidate:
     if: ${{ inputs.run_release_candidate == true }}
     name: Build Release Candidate
-    needs: setup-maven-settings
 
     runs-on: [ k8s ]
 
@@ -217,7 +198,17 @@ jobs:
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
+
     steps:
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@stable
+
+      - name: Copy settings.xml to .m2 directory
+        shell: sh
+        run: |
+          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
       - id: initial-setup
         shell: bash
@@ -304,13 +295,13 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        if: ${{ inputs.run_snapshot == false }}
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+#      - name: Sonarqube scan
+#        if: ${{ inputs.run_snapshot == false }}
+#        continue-on-error: true
+#        uses: lumada-common-services/gh-composite-actions@stable
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
         uses: lumada-common-services/gh-composite-actions@stable
