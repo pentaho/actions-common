@@ -107,7 +107,7 @@ jobs:
   setup-maven-settings:
     name: Setup Maven settings
 
-    runs-on: [ k8s ]
+    runs-on: [ k8s-aws ]
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
@@ -133,7 +133,7 @@ jobs:
     name: Update Snapshots
     needs: setup-maven-settings
 
-    runs-on: [ k8s ]
+    runs-on: [ k8s-aws ]
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
@@ -205,7 +205,7 @@ jobs:
     name: Build Release Candidate
     needs: setup-maven-settings
 
-    runs-on: [ k8s ]
+    runs-on: [ k8s-aws ]
 
     env:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

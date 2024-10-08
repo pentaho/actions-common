@@ -59,7 +59,7 @@ jobs:
   setup-maven-settings:
     name: Setup Maven settings
 
-    runs-on: [ k8s ]
+    runs-on: [ k8s-aws ]
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
@@ -84,7 +84,7 @@ jobs:
   common-job:
     name: Common Checks
     needs: setup-maven-settings
-    runs-on: [ k8s ]
+    runs-on: [ k8s-aws ]
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
