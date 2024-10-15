@@ -60,6 +60,13 @@ jobs:
     name: Common Checks
     runs-on: [ k8s ]
 
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
+
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
