@@ -41,7 +41,7 @@ jobs:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
-        - /home/runner/caches/pentaho-features/.m2:/root/.m2
+        - /home/runner/caches/pentaho/.m2:/root/.m2
 
     steps:
 
@@ -66,7 +66,7 @@ jobs:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
-        - /home/runner/caches/pentaho-features/.m2:/root/.m2
+        - /home/runner/caches/pentaho/.m2:/root/.m2
 
     steps:
 
