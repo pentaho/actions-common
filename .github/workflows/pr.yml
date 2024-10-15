@@ -1,4 +1,4 @@
-name: Run
+name: Pentaho pull request workflow
 on:
   workflow_call:
     inputs:
