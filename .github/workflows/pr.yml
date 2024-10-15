@@ -140,11 +140,11 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-#      - name: Sonarqube scan
-#        uses: lumada-common-services/gh-composite-actions@stable
-#        env:
-#          sonar_utility: sonar-scanner
-#          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+      - name: Sonarqube scan
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          sonar_utility: sonar-scanner
+          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot scan
         uses: lumada-common-services/gh-composite-actions@stable
