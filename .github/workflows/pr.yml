@@ -1,41 +1,17 @@
-name: Pentaho pull request workflow
+name: Run
 on:
   workflow_call:
     inputs:
-      slack_channels:
-        type: string
-        required: true
-        description: "Slack channel(s) to send notifications to."
-      arti_host:
-        required: false
-        type: string
-        default: https://one.hitachivantara.com
-        description: "Artifactory's Host name"
-      sonar_project_key:
+      command:
         required: true
         type: string
-        description: "Sonar's project identifier key"
-      sonar_url:
-        required: false
-        type: string
-        description: "Sonar's URL"
-        default: https://sonar.orl.eng.hitachivantara.com
-      additional_mvn_directives:
-        required: false
-        type: string
-        description: "Extra additional directives for the Maven command"
-        default: ""
-
 
 env:
-  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
-  SONAR_HOST_URL: ${{ inputs.sonar_url }}
-  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
   ARTIFACTORY_HOST: ${{ inputs.arti_host }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn/
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -52,8 +28,6 @@ env:
   DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
 
-  SLACK_CHANNEL: "${{ inputs.slack_channels }}"
-
 jobs:
 
   setup-maven-settings:
@@ -67,7 +41,7 @@ jobs:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
+        - /home/runner/caches/pentaho-features/.m2:/root/.m2
 
     steps:
 
@@ -79,7 +53,7 @@ jobs:
         shell: sh
         run: |
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
-    
+
 
   common-job:
     name: Common Checks
@@ -92,92 +66,44 @@ jobs:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
+        - /home/runner/caches/pentaho-features/.m2:/root/.m2
 
     steps:
 
-      - name: Load Job metadata into Env vars
-        shell: bash
-        continue-on-error: true
-        env:
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        run: |
-          process_json() {
-            local prefix=$1
-            local json_data=$2
-
-            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
-              # Check if the value is a JSON object or array
-              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
-              if [[ $is_json == 0 ]]; then
-                # If it's an object or array, call the function recursively
-                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
-              else
-                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
-                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
-              fi
-            done
-          }
-          # Start processing JSON from the root
-          echo "Dealing with ${{ env.JOB_CONTEXT }}"
-          process_json '' '${{ env.JOB_CONTEXT }}'
-
       - name: Checkout code
         uses: actions/checkout@v4
+        #        TODO this would need to check out the right version
         with:
           fetch-depth: 0
+      #          ref: ${{ inputs.branch?}}
 
       - name: Update cmd_type as per the mvn_directives
         if: env.SET_CMD_TYPE == null
         run: |
-          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
-            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
-          else
-            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
-          fi
+          echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
         shell: bash
 
-      - name: Determine which changes occurred
-        id: change_detection
-        uses: hv-actions/change-detection-builder@stable
-
-      - name: Build & Run tests
+      - name: Run a command
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" \
-            ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: ${{ env.SET_CMD_TYPE }}
-          unit_test_reporter: 'java-junit'
-          unit_test_fail_on_error: 'true'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
-          int_test_reporter: 'java-junit'
-          int_test_fail_on_error: 'true'
-          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+            ${{ inputs.command }}
+        #            echo "mvn clean verify -DskipTests=false -Daudit -amd \
+        #            -pl ${{ inputs.plugin-name }} \
+        #            -am \
+        #            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}')
+        #            -Dmaven.test.redirectTestOutputToFile=false \
+        #            -DrunITs \
+        #            -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-111 \
+        #            -DsetVmMaxMapCountForElasticsearch
+        #TODO testing
+        #TODO can I set all these environment variables in the caller to keep this resusable action super generic?
+#        env:
+#          cmd_type: ${{ env.SET_CMD_TYPE }}
+#          unit_test_reporter: 'java-junit'
+#          unit_test_fail_on_error: 'true'
+#          unit_test_report_path: '**/target/surefire-reports/*.xml'
+#          int_test_reporter: 'java-junit'
+#          int_test_fail_on_error: 'true'
+#          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
-
-      - name: FrogBot scan
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          JF_URL: https://one.hitachivantara.com
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
-          GIT_REPO_OWNER: ${{ github.repository_owner }}
-          GIT_REPO_NAME: ${{ github.event.repository.name }}
-          JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
-          PULL_REQUEST_NUMBER: ${{github.event.number}}
-
-      - name: Report notifications
-        if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
-          report: true
