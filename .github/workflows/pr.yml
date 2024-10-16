@@ -99,11 +99,11 @@ jobs:
             -DrunITs \
             -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-222 \
             -DsetVmMaxMapCountForElasticsearch
-          env:
-            cmd_type: 'BUILD,UNIT_TEST,INTEGRATION_TEST'
-            unit_test_reporter: 'java-junit'
-            unit_test_fail_on_error: 'true'
-            unit_test_report_path: '**/target/surefire-reports/*.xml'
-            int_test_reporter: 'java-junit'
-            int_test_fail_on_error: 'true'
-            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+        env:
+          cmd_type: 'BUILD,UNIT_TEST,INTEGRATION_TEST'
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: '**/target/surefire-reports/*.xml'
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
