@@ -118,7 +118,7 @@ jobs:
           if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
           else
-            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
+            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
           fi
         shell: bash
 
