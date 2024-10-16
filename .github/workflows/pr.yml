@@ -94,7 +94,7 @@ jobs:
             -pl ${{ inputs.plugin-name }} \
             -Dpdi-plugin-tester.pdi-version=${{ inputs.pdi-version }} \
             -am \
-            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}')
+            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}') \
             -Dmaven.test.redirectTestOutputToFile=false \
             -DrunITs \
             -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-222 \
