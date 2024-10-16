@@ -7,8 +7,9 @@ on:
         type: string
         default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
-      command:
+      testcommand:
         required: true
+        default: echo something
         type: string
 
 env:
@@ -77,10 +78,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v4
-        #        TODO this would need to check out the right version
         with:
           fetch-depth: 0
-      #          ref: ${{ inputs.branch?}}
 
       - name: Update cmd_type as per the mvn_directives
         if: env.SET_CMD_TYPE == null
@@ -93,22 +92,11 @@ jobs:
         with:
           command: |
             mvn clean
-        #            echo "mvn clean verify -DskipTests=false -Daudit -amd \
-        #            -pl ${{ inputs.plugin-name }} \
-        #            -am \
-        #            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}')
-        #            -Dmaven.test.redirectTestOutputToFile=false \
-        #            -DrunITs \
-        #            -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-111 \
-        #            -DsetVmMaxMapCountForElasticsearch
-        #TODO testing
-        #TODO can I set all these environment variables in the caller to keep this resusable action super generic?
-#        env:
-#          cmd_type: ${{ env.SET_CMD_TYPE }}
-#          unit_test_reporter: 'java-junit'
-#          unit_test_fail_on_error: 'true'
-#          unit_test_report_path: '**/target/surefire-reports/*.xml'
-#          int_test_reporter: 'java-junit'
-#          int_test_fail_on_error: 'true'
-#          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
-
+          env:
+            cmd_type: ${{ env.SET_CMD_TYPE }}
+            unit_test_reporter: 'java-junit'
+            unit_test_fail_on_error: 'true'
+            unit_test_report_path: '**/target/surefire-reports/*.xml'
+            int_test_reporter: 'java-junit'
+            int_test_fail_on_error: 'true'
+            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
