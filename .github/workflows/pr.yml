@@ -7,9 +7,14 @@ on:
         type: string
         default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
-      testcommand:
+      plugin-name:
         required: true
-        default: echo something
+        type: string
+      pdi-version:
+        required: true
+        type: string
+      plugin-version:
+        required: true
         type: string
 
 env:
@@ -81,22 +86,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update cmd_type as per the mvn_directives
-        if: env.SET_CMD_TYPE == null
-        run: |
-          echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
-        shell: bash
-
       - name: Run a command
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            ${{ inputs.testcommand }}
-#          env:
-#            cmd_type: 'BUILD'
-#            unit_test_reporter: 'java-junit'
-#            unit_test_fail_on_error: 'true'
-#            unit_test_report_path: '**/target/surefire-reports/*.xml'
-#            int_test_reporter: 'java-junit'
-#            int_test_fail_on_error: 'true'
-#            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+            echo mvn clean verify -DskipTests=false -Daudit -amd \
+            -pl ${{ inputs.plugin-name }} \
+            -Dpdi-plugin-tester.pdi-version ${{ inputs.pdi-version }} \
+            -am \
+            -Duse-existing-docker-network=$(docker container ls --filter name=onehitachivantaracomdevopsdockerreleasepentahoactionscommon --latest -q | xargs -I % docker inspect % -f '{{.HostConfig.NetworkMode}}')
+            -Dmaven.test.redirectTestOutputToFile=false \
+            -DrunITs \
+            -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-222 \
+            -DsetVmMaxMapCountForElasticsearch
+          env:
+            cmd_type: 'BUILD,UNIT_TEST,INTEGRATION_TEST'
+            unit_test_reporter: 'java-junit'
+            unit_test_fail_on_error: 'true'
+            unit_test_report_path: '**/target/surefire-reports/*.xml'
+            int_test_reporter: 'java-junit'
+            int_test_fail_on_error: 'true'
+            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
