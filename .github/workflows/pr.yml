@@ -91,7 +91,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean
+            ${{ inputs.testcommand }}
 #          env:
 #            cmd_type: 'BUILD'
 #            unit_test_reporter: 'java-junit'
