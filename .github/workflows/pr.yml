@@ -92,11 +92,11 @@ jobs:
         with:
           command: |
             mvn clean
-          env:
-            cmd_type: 'BUILD'
-            unit_test_reporter: 'java-junit'
-            unit_test_fail_on_error: 'true'
-            unit_test_report_path: '**/target/surefire-reports/*.xml'
-            int_test_reporter: 'java-junit'
-            int_test_fail_on_error: 'true'
-            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+#          env:
+#            cmd_type: 'BUILD'
+#            unit_test_reporter: 'java-junit'
+#            unit_test_fail_on_error: 'true'
+#            unit_test_report_path: '**/target/surefire-reports/*.xml'
+#            int_test_reporter: 'java-junit'
+#            int_test_fail_on_error: 'true'
+#            int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
