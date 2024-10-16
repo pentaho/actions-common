@@ -122,6 +122,10 @@ jobs:
           fi
         shell: bash
 
+      - name: Determine which changes occurred
+        id: change_detection
+        uses: hv-actions/change-detection-builder@stable
+
       - name: Build & Run tests
         uses: lumada-common-services/gh-composite-actions@stable
         with:
