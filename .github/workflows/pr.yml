@@ -92,7 +92,8 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            ${{ inputs.command }}
+            echo "testing"
+            "${{ inputs.command }}"
         #            echo "mvn clean verify -DskipTests=false -Daudit -amd \
         #            -pl ${{ inputs.plugin-name }} \
         #            -am \
