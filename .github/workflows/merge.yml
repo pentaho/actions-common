@@ -155,7 +155,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean deploy -amd \
+            mvn clean deploy -amd -Daudit \
             -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
              ${{ inputs.additional_mvn_directives }}
         env:
