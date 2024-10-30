@@ -1,5 +1,5 @@
 ARG JDK=17
-FROM repo-cache.orl.eng.hitachivantara.com/docker/jenkins-build/maven/open-jdk/${JDK}
+FROM repo-cache.orl.eng.hitachivantara.com/pnt-docker/jenkins-build/maven/open-jdk/${JDK}
 
 ARG VERSION_MERGER=1.0.8
 ARG ARTIFACTORY_URL=https://one.hitachivantara.com/artifactory/maven
