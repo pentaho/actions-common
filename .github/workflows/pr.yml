@@ -16,6 +16,9 @@ on:
       plugin-version:
         required: true
         type: string
+      elastic-version:
+        required: false
+        type: string
 
 env:
 
@@ -138,7 +141,8 @@ jobs:
             -Dmaven.test.redirectTestOutputToFile=false \
             -DrunITs \
             -Drelease -Dpentaho-ee-dsc.version=10.2.0.0-222 \
-            -DsetVmMaxMapCountForElasticsearch
+            -DsetVmMaxMapCountForElasticsearch \
+            -Delasticsearch-test-major-version=${{ inputs.elastic-version }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
