@@ -156,7 +156,7 @@ jobs:
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" \
+            -pl "./projects" \
             ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
