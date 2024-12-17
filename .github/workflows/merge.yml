@@ -172,7 +172,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Report notifications
         if: always()
@@ -301,7 +301,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}}")'
+          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
         uses: lumada-common-services/gh-composite-actions@stable
