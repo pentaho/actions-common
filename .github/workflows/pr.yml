@@ -54,6 +54,17 @@ jobs:
 
     runs-on: [ k8s ]
 
+    permissions:
+      # required for all workflows
+      security-events: write
+
+      # required to fetch internal or private CodeQL packs
+      packages: read
+
+      # only required for workflows in private repositories
+      actions: read
+      contents: read
+
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
@@ -149,9 +160,26 @@ jobs:
           int_test_reporter: 'java-junit'
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
-      - run: |
-           curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
-           java -jar threat-agent-latest.jar --verbose --progress --app-name=${{ github.event.repository.name }} --tags="agent, repo/folder, pr" --branch=${{ github.head_ref || github.ref_name }} --pr-num=${{ github.event.number }} --scm=GITHUB --scm-auth-token=${{ secrets.HV_ACTIONS_GIT_TOKEN }} --repo-owner=pentaho --repo-name=${{ github.event.repository.name }} --scpId=${{ inputs.scpId || 'UNDEFINED' }} --oid=${{ secrets.THREATRIX_OID }} --eid=${{ secrets.THREATRIX_EID }} --api-key=${{ secrets.THREATRIX_SERVER_API_KEY }} .
+
+      ###############
+      # This is the CodeQL section
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java-kotlin"
+      # End CodeQL
+      #################
+
+      # This was the threatrix poc. keeping for reference for now    
+      #- run: |
+      #     curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
+      #     java -jar threat-agent-latest.jar --verbose --progress --app-name=${{ github.event.repository.name }} --tags="agent, repo/folder, pr" --branch=${{ github.head_ref || github.ref_name }} --pr-num=${{ github.event.number }} --scm=GITHUB --scm-auth-token=${{ secrets.HV_ACTIONS_GIT_TOKEN }} --repo-owner=pentaho --repo-name=${{ github.event.repository.name }} --scpId=${{ inputs.scpId || 'UNDEFINED' }} --oid=${{ secrets.THREATRIX_OID }} --eid=${{ secrets.THREATRIX_EID }} --api-key=${{ secrets.THREATRIX_SERVER_API_KEY }} .
 
       - name: Report notifications
         if: always()
