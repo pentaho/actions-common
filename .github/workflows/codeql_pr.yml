@@ -1,11 +1,7 @@
-name: Pentaho CodeQL PR Workflow
+name: Pentaho CodeQL Workflow
 on:
   workflow_call:
     inputs:
-      slack_channels:
-        type: string
-        required: true
-        description: "Slack channel(s) to send notifications to."
       arti_host:
         required: false
         type: string
@@ -20,22 +16,7 @@ env:
 
   RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
 
-  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-
-  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
-  PRIVATE_RELEASE_REPO: pntprv-maven-dev
-  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
-
-  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
-  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
-  PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
-
   DOCKER_PULL_HOST: one.hitachivantara.com/docker/
-  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
-  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
-
-  SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
 jobs:
 
@@ -43,17 +24,6 @@ jobs:
     name: Setup Maven settings
 
     runs-on: [ k8s ]
-
-    permissions:
-      # required for all workflows
-      security-events: write
-
-      # required to fetch internal or private CodeQL packs
-      packages: read
-
-      # only required for workflows in private repositories
-      actions: read
-      contents: read
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
@@ -75,10 +45,16 @@ jobs:
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
     
 
-  common-job:
+  run-codeql:
     name: Common Checks
     needs: setup-maven-settings
     runs-on: [ k8s ]
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
 
     container:
       image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
@@ -90,61 +66,19 @@ jobs:
 
     steps:
 
-      - name: Load Job metadata into Env vars
-        shell: bash
-        continue-on-error: true
-        env:
-          JOB_CONTEXT: ${{ toJSON(job) }}
-        run: |
-          process_json() {
-            local prefix=$1
-            local json_data=$2
-
-            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
-              # Check if the value is a JSON object or array
-              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
-              if [[ $is_json == 0 ]]; then
-                # If it's an object or array, call the function recursively
-                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
-              else
-                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
-                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
-              fi
-            done
-          }
-          # Start processing JSON from the root
-          echo "Dealing with ${{ env.JOB_CONTEXT }}"
-          process_json '' '${{ env.JOB_CONTEXT }}'
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Build
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean verify -DskipTests=true -Daudit -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}"
-        env:
-          cmd_type: BUILD
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
           languages: java-kotlin
-          build-mode: none
+          build-mode: autobuild
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
         with:
           category: "/language:java-kotlin"
 
-      - name: Report notifications
-        if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          Slack_Token: ${{ secrets.SLACK_TOKEN }}
-          Slack_Channel: ${{ env.SLACK_CHANNEL }}
-          report: true
