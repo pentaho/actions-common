@@ -69,6 +69,11 @@ on:
         type: boolean
         default: false
         description: 'should the RC build'
+      add_github_run_number:
+        required: false
+        type: boolean
+        default: true
+        description: 'should the github run number be added to the version'
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -245,7 +250,9 @@ jobs:
           version="${{ env.VERSION }}"
           tag="$version"
           if [[ "${{ inputs.run_versioning }}" == "true" ]]; then
-            version="$version-${{ github.run_number }}"
+            if [[ "${{ inputs.add_github_run_number }}" == "true" ]]; then
+              version="$version-${{ github.run_number }}"
+            fi
             tag="$version"
           else
             tag="$version-R"
