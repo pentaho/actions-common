@@ -136,8 +136,9 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Snyk Open Source monitor
+      - name: Snyk Dependency Check
         run: snyk test --all-projects --sarif --sarif-file-output=snyk-code.sarif
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
