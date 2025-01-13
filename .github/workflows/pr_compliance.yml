@@ -120,6 +120,10 @@ jobs:
       #  env:
       #    cmd_type: BUILD
 
+      - uses: intel/cve-bin-tool-action@main
+        with:
+          exclude_dir: test
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
