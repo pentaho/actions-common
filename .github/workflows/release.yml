@@ -17,6 +17,9 @@ env:
   ARTIFACTORY_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   ARTIFACTORY_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
 jobs:
 
   pentaho-release:
@@ -43,6 +46,18 @@ jobs:
           build_nbr=$(echo "$release_version" | cut -d '-' -f2 | xargs)
           
           build_name="${{ github.event.repository.name }}-${version}"
+          
+          if [ "$version" = "$build_nbr" ]; then
+            build_aql="builds.find({\"name\": \"$build_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
+            buildinfo_data=$(curl -L -u "${{ env.NEXUS_DEPLOY_USER }}:${{ env.NEXUS_DEPLOY_PASSWORD }}" -X POST -H "Content-Type:text/plain" ${{ env.ARTIFACTORY_BASE_URL }}/api/search/aql -d "$build_aql")
+            echo "$buildinfo_data"
+
+            buildinfo_number=$(echo $buildinfo_data | jq -r '.results[0]."build.number"')
+
+            if [[ "$buildinfo_number" != "" && "$buildinfo_number" != "null" ]]; then
+              build_nbr="$buildinfo_number"  
+            fi
+          fi
           
           echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 

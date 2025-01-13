@@ -10,7 +10,7 @@ on:
           Using this option builds only the modules you specify, regardless of whether those modules have changes.
       version:
         type: string
-        required: true
+        required: false
         description: "Version to be built"
       base_version:
         type: string
@@ -69,12 +69,17 @@ on:
         type: boolean
         default: false
         description: 'should the RC build'
+      add_github_run_number:
+        required: false
+        type: boolean
+        default: true
+        description: 'should the github run number be added to the version'
 
 env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
-  BUILD_NAME: "${{ github.event.repository.name }}-$VERSION"
+  BUILD_NAME: "${{ github.event.repository.name }}"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
@@ -214,15 +219,11 @@ jobs:
         shell: bash
         run: |
           checkout_depth=0
-          build_name=${{ env.BUILD_NAME }}
-          build_number="${{ github.run_number }}"
-
+          
           if [[ "${{ inputs.modules_to_build }}" != "" ]]; then
             checkout_depth=1
           fi
           
-          echo "build_name=$build_name" >> $GITHUB_OUTPUT
-          echo "build_number=$build_number" >> $GITHUB_OUTPUT
           echo "checkout_depth=$checkout_depth" >> $GITHUB_OUTPUT
 
       - name: Checkout code
@@ -243,9 +244,16 @@ jobs:
         shell: bash
         run: |
           version="${{ env.VERSION }}"
+          
+          if [[ -z "$version" ]]; then
+            version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed 's/-SNAPSHOT//')
+          fi
+          
           tag="$version"
           if [[ "${{ inputs.run_versioning }}" == "true" ]]; then
-            version="$version-${{ github.run_number }}"
+            if [[ "${{ inputs.add_github_run_number }}" == "true" ]]; then
+              version="$version-${{ github.run_number }}"
+            fi
             tag="$version"
           else
             tag="$version-R"
@@ -253,6 +261,15 @@ jobs:
           
           echo "current-tag=$tag" >> $GITHUB_OUTPUT
           echo "current-version=$version" >> $GITHUB_OUTPUT
+
+      - id: post-setup
+        shell: bash
+        run: |
+          build_name=${{ env.BUILD_NAME }}-${{ steps.version.outputs.current-version }}
+          build_number="${{ github.run_number }}"
+
+          echo "build_name=$build_name" >> $GITHUB_OUTPUT
+          echo "build_number=$build_number" >> $GITHUB_OUTPUT
 
       - name: Version set
         if: ${{ inputs.run_versioning == true }}
@@ -283,7 +300,7 @@ jobs:
         with:
           command: |
             mvn clean deploy -B -Daudit \
-              -Pcicd-release -Drelease -Dbuild.name=${{ steps.initial-setup.outputs.build_name }} -Dbuild.number=${{ steps.initial-setup.outputs.build_number }} \
+              -Pcicd-release -Drelease -Dbuild.name=${{ steps.post-setup.outputs.build_name }} -Dbuild.number=${{ steps.post-setup.outputs.build_number }} \
               -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:
@@ -312,7 +329,7 @@ jobs:
       - name: Create artifacts download links
         shell: bash
         run: |
-          echo "[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ steps.initial-setup.outputs.build_name }}/${{ steps.initial-setup.outputs.build_number }})" >> $GITHUB_STEP_SUMMARY
+          echo "[Full artifacts list](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ steps.post-setup.outputs.build_name }}/${{ steps.post-setup.outputs.build_number }})" >> $GITHUB_STEP_SUMMARY
 
       - name: Report notifications
         if: always()
