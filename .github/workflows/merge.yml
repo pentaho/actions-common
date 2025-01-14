@@ -74,6 +74,15 @@ on:
         type: boolean
         default: true
         description: 'should the github run number be added to the version'
+      use_semver_release_candidate:
+        required: false
+        type: boolean
+        default: false
+        description: 'should the version be a semver'
+    outputs:
+      current-version:
+        description: "The current version being built"
+        value: ${{ jobs.release-candidate.outputs.current-version }}
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -203,6 +212,8 @@ jobs:
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
         - /home/runner/caches/pentaho/.m2:/root/.m2
+    outputs:
+      current-version: ${{ steps.version.outputs.current-version }}
 
     steps:
 
@@ -257,6 +268,19 @@ jobs:
             tag="$version"
           else
             tag="$version-R"
+          fi
+
+          if [[ "${{ inputs.use_semver_release_candidate }}" == "true" ]]; then
+            # Determine the next release candidate number
+            rc_number=1
+            latest_rc_tag=$(git tag -l "${version}-rc.*" | sort -V | tail -n 1)
+
+            if [[ -n "$latest_rc_tag" ]]; then
+              rc_number=$(( $(echo $latest_rc_tag | sed 's/.*-rc\.//') + 1 ))
+            fi
+
+            version="${version}-rc.${rc_number}"
+            tag="$version"
           fi
           
           echo "current-tag=$tag" >> $GITHUB_OUTPUT
