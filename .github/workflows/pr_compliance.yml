@@ -58,8 +58,8 @@ jobs:
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
     
 
-  compliance-checks:
-    name: Common Checks
+  codeql:
+    name: codeql
     needs: setup-maven-settings
     runs-on: [ k8s ]
 
@@ -120,10 +120,6 @@ jobs:
       #  env:
       #    cmd_type: BUILD
 
-      - uses: intel/cve-bin-tool-action@main
-        with:
-          exclude_dir: test
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
         with:
@@ -135,29 +131,72 @@ jobs:
         with:
           category: "/language:java-kotlin"
 
-      #- name: Set up Snyk CLI
-      #  uses: snyk/actions/setup@master
-      #  env:
-      #    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  frogbot:
+    name: frogbot
+    needs: setup-maven-settings
+    runs-on: [ k8s ]
 
-      #- name: Snyk Dependency Check
-      #  run: snyk test --all-projects --sarif --sarif-file-output=snyk-code.sarif
-      #  continue-on-error: true
-      #  env:
-      #    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+      pull-requests: write
 
-      #- name: Upload Snyk result to GitHub Code Scanning
-      #  uses: github/codeql-action/upload-sarif@v3
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+
+      - name: Load Job metadata into Env vars
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        run: |
+          process_json() {
+            local prefix=$1
+            local json_data=$2
+
+            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+              # Check if the value is a JSON object or array
+              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+              if [[ $is_json == 0 ]]; then
+                # If it's an object or array, call the function recursively
+                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+              else
+                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+              fi
+            done
+          }
+          # Start processing JSON from the root
+          echo "Dealing with ${{ env.JOB_CONTEXT }}"
+          process_json '' '${{ env.JOB_CONTEXT }}'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      #- name: Build
+      #  uses: lumada-common-services/gh-composite-actions@stable
       #  with:
-      #    sarif_file: snyk-code.sarif
+      #    command: |
+      #      mvn clean verify -DskipTests=true -Daudit -amd \
+      #      -pl "${{ steps.change_detection.outputs.changed_modules }}"
+      #  env:
+      #    cmd_type: BUILD
 
-      # Disabled for now. This lists new vulnerabilities, but does not do much else.
-      #- name: Dependency Review
-      #  uses: actions/dependency-review-action@v4
-        # Commonly enabled options, see https://github.com/actions/dependency-review-action#configuration-options for all available options.
-      #  with:
-      #    comment-summary-in-pr: always
-        #   fail-on-severity: moderate
-        #   deny-licenses: GPL-1.0-or-later, LGPL-2.0-or-later
-        #   retry-on-snapshot-warnings: true
-      
+      - name: Run Frogbot
+        # https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
+        uses: jfrog/frogbot@v2
+        env:
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
