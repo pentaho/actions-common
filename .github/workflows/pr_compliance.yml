@@ -197,6 +197,6 @@ jobs:
         # https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
         uses: jfrog/frogbot@v2
         env:
-          JF_URL: ${{ secrets.JF_URL }}
+          JF_URL: https://one.hitachivantara.com/
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
