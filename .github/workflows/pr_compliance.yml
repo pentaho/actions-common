@@ -31,6 +31,21 @@ env:
   DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
 
+  JF_URL: ${ARTIFACTORY_HOST}
+  JF_GIT_PROVIDER: github
+  JF_GIT_REPO: ${{ github.event.repository.name }}
+  JF_GIT_PULL_REQUEST_ID: ${{ github.event.number }}
+  JF_GIT_OWNER: ${{ github.repository_owner }}
+  JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+  JFROG_CLI_LOG_LEVEL: INFO
+  JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+  
+  # Not sure about this one
+  JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+
+  # Do we need this?
+  #MAVEN_ARGS: -V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'
+
 jobs:
 
   setup-maven-settings:
@@ -193,10 +208,20 @@ jobs:
       #  env:
       #    cmd_type: BUILD
 
+      - name: Install Frogbot
+        run: |
+          sh """ curl -fLg "https://releases.jfrog.io/artifactory/frogbot/v2/[RELEASE]/getFrogbot.sh" | sh"""
+
       - name: Run Frogbot
+        run: |
+          ./frogbot scan-pull-request
+        
+
+      # This works kinda, but does not use the provided maven settings
+      #- name: Run Frogbot
         # https://docs.jfrog-applications.jfrog.io/jfrog-applications/frogbot/setup-frogbot/setup-frogbot-using-github-actions
-        uses: jfrog/frogbot@v2
-        env:
-          JF_URL: https://one.hitachivantara.com/
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+      #  uses: jfrog/frogbot@v2
+      #  env:
+      #    JF_URL: https://one.hitachivantara.com/
+      #    JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      #    JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
