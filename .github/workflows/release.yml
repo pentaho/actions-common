@@ -45,7 +45,7 @@ jobs:
           version=$(echo "$release_version" | cut -d '-' -f1 | xargs)
           build_nbr=$(echo "$release_version" | cut -d '-' -f2 | xargs)
           
-          build_name="${{ github.event.repository.name }}-${version}"
+          build_name="${{ github.event.repository.name }}-${release_version}"
           
           if [ "$version" = "$build_nbr" ]; then
             build_aql="builds.find({\"name\": \"$build_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
