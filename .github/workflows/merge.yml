@@ -285,12 +285,17 @@ jobs:
           
           echo "current-tag=$tag" >> $GITHUB_OUTPUT
           echo "current-version=$version" >> $GITHUB_OUTPUT
+          echo "original-version=${{ env.VERSION }}" >> $GITHUB_OUTPUT
 
       - id: post-setup
         shell: bash
         run: |
-          build_name=${{ env.BUILD_NAME }}-${{ steps.version.outputs.current-version }}
+          build_name=${{ env.BUILD_NAME }}
           build_number="${{ github.run_number }}"
+          
+          if [[ "${{ steps.version.outputs.original-version }}" != "" ]]; then
+            build_name="$build_name-${{ steps.version.outputs.original-version }}"
+          fi
 
           echo "build_name=$build_name" >> $GITHUB_OUTPUT
           echo "build_number=$build_number" >> $GITHUB_OUTPUT
