@@ -295,6 +295,8 @@ jobs:
           
           if [[ "${{ steps.version.outputs.original-version }}" != "" ]]; then
             build_name="$build_name-${{ steps.version.outputs.original-version }}"
+          elif [[ "${{ inputs.run_release_candidate }}" == "true" ]]; then
+            build_name="$build_name-${{ steps.version.outputs.current-version }}"
           fi
 
           echo "build_name=$build_name" >> $GITHUB_OUTPUT
