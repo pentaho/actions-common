@@ -1,0 +1,222 @@
+# This is the compliance PR action. It takes care of all compliance requirements
+# when creating a PR. There are certain secrets/variables that need to be set.
+#
+# secrets.PENTAHO_CICD_ONE_USER
+#   The user for artifactory
+# secrets.PENTAHO_CICD_ONE_KEY
+#   The api key for artifactory
+#
+# To tnable the compliance checks in a given project, add the following action
+# in the workflows:
+#
+################################################################################
+# name: Pentaho PR Compliance
+# on: pull_request
+# jobs:
+#   run-pr-compliance:
+#     name: Run PR Compliance Checks
+#     uses: pentaho/actions-common/.github/workflows/pr_compliance.yml
+#     secrets: inherit
+################################################################################
+#
+name: Pentaho PR Compliance
+on:
+  workflow_call:
+    inputs:
+      arti_host:
+        required: false
+        type: string
+        default: https://one.hitachivantara.com
+        description: "Artifactory's Host name"
+      language:
+        description: "List of languages to run CodeQL on"
+        type: string
+        required: false
+        default: '["java", "javascript"]'
+
+
+env:
+
+  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
+
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
+  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
+
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
+
+  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
+  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+
+jobs:
+
+  setup-maven-settings:
+    name: Setup Maven settings
+
+    runs-on: [ k8s ]
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@stable
+
+      - name: Copy settings.xml to .m2 directory
+        shell: sh
+        run: |
+          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
+
+
+  codeql:
+    name: codeql
+    needs: setup-maven-settings
+    runs-on: [ k8s ]
+
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+      pull-requests: write
+
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - language: ${{ fromJSON(github.event.inputs.language)}}
+
+    steps:
+
+      - name: Load Job metadata into Env vars
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        run: |
+          process_json() {
+            local prefix=$1
+            local json_data=$2
+
+            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+              # Check if the value is a JSON object or array
+              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+              if [[ $is_json == 0 ]]; then
+                # If it's an object or array, call the function recursively
+                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+              else
+                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+              fi
+            done
+          }
+          # Start processing JSON from the root
+          echo "Dealing with ${{ env.JOB_CONTEXT }}"
+          process_json '' '${{ env.JOB_CONTEXT }}'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{matrix.language}}"
+
+  # Frogbot is disabled for now as it runs on Wingman.
+  # The working configuration below is kept for reference should this change in the future.
+  #
+  # frogbot:
+  #   name: frogbot
+  #   needs: setup-maven-settings
+  #   runs-on: [ k8s ]
+  #
+  #   permissions:
+  #     security-events: write
+  #     packages: read
+  #     actions: read
+  #     contents: read
+  #     pull-requests: write
+  #
+  #   container:
+  #     image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+  #     credentials:
+  #       username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  #       password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+  #     volumes:
+  #       - /home/runner/caches/pentaho/.m2:/root/.m2
+  #
+  #   steps:
+  #
+  #     - name: Load Job metadata into Env vars
+  #       shell: bash
+  #       continue-on-error: true
+  #       env:
+  #         JOB_CONTEXT: ${{ toJSON(job) }}
+  #       run: |
+  #         process_json() {
+  #           local prefix=$1
+  #           local json_data=$2
+  #
+  #           echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+  #             # Check if the value is a JSON object or array
+  #             is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+  #             if [[ $is_json == 0 ]]; then
+  #               # If it's an object or array, call the function recursively
+  #               process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+  #             else
+  #               echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+  #               echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+  #             fi
+  #           done
+  #         }
+  #         # Start processing JSON from the root
+  #         echo "Dealing with ${{ env.JOB_CONTEXT }}"
+  #         process_json '' '${{ env.JOB_CONTEXT }}'
+  #
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #
+  #     - name: FrogBot scan
+  #       uses: lumada-common-services/gh-composite-actions@stable
+  #       env:
+  #         JF_URL: ${{ inputs.arti_host }}
+  #         JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+  #         JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+  #         GIT_REPO_OWNER: ${{ github.repository_owner }}
+  #         GIT_REPO_NAME: ${{ github.event.repository.name }}
+  #         JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+  #         PULL_REQUEST_NUMBER: ${{github.event.number}}
