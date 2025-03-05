@@ -62,11 +62,6 @@ on:
         type: string
         description: "Repository organisation/owner where merge PRs are checked. This would typically be overridden with 'webdetails' where required."
         default: "pentaho"
-      language:
-        description: "List of languages to run CodeQL on"
-        type: string
-        required: false
-        default: '["java", "javascript"]'
 
 env:
 
@@ -140,8 +135,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - language: ${{ fromJSON(github.event.inputs.language)}}
+        language: ['java-kotlin', 'javascript']
 
     steps:
 
