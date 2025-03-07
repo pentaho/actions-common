@@ -18,7 +18,7 @@ on:
         description: "Base version to be taken in consideration for dependencies"
       slack_channels:
         type: string
-        required: true
+        required: false
         description: "Slack channel(s) to send notifications to."
       arti_host:
         required: false
@@ -79,6 +79,11 @@ on:
         type: boolean
         default: false
         description: 'should the version be a semver'
+      ms_teams_webhook_secret_name:
+        required: false
+        type: string
+        description: "The MS Teams webhook"
+        default: ""
     outputs:
       current-version:
         description: "The current version being built"
@@ -194,6 +199,7 @@ jobs:
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
           report: true
 
   release-candidate:
@@ -368,4 +374,5 @@ jobs:
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
           report: true
