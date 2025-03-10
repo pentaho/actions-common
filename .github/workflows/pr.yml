@@ -84,7 +84,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@stable
+        uses: pentaho/actions-common@DEVO-11794
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -137,7 +137,8 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build & Run tests
-        uses: lumada-common-services/gh-composite-actions@stable
+        id: Build_Unit_Test
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
@@ -153,13 +154,14 @@ jobs:
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
-        uses: lumada-common-services/gh-composite-actions@stable
+        id: Sonarqube
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot scan
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           JF_URL: https://one.hitachivantara.com
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
@@ -171,7 +173,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}

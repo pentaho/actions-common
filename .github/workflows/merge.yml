@@ -141,7 +141,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@stable
+        uses: pentaho/actions-common@DEVO-11794
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -171,7 +171,8 @@ jobs:
         shell: bash
 
       - name: Build code, deploy artifacts & Run tests
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
+        id: Build_Unit_Test
         with:
           command: |
             mvn clean deploy -amd -Daudit \
@@ -187,19 +188,21 @@ jobs:
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
+        id: Sonarqube
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
           teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
           report: true
 
   release-candidate:
@@ -225,7 +228,7 @@ jobs:
 
       - name: Retrieve settings file
         id: common-maven
-        uses: pentaho/actions-common@stable
+        uses: pentaho/actions-common@DEVO-11794
 
       - name: Copy settings.xml to .m2 directory
         shell: sh
@@ -333,7 +336,8 @@ jobs:
         shell: bash
 
       - name: Build code, deploy artifacts & Run tests
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
+        id: Build_Unit_Test
         with:
           command: |
             mvn clean deploy -B -Daudit \
@@ -350,15 +354,16 @@ jobs:
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
+        id: Sonarqube
         if: ${{ inputs.run_snapshot == false }}
         continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           Tag_version: "${{ steps.version.outputs.current-tag }}"
           push_tag_only: true
@@ -370,9 +375,10 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@DEVO-11794
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
           teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
           report: true
