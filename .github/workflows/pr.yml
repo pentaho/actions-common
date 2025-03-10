@@ -4,7 +4,7 @@ on:
     inputs:
       slack_channels:
         type: string
-        required: true
+        required: false
         description: "Slack channel(s) to send notifications to."
       arti_host:
         required: false
@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         description: "Extra additional directives for the Maven command"
+        default: ""
+      ms_teams_webhook_secret_name:
+        required: false
+        type: string
+        description: "The MS Teams webhook secret name"
         default: ""
 
 
@@ -170,4 +175,5 @@ jobs:
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
           report: true
