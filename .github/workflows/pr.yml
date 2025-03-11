@@ -137,6 +137,7 @@ jobs:
         uses: hv-actions/change-detection-builder@stable
 
       - name: Build & Run tests
+        id: Build_Unit_Test
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
@@ -153,6 +154,7 @@ jobs:
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
+        id: Sonarqube
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
@@ -176,4 +178,5 @@ jobs:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
           teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
           report: true
