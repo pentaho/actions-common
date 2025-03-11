@@ -382,3 +382,27 @@ jobs:
           teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
           steps_json: ${{ toJson(steps) }}
           report: true
+
+  threatrix-scan:
+    name: Threatrix Scan
+    runs-on: [ k8s ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+
+      - name: Run scan with threat-agent
+        uses: threatrix/threat-agent-scan@master
+        with:
+          eid: ${{ vars.THREATRIX_EID }}
+          oid: ${{ vars.THREATRIX_OID }}
+          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
+          app-name: ${{ github.event.repository.name }}
+          server-url: ${{ vars.THREATRIX_HOST }}
+          scm-token: ${{ secrets.GITHUB_TOKEN }}
+          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
+          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
