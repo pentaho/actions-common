@@ -14,7 +14,7 @@ on:
         description: "Version to be built"
       base_version:
         type: string
-        required: true
+        required: false
         description: "Base version to be taken in consideration for dependencies"
       slack_channels:
         type: string
@@ -26,7 +26,7 @@ on:
         default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
       sonar_project_key:
-        required: true
+        required: false
         type: string
         description: "Sonar's project identifier key"
       sonar_url:
@@ -195,19 +195,19 @@ jobs:
 #          sonar_utility: sonar-scanner
 #          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
-      - name: Run scan with threat-agent
-        uses: threatrix/threat-agent-scan@master
-        with:
-          eid: ${{ vars.THREATRIX_EID }}
-          oid: ${{ vars.THREATRIX_OID }}
-          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
-          app-name: ${{ github.event.repository.name }}
-          server-url: ${{ vars.THREATRIX_HOST }}
-          scm-token: ${{ secrets.GITHUB_TOKEN }}
-          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
-          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
-          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
-          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
+#      - name: Run scan with threat-agent
+#        uses: threatrix/threat-agent-scan@master
+#        with:
+#          eid: ${{ vars.THREATRIX_EID }}
+#          oid: ${{ vars.THREATRIX_OID }}
+#          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
+#          app-name: ${{ github.event.repository.name }}
+#          server-url: ${{ vars.THREATRIX_HOST }}
+#          scm-token: ${{ secrets.GITHUB_TOKEN }}
+#          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+#          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+#          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
+#          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
 
       - name: Report notifications
         if: always()
@@ -397,26 +397,26 @@ jobs:
           steps_json: ${{ toJson(steps) }}
           report: true
 
-#  threatrix-scan:
-#    name: Threatrix Scan
-#    runs-on: [ k8s ]
-#
-#    steps:
-#      - name: Checkout repository
-#        uses: actions/checkout@v4
-#        with:
-#          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
-#
-#      - name: Run scan with threat-agent
-#        uses: threatrix/threat-agent-scan@master
-#        with:
-#          eid: ${{ vars.THREATRIX_EID }}
-#          oid: ${{ vars.THREATRIX_OID }}
-#          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
-#          app-name: ${{ github.event.repository.name }}
-#          server-url: ${{ vars.THREATRIX_HOST }}
-#          scm-token: ${{ secrets.GITHUB_TOKEN }}
-#          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
-#          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
-#          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
-#          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
+  threatrix-scan:
+    name: Threatrix Scan
+    runs-on: [ k8s ]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+
+      - name: Run scan with threat-agent
+        uses: threatrix/threat-agent-scan@master
+        with:
+          eid: ${{ vars.THREATRIX_EID }}
+          oid: ${{ vars.THREATRIX_OID }}
+          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
+          app-name: ${{ github.event.repository.name }}
+          server-url: ${{ vars.THREATRIX_HOST }}
+          scm-token: ${{ secrets.GITHUB_TOKEN }}
+          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
+          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
