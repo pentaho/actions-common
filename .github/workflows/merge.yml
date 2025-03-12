@@ -187,13 +187,27 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        id: Sonarqube
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
+#      - name: Sonarqube scan
+#        id: Sonarqube
+#        continue-on-error: true
+#        uses: lumada-common-services/gh-composite-actions@stable
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
+
+      - name: Run scan with threat-agent
+        uses: threatrix/threat-agent-scan@master
+        with:
+          eid: ${{ vars.THREATRIX_EID }}
+          oid: ${{ vars.THREATRIX_OID }}
+          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
+          app-name: ${{ github.event.repository.name }}
+          server-url: ${{ vars.THREATRIX_HOST }}
+          scm-token: ${{ secrets.GITHUB_TOKEN }}
+          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
+          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
 
       - name: Report notifications
         if: always()
@@ -383,26 +397,26 @@ jobs:
           steps_json: ${{ toJson(steps) }}
           report: true
 
-  threatrix-scan:
-    name: Threatrix Scan
-    runs-on: [ k8s ]
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
-
-      - name: Run scan with threat-agent
-        uses: threatrix/threat-agent-scan@master
-        with:
-          eid: ${{ vars.THREATRIX_EID }}
-          oid: ${{ vars.THREATRIX_OID }}
-          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
-          app-name: ${{ github.event.repository.name }}
-          server-url: ${{ vars.THREATRIX_HOST }}
-          scm-token: ${{ secrets.GITHUB_TOKEN }}
-          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
-          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
-          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
-          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
+#  threatrix-scan:
+#    name: Threatrix Scan
+#    runs-on: [ k8s ]
+#
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+#
+#      - name: Run scan with threat-agent
+#        uses: threatrix/threat-agent-scan@master
+#        with:
+#          eid: ${{ vars.THREATRIX_EID }}
+#          oid: ${{ vars.THREATRIX_OID }}
+#          scpid: ${{ vars.THREATRIX_PDIA_SCP_ID }}
+#          app-name: ${{ github.event.repository.name }}
+#          server-url: ${{ vars.THREATRIX_HOST }}
+#          scm-token: ${{ secrets.GITHUB_TOKEN }}
+#          api-token: ${{ secrets.THREATRIX_SERVER_API_KEY }}
+#          branch: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
+#          pr-num: ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }}
+#          tags: "agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}"
