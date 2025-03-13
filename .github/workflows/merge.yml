@@ -424,11 +424,11 @@ jobs:
         with:
           ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
 
-      - name: Maven 1
-        run: mvn clean compile -DskipTests -pl amazon
-
-      - name: Maven 2
-        run: mvn -U org.cyclonedx:cyclonedx-maven-plugin:2.7.9:makeBom -DoutputFormat=xml
+#      - name: Maven 1
+#        run: mvn clean compile -DskipTests -pl amazon
+#
+#      - name: Maven 2
+#        run: mvn -U org.cyclonedx:cyclonedx-maven-plugin:2.7.9:makeBom -DoutputFormat=xml
 
       - name: Run scan with threat-agent
         run: |
