@@ -419,10 +419,10 @@ jobs:
 #        run: |
 #          cp "${{ steps.common-maven.outputs.settings-file-path }}" /maven/.m2
 
-#      - uses: actions/setup-java@v4
-#        with:
-#          distribution: 'temurin'
-#          java-version: '17'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Checkout repository
         uses: actions/checkout@v4
