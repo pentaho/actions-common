@@ -401,13 +401,13 @@ jobs:
     name: Threatrix Scan
     runs-on: [ k8s ]
 
-    container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
-      credentials:
-        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-      volumes:
-        - /home/runner/caches/pentaho/.m2:/root/.m2
+#    container:
+#      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+#      credentials:
+#        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+#        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+#      volumes:
+#        - /home/runner/caches/pentaho/.m2:/root/.m2
 
     steps:
 #      - name: Retrieve settings file
@@ -418,6 +418,11 @@ jobs:
 #        shell: sh
 #        run: |
 #          cp "${{ steps.common-maven.outputs.settings-file-path }}" /maven/.m2
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Checkout repository
         uses: actions/checkout@v4
