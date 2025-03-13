@@ -401,6 +401,14 @@ jobs:
     name: Threatrix Scan
     runs-on: [ k8s ]
 
+    container:
+      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/maven/.m2
+
     steps:
       - name: Retrieve settings file
         id: common-maven
@@ -412,19 +420,39 @@ jobs:
           ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
 
       - name: Run scan with threat-agent
-        env:
-          MAVEN_ARGS: "-s /maven/setting.xml"
         run: |
-          docker run --rm \
-            -v $GITHUB_WORKSPACE:/github/workspace \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            -v ${{ steps.common-maven.outputs.settings-file-path }}:/maven/setting.xml \
-            -e "MAVEN_ARGS" \
-            -e "RESOLVE_REPO_MIRROR" -e "NEXUS_DEPLOY_USER" -e "NEXUS_DEPLOY_PASSWORD" -e "PUBLIC_RELEASE_REPO" -e "PUBLIC_RELEASE_REPO_URL" \
-            -e "PRIVATE_RELEASE_REPO" -e "PRIVATE_RELEASE_REPO_URL" -e "PUBLIC_SNAPSHOT_REPO" -e "PUBLIC_SNAPSHOT_REPO_URL" -e "PRIVATE_SNAPSHOT_REPO" \
-            -e "PRIVATE_SNAPSHOT_REPO_URL" -e "DOCKER_PULL_HOST" -e "DOCKER_PUBLIC_PUSH_HOST" -e "DOCKER_PRIVATE_PUSH_HOST" \
-            --workdir /github/workspace \
-            threatrix/threat-agent:latest "--verbose --progress --scm=GITHUB --lowmem --eid ${{ vars.THREATRIX_EID }} --oid ${{ vars.THREATRIX_OID }} --scpid ${{ vars.THREATRIX_PDIA_SCP_ID }} --app-name ${{ github.event.repository.name }} --server-url ${{ vars.THREATRIX_HOST }} --scm-auth-token ${{ secrets.GITHUB_TOKEN }} --api-key ${{ secrets.THREATRIX_SERVER_API_KEY }} --branch ${{ github.head_ref != '' && github.head_ref || github.ref_name }} --pr-num ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }} --tags 'agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}' '/github/workspace'"
+          export MAVEN_ARGS="-V -s ${{ steps.common-maven.outputs.settings-file-path }} -Dmaven.repo.local=/maven/.m2/repository"
+          
+          curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
+          
+          java -jar threat-agent-latest.jar \
+            --verbose \
+            --progress \
+            --scm=GITHUB \
+            --lowmem \
+            --eid ${{ vars.THREATRIX_EID }} \
+            --oid ${{ vars.THREATRIX_OID }} \
+            --scpId ${{ vars.THREATRIX_PDIA_SCP_ID }} \
+            --app-name ${{ github.event.repository.name }} \
+            --server-url ${{ vars.THREATRIX_HOST }} \
+            --scm-auth-token ${{ secrets.GITHUB_TOKEN }} \
+            --api-key ${{ secrets.THREATRIX_SERVER_API_KEY }} \
+            --branch ${{ github.head_ref != '' && github.head_ref || github.ref_name }} \
+            --pr-num ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }} \
+            --tags 'agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}' \
+            $GITHUB_WORKSPACE
+            
+
+#          docker run --rm \
+#            -v $GITHUB_WORKSPACE:/github/workspace \
+#            -v /var/run/docker.sock:/var/run/docker.sock \
+#            -v ${{ steps.common-maven.outputs.settings-file-path }}:/maven/setting.xml \
+#            -e "MAVEN_ARGS" \
+#            -e "RESOLVE_REPO_MIRROR" -e "NEXUS_DEPLOY_USER" -e "NEXUS_DEPLOY_PASSWORD" -e "PUBLIC_RELEASE_REPO" -e "PUBLIC_RELEASE_REPO_URL" \
+#            -e "PRIVATE_RELEASE_REPO" -e "PRIVATE_RELEASE_REPO_URL" -e "PUBLIC_SNAPSHOT_REPO" -e "PUBLIC_SNAPSHOT_REPO_URL" -e "PRIVATE_SNAPSHOT_REPO" \
+#            -e "PRIVATE_SNAPSHOT_REPO_URL" -e "DOCKER_PULL_HOST" -e "DOCKER_PUBLIC_PUSH_HOST" -e "DOCKER_PRIVATE_PUSH_HOST" \
+#            --workdir /github/workspace \
+#            threatrix/threat-agent:latest "--verbose --progress --scm=GITHUB --lowmem --eid ${{ vars.THREATRIX_EID }} --oid ${{ vars.THREATRIX_OID }} --scpid ${{ vars.THREATRIX_PDIA_SCP_ID }} --app-name ${{ github.event.repository.name }} --server-url ${{ vars.THREATRIX_HOST }} --scm-auth-token ${{ secrets.GITHUB_TOKEN }} --api-key ${{ secrets.THREATRIX_SERVER_API_KEY }} --branch ${{ github.head_ref != '' && github.head_ref || github.ref_name }} --pr-num ${{ github.event.pull_request.number != '' && github.event.pull_request.number || 'UNDEFINED' }} --tags 'agent, repo/folder, merge, ${{ github.head_ref || github.ref_name }}' '/github/workspace'"
 
 #      - name: Run scan with threat-agent
 #        uses: threatrix/threat-agent-scan@master
