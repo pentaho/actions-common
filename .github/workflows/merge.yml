@@ -407,21 +407,32 @@ jobs:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
       volumes:
-        - /home/runner/caches/pentaho/.m2:/maven/.m2
+        - /home/runner/caches/pentaho/.m2:/root/.m2
 
     steps:
-      - name: Retrieve settings file
-        id: common-maven
-        uses: pentaho/actions-common@stable
+#      - name: Retrieve settings file
+#        id: common-maven
+#        uses: pentaho/actions-common@stable
+
+#      - name: Copy settings.xml to .m2 directory
+#        shell: sh
+#        run: |
+#          cp "${{ steps.common-maven.outputs.settings-file-path }}" /maven/.m2
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref != '' && github.head_ref || github.ref_name }}
 
+      - name: Maven 1
+        run: mvn clean compile -DskipTests -pl amazon
+
+      - name: Maven 2
+        run: mvn -U org.cyclonedx:cyclonedx-maven-plugin:2.7.9:makeBom -DoutputFormat=xml
+
       - name: Run scan with threat-agent
         run: |
-          export MAVEN_ARGS="-V -s ${{ steps.common-maven.outputs.settings-file-path }} -Dmaven.repo.local=/maven/.m2/repository"
+          # export MAVEN_ARGS="-V -s ${{ steps.common-maven.outputs.settings-file-path }} -Dmaven.repo.local=/maven/.m2/repository"
           
           curl -LJO https://github.com/threatrix/threat-matrix/releases/download/agent-release-latest/threat-agent-latest.jar
           
