@@ -47,11 +47,6 @@ on:
         type: string
         default: https://one.hitachivantara.com
         description: "Artifactory's Host name"
-      additional_mvn_directives:
-        required: false
-        type: string
-        description: "Extra additional directives for the Maven command"
-        default: ""
       scpId:
         required: false
         type: string
@@ -163,36 +158,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Update cmd_type as per the mvn_directives
-        if: env.SET_CMD_TYPE == null
-        run: |
-          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
-            echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
-          else
-            echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
-          fi
-        shell: bash
-
-      - name: Determine which changes occurred
-        id: change_detection
-        uses: hv-actions/change-detection-builder@stable
-
-      - name: Build & Run tests
-        uses: lumada-common-services/gh-composite-actions@stable
-        with:
-          command: |
-            mvn clean verify -DskipTests=true -Daudit -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" \
-            ${{ inputs.additional_mvn_directives }}
-        env:
-          cmd_type: ${{ env.SET_CMD_TYPE }}
-          unit_test_reporter: 'java-junit'
-          unit_test_fail_on_error: 'true'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
-          int_test_reporter: 'java-junit'
-          int_test_fail_on_error: 'true'
-          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       # This is the threatrix invocation.
       - run: |
