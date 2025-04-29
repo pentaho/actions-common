@@ -10,7 +10,7 @@ on:
       - '.github/bootstrap-image/**'
   workflow_dispatch:
 env:
-  ARTIFACTORY: one.hitachivantara.com/devops-docker-release
+  ARTIFACTORY: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release
   ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
   IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
@@ -44,6 +44,7 @@ jobs:
           docker buildx build \
             -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} \
             --build-arg JDK=${{ matrix.jdk }} \
+            --build-arg ARTIFACTORY_URL=${{ vars.ARTIFACTORY_HOST }} \
             --push -f .github/bootstrap-image/Dockerfile \
             --secret id=myuser,env=ARTIFACTORY_USER \
             --secret id=mytoken,env=ARTIFACTORY_API_KEY .
