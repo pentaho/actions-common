@@ -20,11 +20,6 @@ on:
         type: string
         required: false
         description: "Slack channel(s) to send notifications to."
-      arti_host:
-        required: false
-        type: string
-        default: https://one.hitachivantara.com
-        description: "Artifactory's Host name"
       sonar_project_key:
         required: true
         type: string
@@ -99,7 +94,7 @@ env:
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
-  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_HOST: ${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
   RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
@@ -117,9 +112,9 @@ env:
   PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: repo-cache.orl.eng.hitachivantara.com/pnt-docker/
-  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
-  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+  DOCKER_PULL_HOST: ${{ vars.ARTIFACTORY_HOST }}/pnt-docker/
+  DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
 jobs:
 
@@ -130,7 +125,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -215,7 +210,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
