@@ -6,11 +6,6 @@ on:
         type: string
         required: true
         description: "Slack channel(s) to send notifications to."
-      arti_host:
-        required: false
-        type: string
-        default: https://one.hitachivantara.com
-        description: "Artifactory's Host name"
       sonar_project_key:
         required: true
         type: string
@@ -32,7 +27,7 @@ env:
   SONAR_HOST_URL: ${{ inputs.sonar_url }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
-  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
   RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
@@ -48,9 +43,9 @@ env:
   PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: repo-cache.orl.eng.hitachivantara.com/pnt-docker/
-  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
-  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+  DOCKER_PULL_HOST: ${{ vars.ARTIFACTORY_HOST }}/pnt-docker/
+  DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
@@ -68,7 +63,7 @@ jobs:
       actions: write
 
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240521.203
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240521.203
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -156,7 +151,7 @@ jobs:
       - name: FrogBot scan
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          JF_URL: https://one.hitachivantara.com
+          JF_URL: https://${{ vars.ARTIFACTORY_HOST }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           GIT_REPO_OWNER: ${{ github.repository_owner }}
