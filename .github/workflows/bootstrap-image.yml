@@ -44,7 +44,7 @@ jobs:
           docker buildx build \
             -t ${{ env.ARTIFACTORY }}/${{ env.IMAGE }} \
             --build-arg JDK=${{ matrix.jdk }} \
-            --build-arg ARTIFACTORY_URL=${{ vars.ARTIFACTORY_HOST }} \
+            --build-arg ARTIFACTORY_URL=https://${{ vars.ARTIFACTORY_HOST }}/artifactory/maven \
             --push -f .github/bootstrap-image/Dockerfile \
             --secret id=myuser,env=ARTIFACTORY_USER \
             --secret id=mytoken,env=ARTIFACTORY_API_KEY .
