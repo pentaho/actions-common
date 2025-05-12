@@ -10,11 +10,6 @@ on:
         required: true
         type: string
         description: "Sonar's project identifier key"
-      sonar_url:
-        required: false
-        type: string
-        description: "Sonar's URL"
-        default: https://sonar.orl.eng.hitachivantara.com
       additional_mvn_directives:
         required: false
         type: string
@@ -29,7 +24,7 @@ on:
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
-  SONAR_HOST_URL: ${{ inputs.sonar_url }}
+  SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
