@@ -4,35 +4,30 @@ on:
     inputs:
       slack_channels:
         type: string
-        required: true
-        description: "Slack channel(s) to send notifications to."
-      arti_host:
         required: false
-        type: string
-        default: https://one.hitachivantara.com
-        description: "Artifactory's Host name"
+        description: "Slack channel(s) to send notifications to."
       sonar_project_key:
         required: true
         type: string
         description: "Sonar's project identifier key"
-      sonar_url:
-        required: false
-        type: string
-        description: "Sonar's URL"
-        default: https://sonar.orl.eng.hitachivantara.com
       additional_mvn_directives:
         required: false
         type: string
         description: "Extra additional directives for the Maven command"
         default: ""
+      ms_teams_webhook_secret_name:
+        required: false
+        type: string
+        description: "The MS Teams webhook secret name"
+        default: ""
 
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
-  SONAR_HOST_URL: ${{ inputs.sonar_url }}
+  SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
-  ARTIFACTORY_HOST: ${{ inputs.arti_host }}
+  ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
   RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pntprv-custom2-maven/
@@ -48,21 +43,27 @@ env:
   PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
   PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
 
-  DOCKER_PULL_HOST: one.hitachivantara.com/docker/
-  DOCKER_PUBLIC_PUSH_HOST: one.hitachivantara.com/pntpub-docker-dev/
-  DOCKER_PRIVATE_PUSH_HOST: one.hitachivantara.com/pntprv-docker-dev/
+  DOCKER_PULL_HOST: ${{ vars.ARTIFACTORY_HOST }}/pnt-docker/
+  DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
 jobs:
 
-  setup-maven-settings:
-    name: Setup Maven settings
-
+  common-job:
+    name: Common Checks
     runs-on: [ k8s ]
 
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
+
     container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -79,22 +80,32 @@ jobs:
         shell: sh
         run: |
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
-    
 
-  common-job:
-    name: Common Checks
-    needs: setup-maven-settings
-    runs-on: [ k8s ]
+      - name: Load Job metadata into Env vars
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        run: |
+          process_json() {
+            local prefix=$1
+            local json_data=$2
 
-    container:
-      image: one.hitachivantara.com/devops-docker-release/pentaho/actions-common:20240305.137
-      credentials:
-        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
-        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-      volumes:
-        - /home/runner/caches/pentaho-features2/.m2:/root/.m2
-
-    steps:
+            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+              # Check if the value is a JSON object or array
+              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+              if [[ $is_json == 0 ]]; then
+                # If it's an object or array, call the function recursively
+                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+              else
+                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+              fi
+            done
+          }
+          # Start processing JSON from the root
+          echo "Dealing with ${{ env.JOB_CONTEXT }}"
+          process_json '' '${{ env.JOB_CONTEXT }}'
 
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,8 +161,9 @@ jobs:
         with:
           command:  |
             rm -rf /root/.m2/repository/pentaho-kettle/kettle-core
-        
+
       - name: Build & Run tests
+        id: Build_Unit_Test
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
@@ -168,15 +180,16 @@ jobs:
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
       - name: Sonarqube scan
+        id: Sonarqube
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.login=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
+          sonar_commands: '("-Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot scan
         uses: lumada-common-services/gh-composite-actions@stable
         env:
-          JF_URL: https://one.hitachivantara.com
+          JF_URL: https://${{ vars.ARTIFACTORY_HOST }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           GIT_REPO_OWNER: ${{ github.repository_owner }}
@@ -190,4 +203,6 @@ jobs:
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
           report: true

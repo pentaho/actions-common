@@ -44,6 +44,11 @@
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
+    <server>
+      <id>hitachi.jfrog.io</id>
+      <username>${env.NEXUS_DEPLOY_USER}</username>
+      <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
+    </server>
   </servers>
 
   <profiles>
