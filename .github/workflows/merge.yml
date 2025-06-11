@@ -72,7 +72,7 @@ env:
   BUILD_NAME: "${{ github.event.repository.name }}"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
-  SONAR_LOGIN: ${{secrets.WINGMAN_SONAOKEN}}
+  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
 
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
