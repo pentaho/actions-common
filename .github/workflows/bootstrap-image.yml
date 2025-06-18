@@ -21,7 +21,7 @@ jobs:
     runs-on: [ self-hosted, Linux, k8s ]
     strategy:
       matrix:
-        jdk: [11, 17]
+        jdk: [17, 21]
     steps:
 
       # sets the image name and tag to something like: <owner>/<repo>:<current_date_as_YYYYYMMDD>.<build-number>
