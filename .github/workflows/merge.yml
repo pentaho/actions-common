@@ -21,7 +21,7 @@ on:
         required: false
         description: "Slack channel(s) to send notifications to."
       sonar_project_key:
-        required: true
+        required: false
         type: string
         description: "Sonar's project identifier key"
       blackduck_project_key:
@@ -85,7 +85,7 @@ env:
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
   BUILD_NAME: "${{ github.event.repository.name }}"
 
-  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
+  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
@@ -120,7 +120,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -205,7 +205,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
