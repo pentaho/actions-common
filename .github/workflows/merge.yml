@@ -295,7 +295,7 @@ jobs:
         with:
           command: |
             mvn clean deploy -B -Daudit \
-              -Pcicd-release -Drelease -Dbuild.name=${{ steps.post-setup.outputs.build_name }} -Dbuild.number=${{ steps.post-setup.outputs.build_number }} \
+              -Pcicd-release -Dbuild.name=${{ steps.post-setup.outputs.build_name }} -Dbuild.number=${{ steps.post-setup.outputs.build_number }} \
               -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:
