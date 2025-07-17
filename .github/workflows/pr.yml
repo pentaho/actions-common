@@ -7,7 +7,7 @@ on:
         required: false
         description: "Slack channel(s) to send notifications to."
       sonar_project_key:
-        required: true
+        required: false
         type: string
         description: "Sonar's project identifier key"
       additional_mvn_directives:
@@ -23,7 +23,7 @@ on:
 
 
 env:
-  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key }}
+  SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
   SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
@@ -63,7 +63,7 @@ jobs:
       actions: write
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
