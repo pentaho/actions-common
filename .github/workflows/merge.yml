@@ -74,6 +74,10 @@ on:
         type: string
         description: "The MS Teams webhook"
         default: ""
+      container_image:
+        required: false
+        description: 'Image to be used'
+        type: string
     outputs:
       current-version:
         description: "The current version being built"
@@ -111,6 +115,8 @@ env:
   DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
+  DEFAULT_IMAGE: "${{ vars.ARTIFACTORY_HOST }}/${{ vars.PDIA_AC_CONTAINER_IMAGE }}"
+
 jobs:
 
   snapshot:
@@ -120,7 +126,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
+      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -205,7 +211,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
+      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -331,7 +337,7 @@ jobs:
         with:
           command: |
             mvn clean deploy -B -Daudit \
-              -Pcicd-release -Drelease -Dbuild.name=${{ steps.post-setup.outputs.build_name }} -Dbuild.number=${{ steps.post-setup.outputs.build_number }} \
+              -Pcicd-release -Dbuild.name=${{ steps.post-setup.outputs.build_name }} -Dbuild.number=${{ steps.post-setup.outputs.build_number }} \
               -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
               -amd ${{ inputs.additional_mvn_directives }}
         env:

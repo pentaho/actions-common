@@ -20,6 +20,10 @@ on:
         type: string
         description: "The MS Teams webhook secret name"
         default: ""
+      container_image:
+        required: false
+        description: 'Image to be used'
+        type: string
 
 
 env:
@@ -49,6 +53,8 @@ env:
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
+  DEFAULT_IMAGE: "${{ vars.ARTIFACTORY_HOST }}/${{ vars.PDIA_AC_CONTAINER_IMAGE }}"
+
 jobs:
 
   common-job:
@@ -63,7 +69,7 @@ jobs:
       actions: write
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:jdk17-20250618.224
+      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}

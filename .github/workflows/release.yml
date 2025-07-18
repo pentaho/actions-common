@@ -10,6 +10,10 @@ on:
         type: boolean
         default: true
         description: "Dry run. No real changes should occur."
+      container_image:
+        required: false
+        description: 'Override image to be used'
+        type: string
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
@@ -20,6 +24,8 @@ env:
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
+  DEFAULT_IMAGE: "${{ vars.ARTIFACTORY_HOST }}/${{ vars.PDIA_AC_CONTAINER_IMAGE }}"
+
 jobs:
 
   pentaho-release:
@@ -27,7 +33,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release/pentaho/actions-common:20240305.137
+      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
