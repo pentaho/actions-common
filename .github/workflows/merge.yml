@@ -115,8 +115,6 @@ env:
   DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
-  DEFAULT_IMAGE: "${{ vars.ARTIFACTORY_HOST }}/${{ vars.PDIA_AC_CONTAINER_IMAGE }}"
-
 jobs:
 
   snapshot:
@@ -126,7 +124,7 @@ jobs:
     runs-on: [ k8s ]
 
     container:
-      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -211,7 +209,7 @@ jobs:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     container:
-      image: ${{ inputs.container_image || env.DEFAULT_IMAGE }}
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
