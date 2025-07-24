@@ -87,7 +87,6 @@ env:
   VERSION: "${{ inputs.version }}"
   BASE_VERSION: "${{ inputs.base_version }}"
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
-  BUILD_NAME: "${{ github.event.repository.name }}"
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
@@ -274,6 +273,9 @@ jobs:
           fi
 
           if [[ "${{ inputs.use_semver_release_candidate }}" == "true" ]]; then
+            # Fetch all tags first
+            git fetch --tags
+
             # Determine the next release candidate number
             rc_number=1
             latest_rc_tag=$(git tag -l "${version}-rc.*" | sort -V | tail -n 1)
@@ -293,14 +295,10 @@ jobs:
       - id: post-setup
         shell: bash
         run: |
-          build_name=${{ env.BUILD_NAME }}
-          build_number="${{ github.run_number }}"
-          
-          if [[ "${{ steps.version.outputs.original-version }}" != "" ]]; then
-            build_name="$build_name-${{ steps.version.outputs.original-version }}"
-          elif [[ "${{ inputs.run_release_candidate }}" == "true" ]]; then
-            build_name="$build_name-${{ steps.version.outputs.current-version }}"
-          fi
+          branch_name="${{ github.ref_name }}"
+          sanitized_branch="${branch_name//\//-}"
+          build_name=${{ github.event.repository.name }}-${sanitized_branch}
+          build_number="${{ steps.version.outputs.current-version }}"
 
           echo "build_name=$build_name" >> $GITHUB_OUTPUT
           echo "build_number=$build_number" >> $GITHUB_OUTPUT
