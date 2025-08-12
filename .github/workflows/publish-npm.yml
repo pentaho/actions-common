@@ -1,0 +1,71 @@
+name: Pentaho Publish NPM Modules
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        type: string
+        required: false
+        description: "Image to be used"
+      release_version:
+        type: string
+        required: false
+        default: ""
+        description: "The version to set for the NPM modules."
+      dry_run:
+        type: boolean
+        default: true
+        description: "Dry run. No real changes should occur."
+      release:
+        type: boolean
+        default: false
+        description: "Indicates if this is a release build."
+
+env:
+  PUBLISH_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/${{ inputs.release && 'pntprv-npm-release' || 'pntprv-npm-dev' }}/
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+
+jobs:
+  publish-npm-modules:
+    runs-on: [ k8s ]
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Configure Git
+        uses: pentaho/actions-common/.github/actions/git-config@PAS
+
+      - name: NPM authentication
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        with:
+          pentaho_registry: ${{ env.NPM_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+      - name: NPM publish authentication
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        with:
+          pentaho_registry: ${{ env.PUBLISH_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          set_registry: false
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Publish to registry
+        if: ${{ !inputs.dry_run }}
+        shell: bash
+        run: |
+          if [[ -n "${{ inputs.release_version }}" ]]; then
+            npm run --if-present artifactory-publish -- "${{ inputs.release_version }}" --registry https:${{ env.PUBLISH_REGISTRY }}
+          else
+            npm run --if-present artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+          fi
