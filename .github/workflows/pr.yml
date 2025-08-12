@@ -7,28 +7,27 @@ on:
         required: false
         description: "Slack channel(s) to send notifications to."
       sonar_project_key:
-        required: false
         type: string
+        required: false
         description: "Sonar's project identifier key"
       additional_mvn_directives:
-        required: false
         type: string
+        required: false
+        default: ""
         description: "Extra additional directives for the Maven command"
-        default: ""
       ms_teams_webhook_secret_name:
-        required: false
         type: string
-        description: "The MS Teams webhook secret name"
+        required: false
         default: ""
+        description: "The MS Teams webhook secret name"
       container_image:
+        type: string
         required: false
         description: 'Image to be used'
-        type: string
       resolve_repo:
         required: false
         type: string
         description: "Custom Maven repo for dependency resolution"
-
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}

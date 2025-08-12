@@ -21,71 +21,71 @@ on:
         required: false
         description: "Slack channel(s) to send notifications to."
       sonar_project_key:
-        required: false
         type: string
+        required: false
         description: "Sonar's project identifier key"
       blackduck_project_key:
-        required: false
         type: string
-        description: "Project key for Blackduck"
+        required: false
         default: "Pentaho"  # it's either "Pentaho" or "Pentaho SHIMS" on Orion
+        description: "Project key for Blackduck"
       blackduck_server_url:
-        required: false
         type: string
-        description: "Server URL for Blackduck"
+        required: false
         default: https://orion.orl.eng.hitachivantara.com
+        description: "Server URL for Blackduck"
       blackduck_additional_args:
-        required: false
         type: string
+        required: false
+        default: ""
         description: "Extra additional args for blackduck scan"
-        default: ""
       additional_mvn_directives:
-        required: false
         type: string
-        description: "Extra additional directives for the Maven command"
+        required: false
         default: ""
+        description: "Extra additional directives for the Maven command"
       run_snapshot:
         required: false
         type: boolean
         default: true
         description: 'should the snapshot build run'
       run_versioning:
-        required: false
         type: boolean
+        required: false
         default: true
         description: 'should the versioning run on the RC build'
       run_release_candidate:
-        required: false
         type: boolean
+        required: false
         default: false
         description: 'should the RC build'
       add_github_run_number:
-        required: false
         type: boolean
+        required: false
         default: true
         description: 'should the github run number be added to the version'
       use_semver_release_candidate:
-        required: false
         type: boolean
+        required: false
         default: false
         description: 'should the version be a semver'
       ms_teams_webhook_secret_name:
-        required: false
         type: string
-        description: "The MS Teams webhook"
+        required: false
         default: ""
+        description: "The MS Teams webhook"
       container_image:
+        type: string
         required: false
         description: 'Image to be used'
-        type: string
       resolve_repo:
-        required: false
         type: string
+        required: false
         description: "Custom Maven repo for dependency resolution"
     outputs:
       current-version:
-        description: "The current version being built"
         value: ${{ jobs.release-candidate.outputs.current-version }}
+        description: "The current version being built"
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -123,9 +123,7 @@ jobs:
   snapshot:
     if: ${{ inputs.run_snapshot == true }}
     name: Update Snapshots
-
     runs-on: [ k8s ]
-
     container:
       image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
       credentials:

@@ -1,5 +1,4 @@
 name: Build and Push Container Image
-
 on:
   push:
     branches:
@@ -9,11 +8,13 @@ on:
     paths:
       - '.github/bootstrap-image/**'
   workflow_dispatch:
+
 env:
   ARTIFACTORY: ${{ vars.ARTIFACTORY_HOST }}/devops-docker-release
   ARTIFACTORY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   ARTIFACTORY_API_KEY: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
   IMAGE: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+
 jobs:
 
   bootstrap-image:
@@ -21,7 +22,7 @@ jobs:
     runs-on: [ self-hosted, Linux, k8s ]
     strategy:
       matrix:
-        jdk: [17, 21]
+        jdk: [ 17, 21 ]
     steps:
 
       # sets the image name and tag to something like: <owner>/<repo>:<current_date_as_YYYYYMMDD>.<build-number>
@@ -35,9 +36,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  
-      
-      # Build and Push Image with docker buildx 
+        uses: docker/setup-buildx-action@v3
+
+      # Build and Push Image with docker buildx
       - name: Build and Push to Artifactory
         id: build-image
         run: |

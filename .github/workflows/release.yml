@@ -3,17 +3,17 @@ on:
   workflow_call:
     inputs:
       release_version:
-        description: ""
-        required: true
         type: string
+        required: true
+        description: ""
       dry_run:
         type: boolean
         default: true
         description: "Dry run. No real changes should occur."
       container_image:
-        required: false
-        description: 'Override image to be used'
         type: string
+        required: false
+        description: "Override image to be used"
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
@@ -25,17 +25,13 @@ env:
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
 jobs:
-
   pentaho-release:
-
     runs-on: [ k8s ]
-
     container:
       image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-
     steps:
 
       - name: Checkout source repo
@@ -64,7 +60,7 @@ jobs:
               build_nbr="$buildinfo_number"  
             fi
           fi
-          
+
           echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
           echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
 
@@ -94,5 +90,5 @@ jobs:
             promotion_summary="[Dry run] "
           fi
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
-          
+
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY 
