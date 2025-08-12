@@ -14,6 +14,10 @@ on:
         type: string
         required: false
         description: "Override image to be used"
+      update_version:
+        type: boolean
+        default: false
+        description: "Update the version in the pom.xml after the release"
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
@@ -91,4 +95,12 @@ jobs:
           fi
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
 
-          echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY 
+          echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY
+
+  update-version:
+    if: ${{ inputs.update_version }}
+    needs: pentaho-release
+    uses: pentaho/actions-common/.github/workflows/update-version.yml@PAS
+    with:
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
