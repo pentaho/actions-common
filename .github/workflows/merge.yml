@@ -16,6 +16,11 @@ on:
         type: string
         required: true
         description: "Base version to be taken in consideration for dependencies"
+      base_build_name:
+        type: string
+        required: false
+        default: "pdia-master"
+        description: "Base build name to be taken in consideration to get the latest version when base_version is not provided"
       slack_channels:
         type: string
         required: false
@@ -305,10 +310,20 @@ jobs:
           echo "build_name=$build_name" >> $GITHUB_OUTPUT
           echo "build_number=$build_number" >> $GITHUB_OUTPUT
 
+      - name: Get latest base version
+        id: get-latest-version
+        uses: pentaho/actions-common/.github/actions/get-latest-version@PAS
+        if: ${{ env.BASE_VERSION == '' }}
+        with:
+          build_name: ${{ inputs.base_build_name }}
+          artifactory_url: ${{ env.ARTIFACTORY_BASE_URL }}
+          artifactory_user: ${{ env.NEXUS_DEPLOY_USER }}
+          artifactory_password: ${{ env.NEXUS_DEPLOY_PASSWORD }}
+
       - name: Version set
         if: ${{ inputs.run_versioning == true }}
         run: |
-          sed -i 's/BASE_VERSION/${{ env.BASE_VERSION }}/g' .github/release-versions.properties
+          sed -i 's/BASE_VERSION/${{ env.BASE_VERSION || steps.get-latest-version.outputs.version }}/g' .github/release-versions.properties
           sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
           
           java -DRELEASE_MODE=true -jar /version-merger.jar . \

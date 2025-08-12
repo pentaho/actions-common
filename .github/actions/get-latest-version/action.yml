@@ -1,0 +1,57 @@
+name: Get Latest Version Number
+description: Get the latest version from Artifactory
+inputs:
+  build_name:
+    description: The build name to search for in Artifactory
+    required: true
+  artifactory_url:
+    description: Base URL of the Artifactory server
+    required: true
+  artifactory_user:
+    description: Username for Artifactory authentication
+    required: true
+  artifactory_password:
+    description: Password or token for Artifactory authentication
+    required: true
+outputs:
+  version:
+    description: The latest version found
+    value: ${{ steps.get-latest-version.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Get Latest Version
+      id: get-latest-version
+      shell: bash
+      run: |
+        echo "Checking the latest version for ${{ inputs.build_name }}"
+
+        if [[ "${{ inputs.build_name }}" == *-SNAPSHOT ]]; then
+          echo "The version is a snapshot version."
+
+          version="${{ inputs.build_name }}"
+        else
+          build_aql="builds.find({\"name\": \"${{ inputs.build_name }}\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
+          build_data=$(curl -L -u "${{ inputs.artifactory_user }}:${{ inputs.artifactory_password }}" -X POST -H "Content-Type:text/plain" "${{ inputs.artifactory_url }}/api/search/aql" -d "$build_aql")
+          echo "Query result: $build_data"
+
+          # Extract the last build number
+          build_number=$(echo "$build_data" | jq -r '.results[0]."build.number"')
+
+          if [[ "$build_number" != "" && "$build_number" != "null" ]]; then
+            echo "Build number found: $build_number"
+            version="$build_number"
+          else
+            echo "Build number not found: $build_number"
+            version=""
+          fi
+        fi
+
+        # Validate version is not empty or null
+        if [[ -z "$version" || "$version" == "null" ]]; then
+          echo "::error::Failed to determine version for build name '${{ inputs.build_name }}'. Version is empty or null."
+          exit 1
+        fi
+
+        echo "version to be used is: $version"
+        echo "version=$version" >> $GITHUB_OUTPUT
