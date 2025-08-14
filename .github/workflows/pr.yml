@@ -23,7 +23,12 @@ on:
       container_image:
         type: string
         required: false
-        description: 'Image to be used'
+        description: "Image to be used"
+      check_commit_messages:
+        type: boolean
+        required: false
+        default: false
+        description: "Check commit messages against conventional commits specification"
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
@@ -53,6 +58,19 @@ env:
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
 jobs:
+
+  check-commit-messages:
+    if: ${{ inputs.check_commit_messages }}
+    name: Check Commit Messages
+    uses: pentaho/actions-common/.github/workflows/check.yml@PAS
+    secrets: inherit
+
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
 
   common-job:
     name: Common Checks
