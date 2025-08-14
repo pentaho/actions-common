@@ -78,14 +78,14 @@ on:
         required: false
         description: 'Image to be used'
         type: string
+      resolve_repo:
+        required: false
+        type: string
+        description: "Custom Maven repo for dependency resolution"
     outputs:
       current-version:
         description: "The current version being built"
         value: ${{ jobs.release-candidate.outputs.current-version }}
-    resolve_repo:
-      required: false
-      type: string
-      description: "Custom Maven repo for dependency resolution"
 
 env:
   VERSION: "${{ inputs.version }}"
@@ -99,7 +99,7 @@ env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${{ ARTIFACTORY_BASE_URL }}/${{ inputs.resolve_repo || 'pnt-mvn' }}
+  RESOLVE_REPO_MIRROR: ${{ARTIFACTORY_BASE_URL}}/${{ inputs.resolve_repo || 'pnt-mvn' }}
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
