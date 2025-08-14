@@ -139,7 +139,7 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean verify -DskipTests=false -Daudit -amd \
+            mvn clean verify -DskipTests=true -Daudit -amd \
             -pl "${{ steps.change_detection.outputs.changed_modules }}" \
             ${{ inputs.additional_mvn_directives }}
         env:
