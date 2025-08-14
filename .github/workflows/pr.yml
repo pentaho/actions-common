@@ -23,11 +23,16 @@ on:
       container_image:
         type: string
         required: false
-        description: 'Image to be used'
+        description: "Image to be used"
       resolve_repo:
-        required: false
         type: string
+        required: false
         description: "Custom Maven repo for dependency resolution"
+      check_commit_messages:
+        type: boolean
+        required: false
+        default: false
+        description: "Check commit messages against conventional commits specification"
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
@@ -57,10 +62,22 @@ env:
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
 jobs:
+  check-commit-messages:
+    if: ${{ inputs.check_commit_messages }}
+    name: Check Commit Messages
+    uses: pentaho/actions-common/.github/workflows/check.yml@PAS
+    secrets: inherit
+
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
 
   common-job:
     name: Common Checks
-    runs-on: [ k8s ]
+    runs-on: [k8s]
 
     permissions:
       statuses: write
@@ -78,7 +95,6 @@ jobs:
         - /home/runner/caches/pentaho/.m2:/root/.m2
 
     steps:
-
       - name: Retrieve settings file
         id: common-maven
         uses: pentaho/actions-common@stable
@@ -143,12 +159,12 @@ jobs:
             ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
-          unit_test_reporter: 'java-junit'
-          unit_test_fail_on_error: 'true'
-          unit_test_report_path: '**/target/surefire-reports/*.xml'
-          int_test_reporter: 'java-junit'
-          int_test_fail_on_error: 'true'
-          int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+          unit_test_reporter: "java-junit"
+          unit_test_fail_on_error: "true"
+          unit_test_report_path: "**/target/surefire-reports/*.xml"
+          int_test_reporter: "java-junit"
+          int_test_fail_on_error: "true"
+          int_test_report_path: "**/target/failsafe-reports/TEST*.xml"
 
       - name: Sonarqube scan
         id: Sonarqube
@@ -165,7 +181,7 @@ jobs:
           JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           GIT_REPO_OWNER: ${{ github.repository_owner }}
           GIT_REPO_NAME: ${{ github.event.repository.name }}
-          JF_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
+          JF_PATH_EXCLUSIONS: "*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*"
           PULL_REQUEST_NUMBER: ${{github.event.number}}
 
       - name: Report notifications
