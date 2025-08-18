@@ -53,27 +53,27 @@ on:
         required: false
         type: boolean
         default: true
-        description: 'should the snapshot build run'
+        description: "should the snapshot build run"
       run_versioning:
         type: boolean
         required: false
         default: true
-        description: 'should the versioning run on the RC build'
+        description: "should the versioning run on the RC build"
       run_release_candidate:
         type: boolean
         required: false
         default: false
-        description: 'should the RC build'
+        description: "should the RC build"
       add_github_run_number:
         type: boolean
         required: false
         default: true
-        description: 'should the github run number be added to the version'
+        description: "should the github run number be added to the version"
       use_semver_release_candidate:
         type: boolean
         required: false
         default: false
-        description: 'should the version be a semver'
+        description: "should the version be a semver"
       ms_teams_webhook_secret_name:
         type: string
         required: false
@@ -82,11 +82,16 @@ on:
       container_image:
         type: string
         required: false
-        description: 'Image to be used'
+        description: "Image to be used"
       resolve_repo:
         type: string
         required: false
         description: "Custom Maven repo for dependency resolution"
+      replacements:
+        type: string
+        required: false
+        default: ""
+        description: "Newline-separated KEY=VALUE pairs to replace in `.github/release-versions.properties`"
     outputs:
       current-version:
         value: ${{ jobs.release-candidate.outputs.current-version }}
@@ -322,12 +327,49 @@ jobs:
 
       - name: Version set
         if: ${{ inputs.run_versioning == true }}
+        shell: bash
+        env:
+          FILE: .github/release-versions.properties
+          REPLACEMENTS: ${{ inputs.replacements }}
+          BASE_VERSION_EFFECTIVE: ${{ env.BASE_VERSION || steps.get-latest-version.outputs.version }}
+          BUILD_NBR_EFFECTIVE: ${{ github.run_number }}
         run: |
-          sed -i 's/BASE_VERSION/${{ env.BASE_VERSION || steps.get-latest-version.outputs.version }}/g' .github/release-versions.properties
-          sed -i 's/BUILD_NBR/${{ github.run_number }}/g' .github/release-versions.properties
-          
+          set -euo pipefail
+
+          # Normalize CRLF -> LF
+          REPL_LINES="$(printf '%s\n' "${REPLACEMENTS}" | sed -e 's/\r$//')"
+
+          # Build a map with enforced pairs first
+          declare -A REPL
+          REPL[BASE_VERSION]="${BASE_VERSION_EFFECTIVE}"
+          REPL[BUILD_NBR]="${BUILD_NBR_EFFECTIVE}"
+
+          # Parse optional KEY=VALUE lines and merge
+          while IFS= read -r LINE; do
+            [[ -z "${LINE}" || "${LINE}" =~ ^[[:space:]]*# ]] && continue
+
+            KEY="${LINE%%=*}"
+            VAL="${LINE#*=}"
+
+            # Trim spaces
+            KEY="${KEY#"${KEY%%[![:space:]]*}"}"; KEY="${KEY%"${KEY##*[![:space:]]}"}"
+            VAL="${VAL#"${VAL%%[![:space:]]*}"}"; VAL="${VAL%"${VAL##*[![:space:]]}"}"
+
+            [[ -z "${KEY}" ]] && continue
+
+            REPL["$KEY"]="$VAL"
+          done <<< "${REPL_LINES}"
+
+          # Apply all replacements safely (escape /, &, | in values)
+          for KEY in "${!REPL[@]}"; do
+            VAL="${REPL[$KEY]}"
+            ESC_VAL="$(printf '%s' "${VAL}" | sed -e 's/[\/&|]/\\&/g')"
+            sed -i "s|${KEY}|${ESC_VAL}|g" "${FILE}"
+          done
+
+          # Proceed with your merger
           java -DRELEASE_MODE=true -jar /version-merger.jar . \
-            -f .github/release-versions.properties \
+            -f "${FILE}" \
             commit project.revision=${{ steps.version.outputs.current-version }} \
             project.version=${{ steps.version.outputs.current-version }} \
             version=${{ steps.version.outputs.current-version }} \
