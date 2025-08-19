@@ -99,7 +99,7 @@ env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
-  RESOLVE_REPO_MIRROR: ${{ format('https://{0}/artifactory/{1}', vars.ARTIFACTORY_HOST, inputs.resolve_repo || 'pnt-mvn') }}
+  RESOLVE_REPO_MIRROR: ${{ format('{0}/{1}', env.ARTIFACTORY_BASE_URL, inputs.resolve_repo || 'pnt-mvn') }}
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -174,7 +174,7 @@ jobs:
           command: |
             mvn clean deploy -amd -Daudit \
             -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
-             ${{ inputs.additional_mvn_directives }}
+             ${{ inputs.N }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
