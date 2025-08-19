@@ -174,7 +174,7 @@ jobs:
           command: |
             mvn clean deploy -amd -Daudit \
             -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
-             ${{ inputs.N }}
+             ${{ inputs.additional_mvn_directives  }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
