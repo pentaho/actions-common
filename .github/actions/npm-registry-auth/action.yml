@@ -1,0 +1,30 @@
+name: Pentaho npm registry authentication
+description: Authenticate to the Pentaho npm registry.
+inputs:
+  pentaho_registry:
+    description: URL to the Pentaho npm registry
+    required: true
+  username:
+    description: Username for the Pentaho npm registry
+    required: true
+  password:
+    description: Password for the Pentaho npm registry
+    required: true
+  set_registry:
+    description: Set the Pentaho registry as the default npm registry
+    required: false
+    default: "true"
+runs:
+  using: "composite"
+  steps:
+    - name: NPM Artifactory authentication
+      shell: bash
+      run: |
+        PASSWORD=$(echo -n "${{ inputs.password }}" | base64 | tr -d " \t\n\r")
+        npm config set ${{ inputs.pentaho_registry }}:_password=$PASSWORD
+        npm config set ${{ inputs.pentaho_registry }}:username=${{ inputs.username }}
+
+    - name: Set NPM registry
+      if: ${{ inputs.set_registry == 'true' }}
+      shell: bash
+      run: npm config set registry https:${{ inputs.pentaho_registry }}
