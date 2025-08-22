@@ -99,17 +99,12 @@ jobs:
       - name: Configure Git
         uses: pentaho/actions-common/.github/actions/git-config@PAS
 
-      - name: Check for package.json
-        id: check-npm
-        run: |
-          if [ -f "package.json" ]; then
-            echo "has_package_json=true" >> $GITHUB_OUTPUT
-          else
-            echo "has_package_json=false" >> $GITHUB_OUTPUT
-          fi
+      - name: Detect npm
+        id: detect-npm
+        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
 
       - name: NPM authentication
-        if: ${{ steps.check-npm.outputs.has_package_json == 'true' }}
+        if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
         uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
@@ -117,11 +112,11 @@ jobs:
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
       - name: Install dependencies
-        if: ${{ steps.check-npm.outputs.has_package_json == 'true' }}
+        if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
         run: npm ci
 
       - name: Update NPM version
-        if: ${{ steps.check-npm.outputs.has_package_json == 'true' }}
+        if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
         run: |
           npm run --if-present version:set -- ${{ steps.increment-version.outputs.clean_new_version }}
           npm run --if-present version:print

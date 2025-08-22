@@ -43,6 +43,7 @@ env:
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
 
   RESOLVE_REPO_MIRROR: ${{ format('{0}/{1}', vars.ARTIFACTORY_BASE_URL, inputs.resolve_repo || 'pnt-mvn') }}
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -148,6 +149,18 @@ jobs:
       - name: Determine which changes occurred
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
+
+      - name: Detect npm
+        id: detect-npm
+        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
+
+      - name: NPM authentication
+        if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        with:
+          pentaho_registry: ${{ env.NPM_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
       - name: Build & Run tests
         id: Build_Unit_Test
