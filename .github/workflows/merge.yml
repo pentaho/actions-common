@@ -43,12 +43,17 @@ on:
         type: string
         required: false
         default: ""
-        description: "Extra additional args for blackduck scan"
+        description: "Additional args for blackduck scan"
+      additional_snapshot_mvn_directives:
+        type: string
+        required: false
+        default: ""
+        description: "Additional directives for the SNAPSHOT Maven command"
       additional_mvn_directives:
         type: string
         required: false
         default: ""
-        description: "Extra additional directives for the Maven command"
+        description: "Additional directives for the RC Maven command"
       run_snapshot:
         required: false
         type: boolean
@@ -169,7 +174,7 @@ jobs:
       - name: Update cmd_type as per the mvn_directives
         if: env.SET_CMD_TYPE == null
         run: |
-          if [[ -n "${{ inputs.additional_mvn_directives }}" && "${{ inputs.additional_mvn_directives }}" == *"-DrunITs"* ]]; then
+          if [[ -n "${{ inputs.additional_snapshot_mvn_directives }}" && "${{ inputs.additional_snapshot_mvn_directives }}" == *"-DrunITs"* ]]; then
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST,INTEGRATION_TEST" >> $GITHUB_ENV
           else
             echo "SET_CMD_TYPE=BUILD,UNIT_TEST" >> $GITHUB_ENV
@@ -195,7 +200,7 @@ jobs:
           command: |
             mvn clean deploy -amd -Daudit \
             -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
-             ${{ inputs.additional_mvn_directives }}
+             ${{ inputs.additional_snapshot_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
           unit_test_reporter: 'java-junit'
