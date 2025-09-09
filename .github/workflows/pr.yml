@@ -66,7 +66,7 @@ jobs:
   check-commit-messages:
     if: ${{ inputs.check_commit_messages }}
     name: Check Commit Messages
-    uses: pentaho/actions-common/.github/workflows/check.yml@PAS
+    uses: pentaho/actions-common/.github/workflows/check.yml@stable
     secrets: inherit
 
     permissions:
@@ -152,11 +152,11 @@ jobs:
 
       - name: Detect npm
         id: detect-npm
-        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
+        uses: pentaho/actions-common/.github/actions/detect-npm@stable
 
       - name: NPM authentication
         if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
