@@ -40,17 +40,17 @@ jobs:
           fetch-tags: true
 
       - name: Configure Git
-        uses: pentaho/actions-common/.github/actions/git-config@PAS
+        uses: pentaho/actions-common/.github/actions/git-config@stable
 
       - name: NPM authentication
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
       - name: NPM publish authentication
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.PUBLISH_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}

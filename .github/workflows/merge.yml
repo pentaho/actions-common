@@ -183,11 +183,11 @@ jobs:
 
       - name: Detect npm
         id: detect-npm
-        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
+        uses: pentaho/actions-common/.github/actions/detect-npm@stable
 
       - name: NPM authentication
         if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
@@ -335,7 +335,7 @@ jobs:
 
       - name: Get latest base version
         id: get-latest-version
-        uses: pentaho/actions-common/.github/actions/get-latest-version@PAS
+        uses: pentaho/actions-common/.github/actions/get-latest-version@stable
         if: ${{ env.BASE_VERSION == '' }}
         with:
           build_name: ${{ inputs.base_build_name }}
@@ -406,11 +406,11 @@ jobs:
 
       - name: Detect npm
         id: detect-npm
-        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
+        uses: pentaho/actions-common/.github/actions/detect-npm@stable
 
       - name: NPM authentication
         if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}

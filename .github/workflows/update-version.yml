@@ -97,15 +97,15 @@ jobs:
         run: mvn versions:set -DnewVersion=${{ steps.increment-version.outputs.new_version }}
 
       - name: Configure Git
-        uses: pentaho/actions-common/.github/actions/git-config@PAS
+        uses: pentaho/actions-common/.github/actions/git-config@stable
 
       - name: Detect npm
         id: detect-npm
-        uses: pentaho/actions-common/.github/actions/detect-npm@PAS
+        uses: pentaho/actions-common/.github/actions/detect-npm@stable
 
       - name: NPM authentication
         if: ${{ steps.detect-npm.outputs.has_npm == 'true' }}
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@PAS
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
         with:
           pentaho_registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}

@@ -100,7 +100,7 @@ jobs:
   update-version:
     if: ${{ inputs.update_version }}
     needs: pentaho-release
-    uses: pentaho/actions-common/.github/workflows/update-version.yml@PAS
+    uses: pentaho/actions-common/.github/workflows/update-version.yml@stable
     with:
       dry_run: ${{ inputs.dry_run }}
     secrets: inherit
