@@ -19,7 +19,3 @@ runs:
         PASSWORD=$(echo -n "${{ inputs.password }}" | base64 | tr -d " \t\n\r")
         npm config set ${{ inputs.pentaho_registry }}:_password=$PASSWORD
         npm config set ${{ inputs.pentaho_registry }}:username=${{ inputs.username }}
-
-    - name: Set NPM registry
-      shell: bash
-      run: npm config set registry https:${{ inputs.pentaho_registry }}
