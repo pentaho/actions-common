@@ -114,12 +114,13 @@ jobs:
           process_json() {
             local prefix=$1
             local json_data=$2
+            re="^[0-9]+([.][0-9]+)?$"
 
             echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
               # Check if the value is a JSON object or array
               is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
-              if [[ $is_json == 0 ]]; then
-                # If it's an object or array, call the function recursively
+              if [[ ! $value =~ $re ]] && [[ $is_json == 0 ]]; then
+                # If it's an object or array, and not a number, call the function recursively
                 process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
               else
                 echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
