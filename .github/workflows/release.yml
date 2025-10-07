@@ -46,14 +46,14 @@ jobs:
         shell: bash
         run: |
           release_version="${{ inputs.release_version }}"
-          version=$(echo "$release_version" | cut -d '-' -f1 | xargs)
-          build_nbr=$(echo "$release_version" | cut -d '-' -f2 | xargs)
           
           branch_name="${{ github.ref_name }}"
           sanitized_branch="${branch_name//\//-}"
           build_name=${{ github.event.repository.name }}-${sanitized_branch}
           
-          if [ "$version" = "$build_nbr" ]; then
+          # Check if a build number was provided (release_version contains a hyphen)
+          if [[ ! "$release_version" =~ - ]]; then
+            # No build number provided, query JFrog for the latest build
             build_aql="builds.find({\"name\": \"$build_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
             buildinfo_data=$(curl -L -u "${{ env.NEXUS_DEPLOY_USER }}:${{ env.NEXUS_DEPLOY_PASSWORD }}" -X POST -H "Content-Type:text/plain" ${{ env.ARTIFACTORY_BASE_URL }}/api/search/aql -d "$build_aql")
             echo "$buildinfo_data"
@@ -61,8 +61,15 @@ jobs:
             buildinfo_number=$(echo $buildinfo_data | jq -r '.results[0]."build.number"')
 
             if [[ "$buildinfo_number" != "" && "$buildinfo_number" != "null" ]]; then
-              build_nbr="$buildinfo_number"  
+              build_nbr="$buildinfo_number"
+            else
+              echo "❌ Error: Could not fetch build number from JFrog for build name: $build_name"
+              echo "Please provide the full release version with build number (e.g., 9.5.1.0-23)"
+              exit 1
             fi
+          else
+            # Build number was provided, use the full release_version
+            build_nbr="$release_version"
           fi
 
           echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
@@ -93,8 +100,7 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             promotion_summary="[Dry run] "
           fi
-          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }} || \
-            jf rt build-promote "${{ env.BUILD_NAME }}" "${{ inputs.release_version }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
+          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
 
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY
 
