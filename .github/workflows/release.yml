@@ -93,7 +93,8 @@ jobs:
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             promotion_summary="[Dry run] "
           fi
-          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
+          jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }} || \
+            jf rt build-promote "${{ env.BUILD_NAME }}" "${{ inputs.release_version }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
 
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY
 
