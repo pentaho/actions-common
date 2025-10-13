@@ -210,13 +210,13 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        id: Sonarqube
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
+#      - name: Sonarqube scan
+#        id: Sonarqube
+#        continue-on-error: true
+#        uses: lumada-common-services/gh-composite-actions@stable
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Report notifications
         if: always()
@@ -434,14 +434,14 @@ jobs:
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
 
-      - name: Sonarqube scan
-        id: Sonarqube
-        if: ${{ inputs.run_snapshot == false }}
-        continue-on-error: true
-        uses: lumada-common-services/gh-composite-actions@stable
-        env:
-          sonar_utility: sonar-scanner
-          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
+#      - name: Sonarqube scan
+#        id: Sonarqube
+#        if: ${{ inputs.run_snapshot == false }}
+#        continue-on-error: true
+#        uses: lumada-common-services/gh-composite-actions@stable
+#        env:
+#          sonar_utility: sonar-scanner
+#          sonar_commands: '("-Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: Tag release
         uses: lumada-common-services/gh-composite-actions@stable
