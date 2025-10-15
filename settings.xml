@@ -73,6 +73,9 @@
 
         <!-- let the build become unstable with failed tests instead of failing -->
         <maven.test.failure.ignore>true</maven.test.failure.ignore>
+        <nodeDownloadRoot>https://one.hitachivantara.com/artifactory/nodejs-generic-remote/</nodeDownloadRoot>
+        <npmDownloadRoot>https://one.hitachivantara.com/artifactory/npm-release/npm/-/</npmDownloadRoot>
+        <pentaho.docker.pull.host>one.hitachivantara.com/docker/</pentaho.docker.pull.host>
       </properties>
       <repositories>
         <repository>

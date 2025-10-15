@@ -18,5 +18,5 @@ runs:
       shell: sh
       run: |
         file_path="$GITHUB_ACTION_PATH/settings.xml"
-        
+        cat $file_path
         echo "path=${file_path}" >> $GITHUB_OUTPUT
