@@ -78,7 +78,7 @@ jobs:
 
   common-job:
     name: Common Checks
-    runs-on: [k8s]
+    runs-on: [k8s, orl-lab]
 
     permissions:
       statuses: write

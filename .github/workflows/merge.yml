@@ -139,7 +139,7 @@ jobs:
   snapshot:
     if: ${{ inputs.run_snapshot == true }}
     name: Update Snapshots
-    runs-on: [ k8s ]
+    runs-on: [ k8s, orl-lab ]
     container:
       image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
       credentials:
@@ -232,7 +232,7 @@ jobs:
     if: ${{ inputs.run_release_candidate == true }}
     name: Build Release Candidate
 
-    runs-on: [ k8s ]
+    runs-on: [ k8s, orl-lab ]
 
     env:
       JFROG_CLI_BUILD_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
