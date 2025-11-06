@@ -33,6 +33,12 @@ on:
         required: false
         default: false
         description: "Check commit messages against conventional commits specification"
+      modules_to_build:
+        type: string
+        required: false
+        description: >
+          The modules to build when running from the root of the project. Defaults to everything ('.').
+          Using this option builds only the modules you specify, regardless of whether those modules have changes.
 
 env:
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
@@ -148,6 +154,7 @@ jobs:
         shell: bash
 
       - name: Determine which changes occurred
+        if: ${{ inputs.modules_to_build == '' }}
         id: change_detection
         uses: hv-actions/change-detection-builder@stable
 
@@ -169,7 +176,7 @@ jobs:
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
-            -pl "${{ steps.change_detection.outputs.changed_modules }}" \
+            -pl "${{ inputs.modules_to_build ||steps.change_detection.outputs.changed_modules }}" \
             ${{ inputs.additional_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
