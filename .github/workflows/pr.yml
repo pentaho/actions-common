@@ -143,6 +143,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      - run: git config --global --add safe.directory /__w/${{ github.event.repository.name }}/${{ github.event.repository.name }}
+
       - name: Update cmd_type as per the mvn_directives
         if: env.SET_CMD_TYPE == null
         run: |
