@@ -22,7 +22,7 @@ on:
 
 env:
   PUBLISH_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/${{ inputs.release && 'pntprv-npm-release' || 'pntprv-npm-dev' }}/
-  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_PROXY_HOST }}/artifactory/npm/
 
 jobs:
   publish-npm-modules:
@@ -50,12 +50,11 @@ jobs:
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
       - name: NPM publish authentication
-        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
+        uses: pentaho/actions-common/.github/actions/npm-auth@stable
         with:
           pentaho_registry: ${{ env.PUBLISH_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
-          set_registry: false
 
       - name: Install dependencies
         run: npm ci
