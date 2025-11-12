@@ -68,6 +68,8 @@ env:
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
+  npm_config_loglevel: "verbose"
+
 jobs:
   check-commit-messages:
     if: ${{ inputs.check_commit_messages }}

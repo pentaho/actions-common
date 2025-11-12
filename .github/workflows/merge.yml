@@ -134,6 +134,8 @@ env:
   DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
   DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
 
+  npm_config_loglevel: "verbose"
+
 jobs:
 
   snapshot:
