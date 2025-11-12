@@ -22,7 +22,7 @@ on:
 
 env:
   PUBLISH_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/${{ inputs.release && 'pntprv-npm-release' || 'pntprv-npm-dev' }}/
-  NPM_REGISTRY: //${{ vars.ARTIFACTORY_PROXY_HOST }}/artifactory/npm/
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
 
 jobs:
   publish-npm-modules:

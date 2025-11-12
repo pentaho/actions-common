@@ -15,7 +15,7 @@ env:
   ARTIFACTORY_BASE_URL: https://${{ vars.ARTIFACTORY_HOST }}/artifactory
 
   RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn
-  NPM_REGISTRY: //${{ vars.ARTIFACTORY_PROXY_HOST }}/artifactory/npm/
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
