@@ -200,8 +200,8 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         with:
           command: |
-            mvn clean deploy -amd -Daudit \
-            -pl "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
+            mvn clean deploy  -Daudit \
+             "${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}" \
              ${{ inputs.additional_snapshot_mvn_directives }}
         env:
           cmd_type: ${{ env.SET_CMD_TYPE }}
