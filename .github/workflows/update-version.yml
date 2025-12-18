@@ -126,8 +126,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Add all files matching patterns (git add ignores non-existent files with pathspecs)
-          git add -- 'pom.xml' '**/pom.xml' 'package.json' '**/package.json' 'package-lock.json' '**/package-lock.json' 'lerna.json' || true
+          # Add files individually, ignoring errors for non-existent files
+          git add pom.xml 2>/dev/null || true
+          git add **/pom.xml 2>/dev/null || true
+          git add package.json 2>/dev/null || true
+          git add **/package.json 2>/dev/null || true
+          git add package-lock.json 2>/dev/null || true
+          git add **/package-lock.json 2>/dev/null || true
+          git add lerna.json 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "No changes to commit"
