@@ -127,12 +127,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Add files individually, ignoring errors for non-existent files
-          git add pom.xml 2>/dev/null || true
-          git add **/pom.xml 2>/dev/null || true
-          git add package.json 2>/dev/null || true
-          git add **/package.json 2>/dev/null || true
-          git add package-lock.json 2>/dev/null || true
-          git add **/package-lock.json 2>/dev/null || true
+          find . -name "pom.xml" -exec git add {} \; 2>/dev/null || true
+          find . -name "package.json" -exec git add {} \; 2>/dev/null || true
+          find . -name "package-lock.json" -exec git add {} \; 2>/dev/null || true
           git add lerna.json 2>/dev/null || true
 
           if git diff --staged --quiet; then
