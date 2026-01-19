@@ -5,7 +5,7 @@ on:
       release_version:
         type: string
         required: true
-        description: ""
+        description: "The version to promote. This must be a known artifact version from Artifactory, like '1.0.0' or '10.0.0.0-245'."
       dry_run:
         type: boolean
         default: true
@@ -41,39 +41,16 @@ jobs:
       - name: Checkout source repo
         uses: actions/checkout@v4
 
-      # expecting the release_version to be something like 9.5.1.0-23
       - name: Work the release version
         shell: bash
         run: |
-          release_version="${{ inputs.release_version }}"
-          
           branch_name="${{ github.ref_name }}"
           sanitized_branch="${branch_name//\//-}"
           build_name=${{ github.event.repository.name }}-${sanitized_branch}
-          
-          # Check if a build number was provided (release_version contains a hyphen)
-          if [[ ! "$release_version" =~ - ]]; then
-            # No build number provided, query JFrog for the latest build
-            build_aql="builds.find({\"name\": \"$build_name\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
-            buildinfo_data=$(curl -L -u "${{ env.NEXUS_DEPLOY_USER }}:${{ env.NEXUS_DEPLOY_PASSWORD }}" -X POST -H "Content-Type:text/plain" ${{ env.ARTIFACTORY_BASE_URL }}/api/search/aql -d "$build_aql")
-            echo "$buildinfo_data"
+          build_nbr="${{ inputs.release_version }}"
 
-            buildinfo_number=$(echo $buildinfo_data | jq -r '.results[0]."build.number"')
-
-            if [[ "$buildinfo_number" != "" && "$buildinfo_number" != "null" ]]; then
-              build_nbr="$buildinfo_number"
-            else
-              echo "❌ Error: Could not fetch build number from JFrog for build name: $build_name"
-              echo "Please provide the full release version with build number (e.g., 9.5.1.0-23)"
-              exit 1
-            fi
-          else
-            # Build number was provided, use the full release_version
-            build_nbr="$release_version"
-          fi
-
-          echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV 
-          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV 
+          echo "BUILD_NAME=${build_name}" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=${build_nbr}" >> $GITHUB_ENV
 
       - name: Config Artifactory in jFrog CLI
         run: |
