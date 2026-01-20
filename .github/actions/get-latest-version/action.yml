@@ -31,7 +31,7 @@ runs:
 
           version="${{ inputs.build_name }}"
         else
-          build_aql="builds.find({\"name\": \"${{ inputs.build_name }}\"}).include(\"number\",\"created\").sort({\"\$desc\" : [\"created\"]}).limit(1)"
+          build_aql="builds.find({\"name\": \"${{ inputs.build_name }}\"}).sort({\"\$desc\" : [\"created\"]}).limit(1)"
           build_data=$(curl -L -u "${{ inputs.artifactory_user }}:${{ inputs.artifactory_password }}" -X POST -H "Content-Type:text/plain" "${{ inputs.artifactory_url }}/api/search/aql" -d "$build_aql")
           echo "Query result: $build_data"
 
