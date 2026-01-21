@@ -11,7 +11,7 @@ inputs:
     description: Password for the Pentaho npm registry
     required: true
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: NPM Artifactory authentication
       shell: bash
