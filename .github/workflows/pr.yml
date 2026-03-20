@@ -208,6 +208,7 @@ jobs:
           GIT_REPO_NAME: ${{ github.event.repository.name }}
           JF_PATH_EXCLUSIONS: "*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*"
           PULL_REQUEST_NUMBER: ${{github.event.number}}
+          MAVEN_ARGS: '-pl ${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}'
 
       - name: Report notifications
         if: always()
