@@ -198,6 +198,50 @@ jobs:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.links.scm=https://github.com/${{ github.repository }}" -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
+      - name: Prepare Frogbot scan
+        id: prepare_frogbot
+        shell: bash
+        continue-on-error: true
+        env:
+          JF_GIT_TOKEN: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+        run: |
+          frogbot_inclusions="${{ inputs.modules_to_build || steps.change_detection.outputs.changed_modules }}"
+          
+          declare -a valid_modules=()
+          
+          # Handle comma-separated or space-separated modules
+          IFS=',' read -ra modules_array <<< "$frogbot_inclusions"
+          
+          for module in "${modules_array[@]}"; do
+            module="${module// /}" # Trim whitespace
+            [[ -z "$module" ]] && continue
+            
+            response_code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer ${JF_GIT_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository_owner }}/${{ github.event.repository.name }}/contents/${module}?ref=${{ github.event.pull_request.base.ref }}")
+            
+            module_exists=false
+            [[ "$response_code" == "200" ]] && module_exists=true
+            echo "INFO: Module '${module}' existence in ${{ github.repository_owner }}/${{ github.event.repository.name }}@${{ github.event.pull_request.base.ref }}: ${module_exists} (HTTP ${response_code})"
+            [[ "$module_exists" == "true" ]] && valid_modules+=("$module")
+          done
+          
+          # Only apply -pl if all specified modules are valid in the target branch
+          project_list_option=""
+          echo "INFO: Frogbot inclusions: ${frogbot_inclusions}"
+          echo "INFO: Valid modules for Frogbot scan: ${valid_modules[*]}"
+          
+          # Compare array lengths instead of string values
+          if [[ ${#valid_modules[@]} -eq ${#modules_array[@]} ]] && [[ ${#modules_array[@]} -gt 0 ]]; then
+            joined=$(IFS=','; echo "${valid_modules[*]}")
+            project_list_option="-pl ${joined}"
+          else
+            echo "WARN: Not all specified modules are valid in the target branch. Skipping module filtering for Frogbot scan."
+          fi
+          
+          echo "project_list_options=${project_list_option}" >> $GITHUB_OUTPUT
+
       - name: FrogBot scan
         uses: lumada-common-services/gh-composite-actions@stable
         env:
@@ -208,6 +252,7 @@ jobs:
           GIT_REPO_NAME: ${{ github.event.repository.name }}
           JF_PATH_EXCLUSIONS: "*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*"
           PULL_REQUEST_NUMBER: ${{github.event.number}}
+          MAVEN_ARGS: '${{ steps.prepare_frogbot.outputs.project_list_options }}'
 
       - name: Report notifications
         if: always()
