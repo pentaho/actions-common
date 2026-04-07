@@ -38,6 +38,7 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
 
       - name: Configure Git
         uses: pentaho/actions-common/.github/actions/git-config@stable
