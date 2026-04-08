@@ -61,7 +61,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: npm run --if-present build
 
       - name: Publish to registry
         if: ${{ !inputs.dry_run }}
