@@ -20,6 +20,7 @@ RUN curl -L -o jq-linux64 https://github.com/stedolan/jq/releases/download/jq-${
 
 # Install Python and Pip
 RUN apt-get update && \
+    apt-mark hold systemd && \
     apt-get install -y python3-pip python3-venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
