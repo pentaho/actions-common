@@ -14,6 +14,10 @@ on:
         type: string
         required: false
         description: "Override image to be used"
+      resolve_repo:
+        type: string
+        required: false
+        description: "Custom Maven repo for dependency resolution"
       update_version:
         type: boolean
         default: false
@@ -22,8 +26,12 @@ on:
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
   ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
   ARTIFACTORY_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   ARTIFACTORY_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  RESOLVE_REPO_MIRROR: ${{ format('{0}/{1}', vars.ARTIFACTORY_BASE_URL, inputs.resolve_repo || 'pnt-mvn') }}
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
@@ -36,6 +44,8 @@ jobs:
       credentials:
         username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
         password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
     steps:
 
       - name: Checkout source repo
@@ -81,10 +91,12 @@ jobs:
 
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY
 
-  update-version:
-    if: ${{ inputs.update_version }}
-    needs: pentaho-release
-    uses: pentaho/actions-common/.github/workflows/update-version.yml@stable
-    with:
-      dry_run: ${{ inputs.dry_run }}
-    secrets: inherit
+      - name: Update Version
+        if: ${{ inputs.update_version }}
+        uses: pentaho/actions-common/.github/actions/update-version@stable
+        with:
+          dry_run: ${{ inputs.dry_run }}
+          npm_registry: ${{ env.NPM_REGISTRY }}
+          artifactory_user: ${{ env.ARTIFACTORY_DEPLOY_USER }}
+          artifactory_password: ${{ env.ARTIFACTORY_DEPLOY_PASSWORD }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
