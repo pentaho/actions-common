@@ -1,6 +1,6 @@
 # Workflows Documentation
 
-This folder contains the reusable GitHub Actions workflows for Pentaho projects.
+This folder contains GitHub Actions workflows and related documentation for Pentaho projects, including both reusable workflows and repository-internal/standalone workflows.
 Below is an overview of the available documentation files.
 
 ---
