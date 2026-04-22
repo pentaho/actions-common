@@ -98,7 +98,7 @@ Runs after a PR is merged. Has two independent jobs: a **Snapshot** build (deplo
 
 #### `sonar-project.properties` (root of the repository)
 
-For the **Sonarqube scan** step to execute correctly, a `sonar-project.properties` file must exist at the root of the calling repository. This file is the standard SonarQube configuration descriptor used by the `sonar-scanner` CLI to determine how to analyse the project: which sources and tests to include, which languages to scan, encoding settings, and any additional analysis parameters. Without it, the scanner will either fail to start or produce an incomplete analysis.
+For the **SonarQube scan** step to execute correctly, a `sonar-project.properties` file must exist at the root of the calling repository. This file is the standard SonarQube configuration descriptor used by the `sonar-scanner` CLI to determine how to analyse the project: which sources and tests to include, which languages to scan, encoding settings, and any additional analysis parameters. Without it, the scanner will either fail to start or produce an incomplete analysis.
 
 Minimal example:
 ```properties
