@@ -1,4 +1,4 @@
-# Auxiliary GitHub Actions Workflows
+# Auxiliar GitHub Actions Workflows
 
 > **See also:** [COMMON_CHECKS.md](COMMON_CHECKS.md) for the main CI workflows: `pr.yml`, `merge.yml`, and `release.yml`.
 
