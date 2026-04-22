@@ -49,16 +49,16 @@ sonar.java.test.binaries=**/target/test-classes
 
 ### Inputs
 
-| Input                          | Type    | Required | Default                        | Description & Usage                                                                                                                                                     |
-|-------------------------------|---------|----------|--------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `slack_channels`               | string  | No       | —                              | Passed as `Slack_Channel` env var to the **Report notifications** step to determine where build result messages are sent.                                               |
-| `sonar_project_key`            | string  | No       | repo name                      | Used in the **Sonarqube scan** step as `-Dsonar.projectKey`. Defaults to the repository name if not provided.                                                          |
+| Input                          | Type    | Required | Default                        | Description & Usage                                                                                                                                                               |
+|-------------------------------|---------|----------|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `slack_channels`               | string  | No       | —                              | Passed as `Slack_Channel` env var to the **Report notifications** step to determine where build result messages are sent.                                                         |
+| `sonar_project_key`            | string  | No       | repo name                      | Used in the **SonarQube scan** step as `-Dsonar.projectKey`. Defaults to the repository name if not provided.                                                                     |
 | `additional_mvn_directives`    | string  | No       | `""`                           | Appended verbatim to the `mvn clean verify` command in the **Build & Run tests** step. Also inspected for `-DrunITs` to decide whether to include integration tests in reporting. |
-| `ms_teams_webhook_secret_name` | string  | No       | `""`                           | Used as a dynamic secret key (`secrets[inputs.ms_teams_webhook_secret_name]`) in the **Report notifications** step to resolve the MS Teams webhook URL at runtime.     |
-| `container_image`              | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Sets the Docker image used for the job container. Falls back to the org-level variable if not specified.                                                                |
-| `resolve_repo`                 | string  | No       | `pnt-mvn`                      | Interpolated into `RESOLVE_REPO_MIRROR` env var (`{artifactory_base_url}/{resolve_repo}`), which Maven uses as its mirror for dependency resolution via `settings.xml`. |
-| `check_commit_messages`        | boolean | No       | `false`                        | Gates the `check-commit-messages` job. When `true`, triggers `check.yml` to validate every commit message on the PR against the Conventional Commits regex.            |
-| `modules_to_build`             | string  | No       | auto-detected                  | Passed as `-pl` to the `mvn` command. When empty, the `change-detection-builder` action determines which modules changed. Also used to scope the Frogbot security scan. |
+| `ms_teams_webhook_secret_name` | string  | No       | `""`                           | Used as a dynamic secret key (`secrets[inputs.ms_teams_webhook_secret_name]`) in the **Report notifications** step to resolve the MS Teams webhook URL at runtime.                |
+| `container_image`              | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Sets the Docker image used for the job container. Falls back to the org-level variable if not specified.                                                                          |
+| `resolve_repo`                 | string  | No       | `pnt-mvn`                      | Interpolated into `RESOLVE_REPO_MIRROR` env var (`{artifactory_base_url}/{resolve_repo}`), which Maven uses as its mirror for dependency resolution via `settings.xml`.           |
+| `check_commit_messages`        | boolean | No       | `false`                        | Gates the `check-commit-messages` job. When `true`, triggers `check.yml` to validate every commit message on the PR against the Conventional Commits regex.                       |
+| `modules_to_build`             | string  | No       | auto-detected                  | Passed as `-pl` to the `mvn` command. When empty, the `change-detection-builder` action determines which modules changed. Also used to scope the Frogbot security scan.           |
 
 ### Usage Example
 
