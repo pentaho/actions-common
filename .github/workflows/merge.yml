@@ -162,7 +162,7 @@ jobs:
           cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -272,7 +272,7 @@ jobs:
           echo "checkout_depth=$checkout_depth" >> $GITHUB_OUTPUT
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
           fetch-depth: ${{ steps.initial-setup.outputs.checkout_depth }}
