@@ -176,7 +176,7 @@ jobs:
 
       - name: Build & Run tests
         id: Build_Unit_Test
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@master
         with:
           command: |
             mvn clean verify -DskipTests=false -Daudit -amd \
@@ -193,7 +193,7 @@ jobs:
 
       - name: Sonarqube scan
         id: Sonarqube
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@master
         env:
           sonar_utility: sonar-scanner
           sonar_commands: '("-Dsonar.links.scm=https://github.com/${{ github.repository }}" -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
@@ -243,7 +243,7 @@ jobs:
           echo "project_list_options=${project_list_option}" >> $GITHUB_OUTPUT
 
       - name: FrogBot scan
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@master
         env:
           JF_URL: https://${{ vars.ARTIFACTORY_HOST }}
           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
@@ -256,7 +256,7 @@ jobs:
 
       - name: Report notifications
         if: always()
-        uses: lumada-common-services/gh-composite-actions@stable
+        uses: lumada-common-services/gh-composite-actions@master
         env:
           Slack_Token: ${{ secrets.SLACK_TOKEN }}
           Slack_Channel: ${{ env.SLACK_CHANNEL }}
