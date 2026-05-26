@@ -1,0 +1,179 @@
+name: PDI plugin compatibility test
+on:
+  workflow_call:
+    inputs:
+      plugin-directory-name:
+        type: string
+        default: "."
+        description: |
+          The name of the directory within the repo that contains the plugin you want to test.
+          Defaults to "." (the root of the repository).
+      pdi-version:
+        required: true
+        type: string
+        description: |
+          The version of PDI that you want to test the plugin against.
+          Valid values are tag values for the pdi-client Docker image, maintained in the qa-automation repo.
+          For example, '11.0' or '10.2'.
+      plugin-version:
+        required: true
+        type: string
+        description: |
+          The version of the plugin that you want to test.  Valid values are build numbers,
+          such as '10.2.0.0-222' or '11.0.0.0-SNAPSHOT'.
+
+env:
+
+  ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
+  ARTIFACTORY_BASE_URL: ${ARTIFACTORY_HOST}/artifactory
+
+  RESOLVE_REPO_MIRROR: ${ARTIFACTORY_BASE_URL}/pnt-mvn/
+
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  PUBLIC_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-dev
+  PRIVATE_RELEASE_REPO: pntprv-maven-dev
+  PRIVATE_RELEASE_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_RELEASE_REPO}
+
+  PUBLIC_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/pntpub-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO: pntprv-maven-snapshot
+  PRIVATE_SNAPSHOT_REPO_URL: ${ARTIFACTORY_BASE_URL}/${PRIVATE_SNAPSHOT_REPO}
+
+  DOCKER_PULL_HOST: ${{ vars.ARTIFACTORY_HOST }}/pnt-docker/
+  DOCKER_PUBLIC_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntpub-docker-dev/
+  DOCKER_PRIVATE_PUSH_HOST: ${{ vars.ARTIFACTORY_HOST }}/pntprv-docker-dev/
+
+  PRACTITEST_TOKEN: ${{ secrets.PRACTITEST_PAT }}
+
+jobs:
+  common-job:
+    name: Common Checks
+    runs-on: [ k8s ]
+
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
+
+    container:
+      image: ${{ vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@stable
+
+      - name: Copy settings.xml to .m2 directory
+        shell: sh
+        run: |
+          cp "${{ steps.common-maven.outputs.settings-file-path }}" /root/.m2
+
+      - name: Load Job metadata into Env vars
+        shell: bash
+        continue-on-error: true
+        env:
+          JOB_CONTEXT: ${{ toJSON(job) }}
+        run: |
+          process_json() {
+            local prefix=$1
+            local json_data=$2
+            re="^[0-9]+([.][0-9]+)?$"
+
+            echo "$json_data" | jq -r 'to_entries | .[] | "\(.key) \(.value|tostring)"' | while read -r key value; do
+              # Check if the value is a JSON object or array
+              is_json=$(echo $value | jq -e . >/dev/null 2>&1 ; echo ${PIPESTATUS[1]})
+              if [[ ! $value =~ $re ]] && [[ $is_json == 0 ]]; then
+                # If it's an object or array, and not a number, call the function recursively
+                process_json "${prefix}${key}_" "$(echo "$json_data" | jq -c ."$key")"
+              else
+                echo "Creating \"${prefix}${key}\" env var with the value \"${value}\""
+                echo "${prefix}${key}=${value}" >> $GITHUB_ENV
+              fi
+            done
+          }
+          # Start processing JSON from the root
+          echo "Dealing with ${{ env.JOB_CONTEXT }}"
+          process_json '' '${{ env.JOB_CONTEXT }}'
+
+      - name: Git configuration
+        run: git config --global --add safe.directory '*'
+        shell: bash
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get pentaho build number
+        id: get-pentaho-build-number
+        run: |
+          kettleversion=$(docker run --rm repo-cache.orl.eng.hitachivantara.com/pnt-docker/automation/pdi-client:${{ inputs.pdi-version }} ./pan.sh -version | grep -oE '(Kettle version[^,]+)'  )
+          echo "Running with $kettleversion"
+          build=$(echo $kettleversion | grep -oE '[^-]+$' )
+          echo "PRODUCT_BUILD_NUMBER=$build" >> $GITHUB_ENV
+        shell: bash {0}
+
+      - name: Build and test
+        uses: lumada-common-services/gh-composite-actions@stable
+        with:
+          command: |
+            mvn clean verify \
+            -Dpentaho.docker.pull.host=repo-cache.orl.eng.hitachivantara.com/pnt-docker/ \
+            -DskipTests=false \
+            -Daudit \
+            -amd \
+            -pl ${{ inputs.plugin-directory-name }} \
+            -Dpdi-plugin-tester.plugin-version=${{ inputs.plugin-version }} \
+            -Dpdi-plugin-tester.pdi-version=${{ inputs.pdi-version }} \
+            -am \
+            -Duse-existing-docker-network=$container_network \
+            -Dmaven.test.redirectTestOutputToFile=false \
+            -DrunITs \
+            -Drelease \
+            -DsetVmMaxMapCountForElasticsearch
+        env:
+          cmd_type: BUILD,INTEGRATION_TEST,UNIT_TEST
+          unit_test_reporter: 'java-junit'
+          unit_test_fail_on_error: 'true'
+          unit_test_report_path: "${{ inputs.plugin-directory-name == '.' && '**/target/surefire-reports/*.xml' || format('**/{0}/**/target/surefire-reports/*.xml', inputs.plugin-directory-name) }}"
+          int_test_reporter: 'java-junit'
+          int_test_fail_on_error: 'true'
+          int_test_report_path: "${{ inputs.plugin-directory-name == '.' && '**/target/failsafe-reports/TEST*.xml' || format('**/{0}/**/target/failsafe-reports/TEST*.xml', inputs.plugin-directory-name) }}"
+
+      - name: Get failsafe report dir
+        if: always()
+        id: get-report-dir
+        shell: bash
+        run: |
+          plugin_dir="${{ inputs.plugin-directory-name }}"
+          if [[ "$plugin_dir" == "." ]]; then
+            dir=$(realpath $(dirname $(find . -wholename "**/target/failsafe-reports/TEST*" -print -quit)))
+          else
+            dir=$(realpath $(dirname $(find . -wholename "**/${plugin_dir}/**/target/failsafe-reports/TEST*" -print -quit)))
+          fi
+          echo $dir
+          echo "TEST_REPORT_DIR=$dir" >> $GITHUB_ENV
+
+      - name: Report to practitest
+        if: always()
+        uses: hv-actions/report-archiver@firecracker
+        with:
+          lookup-folder: ${{ env.TEST_REPORT_DIR }}
+          build-title: "Automation-PDI-EE-Plugin-${{ inputs.plugin-directory-name == '.' && github.event.repository.name || inputs.plugin-directory-name }}-version-${{ inputs.plugin-version }}-on-PDI-${{ inputs.pdi-version }}"
+          project-id: '13675'
+          practitest-api-host: https://eu1-prod-api.practitest.app
+          practitest-host: https://eu1-prod.practitest.app
+          practitest-token: ${{ env.PRACTITEST_TOKEN }}
+          test-type: "Functional"
+          product-name: "PlugIns"
+          product-version: "${{ inputs.pdi-version }}"
+          product-build: ${{ env.PRODUCT_BUILD_NUMBER }}
