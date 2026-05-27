@@ -165,7 +165,59 @@ jobs:
 
 ---
 
-## 4. `bootstrap-image.yml` — Build & Push Container Image
+## 4. `pdi-plugin-compatibility-test.yml` — PDI Plugin Compatibility Test
+
+Runs compatibility automation tests for PDI plugin repos
+
+### Jobs
+
+| Job                   | Condition | Purpose                                          |
+|-----------------------|-----------|--------------------------------------------------|
+| `common-job`          | always    | Runs the automation tests                        |
+
+### Inputs
+
+| Input                      | Type    | Required | Default                        | Description                                                                              |
+|----------------------------|---------|----------|--------------------------------|------------------------------------------------------------------------------------------|
+| `plugin-directory-name`    | string  | No       | `"."`                          | The name of the subdirectory containing the plugin to test (defaults to `.`, the repo's root dir) |
+| `pdi-version`              | string  | Yes      |                                | The version of PDI that you want to test the plugin against. Valid values are tag values for the pdi-client Docker image, maintained in the qa-automation repo. For example, '11.0' or '10.2'. |
+| `plugin-version`           | string  | Yes      |                                | The version of the plugin that you want to test. Valid values are build numbers, such as '10.2.0.0-222' or '11.0.0.0-SNAPSHOT'. |
+
+### Usage Examples
+
+**Single-module repo (plugin at root):**
+
+```yaml
+# .github/workflows/compatibility-test.yml (in your project repo)
+name: Compatibility Test
+on:
+  workflow_dispatch:
+
+jobs:
+  compatibility-test:
+    uses: pentaho/actions-common/.github/workflows/pdi-plugin-compatibility-test.yml@stable
+    secrets: inherit
+    with:
+      pdi-version: "11.1"
+      plugin-version: "11.1.0.0-SNAPSHOT"
+```
+
+**Multi-module repo (plugin in a subdirectory -- like pdi-plugins-ee):**
+
+```yaml
+jobs:
+  compatibility-test:
+    uses: pentaho/actions-common/.github/workflows/pdi-plugin-compatibility-test.yml@stable
+    secrets: inherit
+    with:
+      plugin-directory-name: "my-plugin-module"
+      pdi-version: "10.2"
+      plugin-version: "10.2.0.0-222"
+```
+
+---
+
+## 5. `bootstrap-image.yml` — Build & Push Container Image
 
 Builds a Docker container image (used as the CI runner image for other workflows) and pushes it to Artifactory. Triggered automatically on pushes to `master` that modify files under `.github/bootstrap-image/`, or manually via `workflow_dispatch`. Builds in a matrix for **JDK 17** and **JDK 21**.
 
