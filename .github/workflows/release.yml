@@ -18,6 +18,10 @@ on:
         type: boolean
         default: false
         description: "Update the version in the pom.xml after the release"
+      promote_to_rc:
+        type: boolean
+        default: false
+        description: "Whether to promote to the RC repository instead of the release repository. This is useful for testing the promotion process without actually promoting to the release repository."
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
@@ -67,10 +71,14 @@ jobs:
 
       - name: Promote artifacts
         run: |
-          rt_repo='pntpub-maven-release'
+          # Depending on the input, we will promote to either the RC repository or the release repository. 
+          # By default, we promote to the release repository, but if promote_to_rc is true, we promote to the RC repository instead.
+          # The repository we promote to also depends on whether the repository is private or not. If the Github repository is private, we promote to the private repository instead of the public one.
+
+          rt_repo=${{ inputs.promote_to_rc && 'pntpub-maven-rc' || 'pntpub-maven-release' }}
 
           if [ "${{ env.REPOSITORY_IS_PRIVATE }}" = "true" ]; then
-            rt_repo='pntprv-maven-release'
+            rt_repo=${{ inputs.promote_to_rc && 'pntprv-maven-rc' || 'pntprv-maven-release' }}
           fi
 
           promotion_summary=""

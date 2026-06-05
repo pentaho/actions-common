@@ -214,7 +214,7 @@ jobs:
 
 ## 3. `release.yml` — Release / Promotion Workflow
 
-Promotes a previously built RC artifact from the dev Artifactory repository to the release repository (`pntpub-maven-release` for public repos, `pntprv-maven-release` for private repos). Optionally bumps the `pom.xml` version afterwards.
+Promotes a previously built RC artifact from the dev Artifactory repository to either the release repository (`pntpub-maven-release` or `pntprv-maven-release`) or the RC repository (`pntpub-maven-rc` or `pntprv-maven-rc`), depending on the `promote_to_rc` input and whether the repository is private. Optionally bumps the `pom.xml` version afterwards.
 
 ### Jobs
 
@@ -231,6 +231,7 @@ Promotes a previously built RC artifact from the dev Artifactory repository to t
 | `dry_run`          | boolean | No       | `true`                         | Forwarded as `--dry-run=${{ inputs.dry_run }}` to the `jf rt build-promote` command. When `true`, the promotion is simulated with no actual repository changes. Also passed to `update-version.yml` if triggered. |
 | `container_image`  | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Sets the Docker image for the job container. Falls back to the org-level variable if not specified.                                                                                          |
 | `update_version`   | boolean | No       | `false`                        | Gates the `update-version` job via its `if:` condition. When `true`, calls `update-version.yml` after a successful promotion to bump the patch version in `pom.xml` and `package.json`.     |
+| `promote_to_rc`    | boolean | No       | `false`                        | When `true`, promotes to the RC repository (`pntpub-maven-rc` for public repos, `pntprv-maven-rc` for private repos) instead of the release repository. Useful for testing the promotion process without committing to the release repository. |
 
 ### Usage Examples
 
