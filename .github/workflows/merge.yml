@@ -69,11 +69,6 @@ on:
         required: false
         default: false
         description: "should the RC build"
-      run_register_ram_plugin_release:
-        type: boolean
-        required: false
-        default: false
-        description: "should register the plugin release in RAM"
       add_github_run_number:
         type: boolean
         required: false
@@ -234,15 +229,6 @@ jobs:
           teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
           steps_json: ${{ toJson(steps) }}
           report: true
-
-  register-ram-plugin-version:
-    if: ${{ inputs.run_release_candidate == true && inputs.run_register_ram_plugin_version == true }}
-    name: Register plugin version in RAM
-    needs: [ release-candidate ]
-    uses: register-ram-plugin-version.yml
-    with:
-      version: ${{ needs.release-candidate.outputs.current-version }}
-    secrets: inherit
 
   release-candidate:
     if: ${{ inputs.run_release_candidate == true }}

@@ -22,6 +22,10 @@ on:
         type: boolean
         default: false
         description: "Whether to promote to the RC repository instead of the release repository. This is useful for testing the promotion process without actually promoting to the release repository."
+      run_register_ram_plugin_release:
+        type: boolean
+        default: false
+        description: "should register the plugin release in RAM"
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
@@ -88,6 +92,18 @@ jobs:
           jf rt build-promote "${{ env.BUILD_NAME }}" "${{ env.BUILD_NUMBER }}" ${rt_repo} --dry-run=${{ inputs.dry_run }}
 
           echo "$promotion_summary :frog: Version ${{ inputs.release_version }} was promoted to [${rt_repo}](${{ env.ARTIFACTORY_BASE_URL }}/${rt_repo}) - [Build Info](${{ env.ARTIFACTORY_HOST }}/ui/builds/${{ env.BUILD_NAME }}/${{ env.BUILD_NUMBER }}/)" >> $GITHUB_STEP_SUMMARY
+
+  register-ram-plugin-version:
+    # Only register the plugin version in RAM if it's not a dry run and the user elected to; not all builds run
+    # through this workflow will be plugin releases
+    if: ${{ inputs.dry_run == false && inputs.run_register_ram_plugin_version == true }}
+    name: Register plugin version in RAM
+    needs: [ pentaho-release ]
+    uses: pentaho/actions-common/.github/workflows/register-ram-plugin-version.yml@stable
+    with:
+      version: ${{ inputs.release_version }}
+    secrets: inherit
+
 
   update-version:
     if: ${{ inputs.update_version }}

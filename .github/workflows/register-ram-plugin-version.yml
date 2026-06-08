@@ -46,15 +46,10 @@ on:
 
 jobs:
   register:
-    runs-on: ubuntu-latest
+    runs-on: [ k8s, orl-lab ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
+        uses: actions/checkout@v6
 
       - name: Install PyYAML
         run: pip install --quiet pyyaml
