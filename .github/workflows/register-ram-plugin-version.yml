@@ -1,0 +1,220 @@
+name: Register plugin release in RAM
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+        description: Plugin version to register in RAM.
+      ram_base_url:
+        required: false
+        type: string
+        default: https://ram.pentaho.com
+        description: Base URL of the RAM server.
+      plugin_details_path:
+        required: false
+        type: string
+        default: plugin-details.yaml
+        description: Path to plugin-details.yaml in the repository.
+      user_agent:
+        required: false
+        type: string
+        default: Pentaho-GitHubActions-RAM-Register
+        description: User-Agent header value (must start with Pentaho).
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+        type: string
+        description: Plugin version to register in RAM.
+      ram_base_url:
+        required: false
+        type: string
+        default: https://ram.pentaho.com
+        description: Base URL of the RAM server.
+      plugin_details_path:
+        required: false
+        type: string
+        default: plugin-details.yaml
+        description: Path to plugin-details.yaml in the repository.
+      user_agent:
+        required: false
+        type: string
+        default: Pentaho-GitHubActions-RAM-Register
+        description: User-Agent header value (must start with Pentaho).
+
+jobs:
+  register:
+    runs-on: [ k8s, orl-lab ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install PyYAML
+        run: pip install --quiet pyyaml
+
+      - name: Parse plugin details
+        id: parse
+        shell: bash
+        env:
+          PLUGIN_DETAILS_PATH: ${{ inputs.plugin_details_path }}
+          TARGET_VERSION: ${{ inputs.version }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          import yaml
+
+          path = os.environ["PLUGIN_DETAILS_PATH"]
+          target_version = os.environ["TARGET_VERSION"]
+
+          with open(path, "r", encoding="utf-8") as fh:
+              data = yaml.safe_load(fh) or {}
+
+          plugin_id_raw = data.get("id")
+          try:
+              plugin_id = int(str(plugin_id_raw).strip())
+          except Exception:
+              print(f"Invalid plugin id in {path}: {plugin_id_raw}", file=sys.stderr)
+              sys.exit(1)
+
+          artifact_id_raw = data.get("artifact_id")
+          try:
+              artifact_id = int(str(artifact_id_raw).strip())
+          except Exception:
+              print(f"Invalid artifact_id in {path}: {artifact_id_raw}", file=sys.stderr)
+              sys.exit(1)
+
+          versions = data.get("versions") or []
+          if not isinstance(versions, list) or not versions:
+              print(f"No versions[] found in {path}", file=sys.stderr)
+              sys.exit(1)
+
+          matches = []
+          for entry in versions:
+              plugin_version = str(entry.get("plugin_version", "")).strip()
+              if not plugin_version:
+                  continue
+              if (
+                   target_version == plugin_version
+                   or target_version.startswith(f"{plugin_version}.")
+                   or target_version.startswith(f"{plugin_version}-")
+              ):
+                  matches.append((len(plugin_version), entry, plugin_version))
+
+          if not matches:
+              print(
+                  f"No versions[] entry in {path} matches target version prefix: {target_version}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          _, selected, matched_prefix = max(matches, key=lambda item: item[0])
+
+          change_log = selected.get("change_log") or []
+          if isinstance(change_log, list):
+              changes = "\n".join([str(item).strip() for item in change_log if str(item).strip()])
+          else:
+              changes = str(change_log).strip()
+          if not changes:
+              print(
+                  f"Matched versions[] entry ({matched_prefix}) has empty change_log in {path}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          compatible_versions = selected.get("compatible_versions") or []
+          if not isinstance(compatible_versions, list) or not compatible_versions:
+              print(
+                  f"Matched versions[] entry ({matched_prefix}) has empty compatible_versions in {path}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          def normalize_release_name(value):
+              release_name = str(value).strip()
+              return release_name
+
+          compatible_releases = [normalize_release_name(v) for v in compatible_versions if str(v).strip()]
+          if not compatible_releases:
+              print(
+                  f"Matched versions[] entry ({matched_prefix}) produced no valid compatible releases in {path}",
+                  file=sys.stderr,
+              )
+              sys.exit(1)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write(f"plugin_id={plugin_id}\n")
+              out.write(f"artifact_id={artifact_id}\n")
+              out.write(f"matched_prefix={matched_prefix}\n")
+              out.write(f"changes_json={json.dumps(changes)}\n")
+              out.write(f"compatible_releases_json={json.dumps(compatible_releases)}\n")
+          PY
+
+      - name: Register plugin release in RAM
+        id: register
+        shell: bash
+        env:
+          RAM_BASE_URL: ${{ inputs.ram_base_url }}
+          RAM_USER_AGENT: ${{ inputs.user_agent }}
+          PLUGIN_ID: ${{ steps.parse.outputs.plugin_id }}
+          ARTIFACT_ID: ${{ steps.parse.outputs.artifact_id }}
+          VERSION: ${{ inputs.version }}
+          CHANGES_JSON: ${{ steps.parse.outputs.changes_json }}
+          COMPATIBLE_RELEASES_JSON: ${{ steps.parse.outputs.compatible_releases_json }}
+        run: |
+          if [[ "$RAM_USER_AGENT" != Pentaho* ]]; then
+              echo "Invalid user_agent: must start with 'Pentaho'." >&2
+              exit 1
+          fi
+          release_date="$(date -u +%F)"
+          register_body="$(
+            jq -nc \
+              --argjson pluginId "$PLUGIN_ID" \
+              --argjson artifactId "$ARTIFACT_ID" \
+              --arg version "$VERSION" \
+              --arg releaseDate "$release_date" \
+              --argjson changes "$CHANGES_JSON" \
+              --argjson compatibleReleases "$COMPATIBLE_RELEASES_JSON" \
+              '{
+                pluginId: $pluginId,
+                artifactId: $artifactId,
+                version: $version,
+                releaseDate: $releaseDate,
+                changes: $changes,
+                compatiblePlatformVersions: $compatibleReleases
+              }'
+          )"
+
+          echo "Registering plugin version: " "$register_body"
+
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          status_code="$(
+            curl -sS -o "$response_file" -w "%{http_code}" \
+              -X POST \
+              -H "Content-Type: application/json" \
+              -H "User-Agent: $RAM_USER_AGENT" \
+              -d "$register_body" \
+              "$RAM_BASE_URL/api/v2/plugin/release/register"
+          )"
+
+          if [[ "$status_code" != 2* ]]; then
+            echo "RAM register call failed with status $status_code" >&2
+            echo "RAM response body:" >&2
+            if [[ -s "$response_file" ]]; then
+              if jq -e . "$response_file" >/dev/null 2>&1; then
+                jq -C . "$response_file" >&2
+              else
+                cat "$response_file" >&2
+              fi
+            else
+              echo "<empty response body>" >&2
+            fi
+            exit 1
+          fi
+
+          jq -C . "$response_file"
