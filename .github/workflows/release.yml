@@ -22,10 +22,10 @@ on:
         type: boolean
         default: false
         description: "Whether to promote to the RC repository instead of the release repository. This is useful for testing the promotion process without actually promoting to the release repository."
-      run_register_ram_plugin_release:
+      run_register_ram_plugin_version:
         type: boolean
         default: false
-        description: "should register the plugin release in RAM"
+        description: "should register the plugin version in RAM"
 
 env:
   ARTIFACTORY_HOST: https://${{ vars.ARTIFACTORY_HOST }}
