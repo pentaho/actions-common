@@ -69,7 +69,7 @@ jobs:
 
       # Going to fetch repo metadata so that we can use REPOSITORY_IS_PRIVATE in the following step
       - name: Get Repository Metadata
-        uses: varunsridharan/action-repository-meta@2.2
+        uses: hv-actions/action-repository-meta@stable
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
