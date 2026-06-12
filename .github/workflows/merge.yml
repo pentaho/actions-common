@@ -349,12 +349,15 @@ jobs:
         if: ${{ inputs.run_versioning == true }}
         shell: bash
         env:
-          FILE: .github/release-versions.properties
+          FILE: ${{ '.github/release-versions.properties' || steps.common-maven.outputs.release-versions-file-path }}
           REPLACEMENTS: ${{ inputs.replacements }}
           BASE_VERSION_EFFECTIVE: ${{ env.BASE_VERSION || steps.get-latest-version.outputs.version }}
           BUILD_NBR_EFFECTIVE: ${{ github.run_number }}
         run: |
           set -euo pipefail
+          
+          echo "Using properties file: ${FILE}"
+          echo "Effective BASE_VERSION: ${BASE_VERSION_EFFECTIVE}"
 
           # Normalize CRLF -> LF
           REPL_LINES="$(printf '%s\n' "${REPLACEMENTS}" | sed -e 's/\r$//')"
