@@ -12,7 +12,7 @@ Documents the **core CI/CD workflows** that cover the full software delivery lif
 | Workflow | Purpose |
 |----------|---------|
 | [`pr.yml`](pr.yml) | Runs on every pull request: builds, tests, Sonar code quality scan, and Frogbot security scan. |
-| [`merge.yml`](merge.yml) | Runs on merge: deploys SNAPSHOT artifacts and optionally produces a versioned Release Candidate. |
+| [`merge.yml`](merge.yml) | Runs on merge: deploys SNAPSHOT artifacts and optionally produces a versioned/tagged Release Candidate with configurable property-token replacements. |
 | [`release.yml`](release.yml) | Promotes a Release Candidate artifact from the dev repository to the release repository in Artifactory. |
 
 Also includes:

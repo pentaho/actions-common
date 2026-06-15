@@ -113,7 +113,7 @@ sonar.java.test.binaries=**/target/test-classes
 
 #### `.github/release-versions.properties`
 
-For the **Version set** step in the `release-candidate` job to work correctly (when `run_versioning: true`), a `release-versions.properties` file must exist inside the `.github` folder of the calling repository. This file acts as a version manifest: it holds placeholder tokens (such as `BASE_VERSION` and `BUILD_NBR`) that the workflow replaces at build time using `sed` substitutions and then feeds into `version-merger.jar`. The merger propagates the resolved values across all `pom.xml` files and other version-tracked resources in the project.
+For the **Version set** step in the `release-candidate` job (when `run_versioning: true`), the workflow first tries to use `.github/release-versions.properties` from the calling repository and, if absent, falls back to the default `release-versions.properties` shipped by `actions-common`. This file acts as a version manifest: it holds placeholder tokens (such as `BASE_VERSION` and `BUILD_NBR`) that the workflow replaces at build time using `sed` substitutions and then feeds into `version-merger.jar`. The merger propagates the resolved values across all `pom.xml` files and other version-tracked resources in the project.
 
 Example:
 ```properties
@@ -121,7 +121,7 @@ coding-standards.version=BASE_VERSION
 some-dependency.version=BASE_VERSION-BUILD_NBR
 ```
 
-At runtime, `BASE_VERSION` is replaced with the effective base dependency version and `BUILD_NBR` with the GitHub run number. Additional custom tokens can be injected via the `replacements` input.
+At runtime, `BASE_VERSION` is replaced with the effective base dependency version and `BUILD_NBR` with the GitHub run number (both enforced by the workflow). Additional custom tokens can be injected via the `replacements` input.
 
 ### Inputs
 
@@ -143,7 +143,7 @@ At runtime, `BASE_VERSION` is replaced with the effective base dependency versio
 | `container_image`                      | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Sets the Docker image for both job containers. Falls back to the org-level variable if not specified.                                                                                                   |
 | `resolve_repo`                         | string  | No       | `pnt-mvn`                      | Interpolated into `RESOLVE_REPO_MIRROR` env var, which Maven uses as its dependency resolution mirror via `settings.xml`.                                                                              |
 | `ms_teams_webhook_secret_name`         | string  | No       | `""`                           | Resolved dynamically as `secrets[inputs.ms_teams_webhook_secret_name]` in the **Report notifications** step of both jobs.                                                                              |
-| `replacements`                         | string  | No       | `""`                           | Newline-separated `KEY=VALUE` pairs parsed in the **Version set** step and applied as `sed` substitutions on `release-versions.properties` before running `version-merger.jar`.                       |
+| `replacements`                         | string  | No       | `""`                           | Newline-separated `KEY=VALUE` pairs parsed in **Version set** (blank/comment lines ignored; keys/values trimmed) and merged with enforced `BASE_VERSION`/`BUILD_NBR`, then applied as safe `sed` substitutions before `version-merger.jar`. |
 | `blackduck_project_key`                | string  | No       | `Pentaho`                      | Reserved for BlackDuck scan integration (declared but not yet wired into a step in the current workflow version).                                                                                       |
 | `blackduck_server_url`                 | string  | No       | Orion URL                      | Reserved for BlackDuck scan integration (declared but not yet wired into a step in the current workflow version).                                                                                       |
 | `blackduck_additional_args`            | string  | No       | `""`                           | Reserved for BlackDuck scan integration (declared but not yet wired into a step in the current workflow version).                                                                                       |
