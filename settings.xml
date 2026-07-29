@@ -51,7 +51,7 @@
     </server>
     <!-- Relevant when using io.fabric8:docker-maven-plugin -->
     <server>
-      <id>one.hitachivantara.com</id>
+      <id>repo.pentaho.com</id>
       <username>${env.NEXUS_DEPLOY_USER}</username>
       <password>${env.NEXUS_DEPLOY_PASSWORD}</password>
     </server>
@@ -84,9 +84,9 @@
 
         <!-- let the build become unstable with failed tests instead of failing -->
         <maven.test.failure.ignore>true</maven.test.failure.ignore>
-        <nodeDownloadRoot>https://one.hitachivantara.com/artifactory/nodejs-generic-remote/</nodeDownloadRoot>
-        <npmDownloadRoot>https://one.hitachivantara.com/artifactory/npm-release/npm/-/</npmDownloadRoot>
-        <pentaho.docker.pull.host>one.hitachivantara.com/docker/</pentaho.docker.pull.host>
+        <nodeDownloadRoot>https://repo.pentaho.com/artifactory/nodejs-generic-remote/</nodeDownloadRoot>
+        <npmDownloadRoot>https://repo.pentaho.com/artifactory/npm-release/npm/-/</npmDownloadRoot>
+        <pentaho.docker.pull.host>repo.pentaho.com/docker/</pentaho.docker.pull.host>
       </properties>
       <repositories>
         <repository>
