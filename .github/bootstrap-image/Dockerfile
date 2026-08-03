@@ -1,5 +1,5 @@
 ARG JDK=17
-FROM repo-cache.eng.pentaho.com/pnt-docker/jenkins-build/maven/open-jdk/${JDK}
+FROM repo.pentaho.com/pnt-docker/jenkins-build/maven/open-jdk/${JDK}
 
 ARG VERSION_MERGER=1.0.10
 ARG ARTIFACTORY_URL=https://repo.pentaho.com/artifactory/maven
