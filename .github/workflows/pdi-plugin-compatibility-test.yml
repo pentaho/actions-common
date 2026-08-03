@@ -127,7 +127,7 @@ jobs:
       - name: Get pentaho build number
         id: get-pentaho-build-number
         run: |
-          kettleversion=$(docker run --rm repo-cache.orl.eng.hitachivantara.com/pnt-docker/automation/pdi-client:${{ inputs.pdi-version }} ./pan.sh -version | grep -oE '(Kettle version[^,]+)'  )
+          kettleversion=$(docker run --rm repo-cache.eng.pentaho.com/pnt-docker/automation/pdi-client:${{ inputs.pdi-version }} ./pan.sh -version | grep -oE '(Kettle version[^,]+)'  )
           echo "Running with $kettleversion"
           build=$(echo $kettleversion | grep -oE '[^-]+$' )
           echo "PRODUCT_BUILD_NUMBER=$build" >> $GITHUB_ENV
@@ -138,7 +138,7 @@ jobs:
         with:
           command: |
             mvn clean verify \
-            -Dpentaho.docker.pull.host=repo-cache.orl.eng.hitachivantara.com/pnt-docker/ \
+            -Dpentaho.docker.pull.host=repo-cache.eng.pentaho.com/pnt-docker/ \
             -DskipTests=false \
             -Daudit \
             -amd \

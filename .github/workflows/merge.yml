@@ -48,7 +48,7 @@ on:
       blackduck_server_url:
         type: string
         required: false
-        default: https://orion.orl.eng.hitachivantara.com
+        default: https://orion.eng.pentaho.com
         description: "Server URL for Blackduck"
       blackduck_additional_args:
         type: string
