@@ -1,0 +1,107 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Pentaho release workflow
+on:
+  workflow_call:
+    inputs:
+      container_image:
+        type: string
+        required: false
+        description: "Image to be used"
+      slack_channels:
+        type: string
+        required: false
+        description: "Slack channel(s) to send notifications to."
+      ms_teams_webhook_secret_name:
+        type: string
+        required: false
+        default: ""
+        description: "The MS Teams webhook secret name"
+      dry_run:
+        type: boolean
+        default: true
+        description: "Dry run. No real changes should occur."
+
+env:
+  PUBLISH_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/pntprv-npm-release/
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+
+  SLACK_CHANNEL: "${{ inputs.slack_channels }}"
+
+  npm_config_loglevel: "verbose"
+
+jobs:
+  release:
+    name: Release
+    runs-on: [ k8s, orl-lab ]
+
+    permissions:
+      statuses: write
+      checks: write
+      contents: write
+      pull-requests: write
+      actions: write
+
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+
+      - name: Configure Git
+        uses: pentaho/actions-common/.github/actions/git-config@stable
+
+      - name: NPM authentication
+        uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
+        with:
+          pentaho_registry: ${{ env.NPM_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+      - name: NPM publish authentication
+        uses: pentaho/actions-common/.github/actions/npm-auth@stable
+        with:
+          pentaho_registry: ${{ env.PUBLISH_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run --if-present build
+
+      - name: Publish to registry
+        shell: bash
+        run: |
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            npm run --if-present dry-run-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+          else
+            npm run --if-present publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+          fi
+
+      - name: Report notifications
+        if: always()
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          Slack_Token: ${{ secrets.SLACK_TOKEN }}
+          Slack_Channel: ${{ env.SLACK_CHANNEL }}
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
+          report: true
