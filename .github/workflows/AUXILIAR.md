@@ -106,7 +106,9 @@ jobs:
 
 ---
 
-## 3. `publish-npm.yml` — Publish NPM Modules Workflow
+## 3. `publish-npm.yml` — Publish NPM Modules Workflow *(Legacy)*
+
+> **⚠️ Legacy workflow, kept for backward compatibility only.** New and existing NPM projects should migrate to [`pr-npm.yml`](#4-pr-npmyml--npm-pull-request-workflow), [`merge-npm.yml`](#5-merge-npmyml--npm-merge-workflow), and [`release-npm.yml`](#6-release-npmyml--npm-release-workflow) instead. `publish-npm.yml` is not actively developed further and may be removed in a future major version.
 
 Builds and publishes NPM packages to Artifactory. Supports both dev and release registries, and can be run as a dry-run to validate without publishing.
 
@@ -165,7 +167,140 @@ jobs:
 
 ---
 
-## 4. `pdi-plugin-compatibility-test.yml` — PDI Plugin Compatibility Test
+## 4. `pr-npm.yml` — NPM Pull Request Workflow
+
+Runs the standard PR checks for NPM-based projects: commit message validation, build, tests, Sonar code quality scan, and Frogbot security scan.
+
+> **Note:** the `build` and `test` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If either script is missing, the job fails — a project without a real build/test step would defeat the purpose of this workflow.
+
+### Jobs
+
+| Job                      | Condition | Purpose                                                              |
+|--------------------------|-----------|-----------------------------------------------------------------------|
+| `check-commit-messages`  | always    | Validates commit messages via `check.yml`                            |
+| `common-job`             | always    | Install dependencies, build, test, Sonar scan, Frogbot scan, notify  |
+
+### Inputs
+
+| Input                          | Type   | Required | Default                        | Description                               |
+|--------------------------------|--------|----------|---------------------------------|--------------------------------------------|
+| `container_image`               | string | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override                     |
+| `slack_channels`                | string | No       |                                 | Slack channel(s) to send notifications to |
+| `sonar_project_key`             | string | No       | repo name                      | Sonar's project identifier key            |
+| `ms_teams_webhook_secret_name`  | string | No       | `""`                            | The MS Teams webhook secret name          |
+
+### Usage Example
+
+```yaml
+# .github/workflows/pr.yml (in your project repo)
+name: Pull Request
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pr:
+    uses: pentaho/actions-common/.github/workflows/pr-npm.yml@stable
+    secrets: inherit
+    with:
+      slack_channels: "#my-channel"
+```
+
+---
+
+## 5. `merge-npm.yml` — NPM Merge Workflow
+
+Runs on merge for NPM-based projects: builds, runs a Sonarqube scan, and publishes packages to the dev Artifactory registry (`pntprv-npm-dev`).
+
+> **Note:** the `build` and `artifactory-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If either script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow. The publish script is intentionally **not** named `publish`: that name collides with npm's reserved `publish` lifecycle hook, so a consumer script like `"publish": "npm publish"` would re-trigger itself and loop indefinitely when invoked.
+
+### Jobs
+
+| Job     | Condition | Purpose                                                                    |
+|---------|-----------|------------------------------------------------------------------------------|
+| `merge` | always    | Install dependencies, build, Sonarqube scan, publish to dev registry, notify |
+
+### Inputs
+
+| Input                          | Type   | Required | Default                        | Description                                |
+|--------------------------------|--------|----------|---------------------------------|---------------------------------------------|
+| `container_image`               | string | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override                      |
+| `slack_channels`                | string | No       |                                 | Slack channel(s) to send notifications to  |
+| `sonar_project_key`             | string | No       | repo name                      | Sonar's project identifier key             |
+| `ms_teams_webhook_secret_name`  | string | No       | `""`                            | The MS Teams webhook secret name           |
+
+### Usage Example
+
+```yaml
+# .github/workflows/merge.yml (in your project repo)
+name: Merge
+on:
+  push:
+    branches: [main]
+
+jobs:
+  merge:
+    uses: pentaho/actions-common/.github/workflows/merge-npm.yml@stable
+    secrets: inherit
+    with:
+      slack_channels: "#my-channel"
+```
+
+---
+
+## 6. `release-npm.yml` — NPM Release Workflow
+
+Promotes an NPM package release by publishing to the release Artifactory registry (`pntprv-npm-release`). Supports a dry-run mode to validate without publishing.
+
+> **Note:** the `build`, `artifactory-publish`, and `dry-run-artifactory-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If a required script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow. The publish scripts are intentionally **not** named `publish`: that name collides with npm's reserved `publish` lifecycle hook, so a consumer script like `"publish": "npm publish"` would re-trigger itself and loop indefinitely when invoked.
+
+### Jobs
+
+| Job       | Condition | Purpose                                                          |
+|-----------|-----------|---------------------------------------------------------------------|
+| `release` | always    | Install dependencies, build, publish to release registry, notify  |
+
+### Inputs
+
+| Input                          | Type    | Required | Default                        | Description                                |
+|--------------------------------|---------|----------|---------------------------------|---------------------------------------------|
+| `container_image`               | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override                      |
+| `slack_channels`                | string  | No       |                                 | Slack channel(s) to send notifications to  |
+| `ms_teams_webhook_secret_name`  | string  | No       | `""`                            | The MS Teams webhook secret name           |
+| `dry_run`                       | boolean | No       | `true`                          | Runs `dry-run-artifactory-publish` instead of `artifactory-publish` |
+
+### Usage Examples
+
+**Dry-run (preview):**
+
+```yaml
+# .github/workflows/release.yml (in your project repo)
+name: Release
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    uses: pentaho/actions-common/.github/workflows/release-npm.yml@stable
+    secrets: inherit
+    with:
+      dry_run: true
+```
+
+**Real release publish:**
+
+```yaml
+jobs:
+  release:
+    uses: pentaho/actions-common/.github/workflows/release-npm.yml@stable
+    secrets: inherit
+    with:
+      dry_run: false
+```
+
+---
+
+## 7. `pdi-plugin-compatibility-test.yml` — PDI Plugin Compatibility Test
 
 Runs compatibility automation tests for PDI plugin repos
 
@@ -217,7 +352,7 @@ jobs:
 
 ---
 
-## 5. `bootstrap-image.yml` — Build & Push Container Image
+## 8. `bootstrap-image.yml` — Build & Push Container Image
 
 Builds a Docker container image (used as the CI runner image for other workflows) and pushes it to Artifactory. Triggered automatically on pushes to `master` that modify files under `.github/bootstrap-image/`, or manually via `workflow_dispatch`. Builds in a matrix for **JDK 17** and **JDK 21**.
 
