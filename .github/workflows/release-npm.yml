@@ -92,9 +92,9 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            npm run dry-run-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+            npm run dry-run-artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
           else
-            npm run publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+            npm run artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
           fi
 
       - name: Report notifications

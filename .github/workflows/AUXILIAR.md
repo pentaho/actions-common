@@ -212,7 +212,7 @@ jobs:
 
 Runs on merge for NPM-based projects: builds and publishes packages to the dev Artifactory registry (`pntprv-npm-dev`).
 
-> **Note:** the `build` and `publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If either script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow.
+> **Note:** the `build` and `artifactory-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If either script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow. The publish script is intentionally **not** named `publish`: that name collides with npm's reserved `publish` lifecycle hook, so a consumer script like `"publish": "npm publish"` would re-trigger itself and loop indefinitely when invoked.
 
 ### Jobs
 
@@ -251,7 +251,7 @@ jobs:
 
 Promotes an NPM package release by publishing to the release Artifactory registry (`pntprv-npm-release`). Supports a dry-run mode to validate without publishing.
 
-> **Note:** the `build`, `publish`, and `dry-run-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If a required script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow.
+> **Note:** the `build`, `artifactory-publish`, and `dry-run-artifactory-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If a required script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow. The publish scripts are intentionally **not** named `publish`: that name collides with npm's reserved `publish` lifecycle hook, so a consumer script like `"publish": "npm publish"` would re-trigger itself and loop indefinitely when invoked.
 
 ### Jobs
 
@@ -266,7 +266,7 @@ Promotes an NPM package release by publishing to the release Artifactory registr
 | `container_image`               | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override                      |
 | `slack_channels`                | string  | No       |                                 | Slack channel(s) to send notifications to  |
 | `ms_teams_webhook_secret_name`  | string  | No       | `""`                            | The MS Teams webhook secret name           |
-| `dry_run`                       | boolean | No       | `true`                          | Runs `dry-run-publish` instead of `publish` |
+| `dry_run`                       | boolean | No       | `true`                          | Runs `dry-run-artifactory-publish` instead of `artifactory-publish` |
 
 ### Usage Examples
 

@@ -86,7 +86,7 @@ jobs:
 
       - name: Publish to registry
         shell: bash
-        run: npm run publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+        run: npm run artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
 
       - name: Report notifications
         if: always()
