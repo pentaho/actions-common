@@ -37,6 +37,7 @@ env:
 
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
