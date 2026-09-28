@@ -85,7 +85,6 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          SONAR_LOGIN: ${{ secrets.WINGMAN_SONAR_TOKEN }}
           sonar_commands: '("-Dsonar.links.scm=https://github.com/${{ github.repository }}" -Dsonar.working.directory=/tmp/.scannerwork -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}}")'
 
       - name: NPM publish authentication

@@ -59,6 +59,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
           token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+          persist-credentials: ${{ !inputs.dry_run }}
 
       - name: Configure Git
         uses: pentaho/actions-common/.github/actions/git-config@stable
@@ -76,21 +77,23 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Dry Run Publish
+        if: ${{ inputs.dry_run }}
+        shell: bash
+        run: npm run dry-run-artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
+
       - name: NPM publish authentication
+        if: ${{ !inputs.dry_run }}
         uses: pentaho/actions-common/.github/actions/npm-auth@stable
         with:
           pentaho_registry: ${{ env.PUBLISH_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
-      - name: Publish to registry
+      - name: Publish
+        if: ${{ !inputs.dry_run }}
         shell: bash
-        run: |
-          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            npm run dry-run-artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
-          else
-            npm run artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
-          fi
+        run: npm run artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
 
       - name: Report notifications
         if: always()
