@@ -210,15 +210,15 @@ jobs:
 
 ## 5. `merge-npm.yml` — NPM Merge Workflow
 
-Runs on merge for NPM-based projects: builds and publishes packages to the dev Artifactory registry (`pntprv-npm-dev`).
+Runs on merge for NPM-based projects: builds, runs a Sonarqube scan, and publishes packages to the dev Artifactory registry (`pntprv-npm-dev`).
 
 > **Note:** the `build` and `artifactory-publish` npm scripts are **required** in the consumer's `package.json` (not run with `--if-present`). If either script is missing, the job fails — a project without a real build/publish step would defeat the purpose of this workflow. The publish script is intentionally **not** named `publish`: that name collides with npm's reserved `publish` lifecycle hook, so a consumer script like `"publish": "npm publish"` would re-trigger itself and loop indefinitely when invoked.
 
 ### Jobs
 
-| Job     | Condition | Purpose                                                      |
-|---------|-----------|----------------------------------------------------------------|
-| `merge` | always    | Install dependencies, build, publish to dev registry, notify  |
+| Job     | Condition | Purpose                                                                    |
+|---------|-----------|------------------------------------------------------------------------------|
+| `merge` | always    | Install dependencies, build, Sonarqube scan, publish to dev registry, notify |
 
 ### Inputs
 
@@ -226,6 +226,7 @@ Runs on merge for NPM-based projects: builds and publishes packages to the dev A
 |--------------------------------|--------|----------|---------------------------------|---------------------------------------------|
 | `container_image`               | string | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override                      |
 | `slack_channels`                | string | No       |                                 | Slack channel(s) to send notifications to  |
+| `sonar_project_key`             | string | No       | repo name                      | Sonar's project identifier key             |
 | `ms_teams_webhook_secret_name`  | string | No       | `""`                            | The MS Teams webhook secret name           |
 
 ### Usage Example

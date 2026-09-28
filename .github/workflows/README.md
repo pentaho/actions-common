@@ -31,7 +31,7 @@ Documents the **auxiliary and supporting workflows** that are either called inte
 | [`update-version.yml`](update-version.yml) | Automatically increments the patch version in `pom.xml` and `package.json` after a release. |
 | [`publish-npm.yml`](publish-npm.yml) *(Legacy)* | Builds and publishes NPM packages to Artifactory, targeting either dev or release registries. Superseded by `pr-npm.yml`, `merge-npm.yml`, and `release-npm.yml`. |
 | [`pr-npm.yml`](pr-npm.yml) | Runs PR checks for NPM projects: commit message validation, build, tests, Sonar scan, and Frogbot scan. |
-| [`merge-npm.yml`](merge-npm.yml) | Runs on merge for NPM projects: builds and publishes packages to the dev Artifactory registry. |
+| [`merge-npm.yml`](merge-npm.yml) | Runs on merge for NPM projects: builds, runs a Sonarqube scan, and publishes packages to the dev Artifactory registry. |
 | [`release-npm.yml`](release-npm.yml) | Promotes an NPM package release to the release Artifactory registry, with optional dry-run. |
 | [`bootstrap-image.yml`](bootstrap-image.yml) | Builds and pushes the CI runner Docker image to Artifactory for JDK 17 and JDK 21. |
 
