@@ -1,0 +1,93 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Set up APM for Pentaho
+description: >
+  Installs APM (Agent Package Manager) and points it at the Pentaho Agent Packages registry in Artifactory,
+  the same way the project-apm skill of pentaho/ai-resources does on developer machines.
+inputs:
+  apm-version:
+    description: >
+      APM version. Defaults to x-pentaho-apm-version in the apm.yml at the root of the calling repository.
+    required: false
+    default: ''
+  artifactory-host:
+    description: >
+      Artifactory hostname, as in the organization variable ARTIFACTORY_HOST (for example repo.pentaho.com).
+      When empty, only APM is installed.
+    required: false
+    default: ''
+  repository:
+    description: >
+      Artifactory Agent Packages repository. The resulting registry address must be identical on every machine,
+      because apm.lock.yaml records it and replays fail when it differs.
+    required: false
+    default: playwrightagent-agentpackages-dev
+  token:
+    description: >
+      Artifactory access token, normally the organization secret PENTAHO_CICD_ONE_KEY.
+      Exposed to APM as APM_REGISTRY_TOKEN_PENTAHO_REGISTRY.
+    required: false
+    default: ''
+runs:
+  using: composite
+  steps:
+    - name: Read the APM version
+      id: version
+      shell: bash
+      env:
+        APM_VERSION: ${{ inputs.apm-version }}
+      run: |
+        version="$APM_VERSION"
+        if [[ -z "$version" ]]; then
+          if [[ ! -r apm.yml ]]; then
+            echo "::error::No apm-version input and no apm.yml at the repository root"
+            exit 1
+          fi
+          # A root key holding a semantic version, optionally quoted, with an optional trailing comment.
+          version="$(awk '
+            /^x-pentaho-apm-version[[:space:]]*:/ {
+              count++
+              value = $0
+              sub(/^x-pentaho-apm-version[[:space:]]*:[[:space:]]*/, "", value)
+              sub(/[[:space:]]+#.*$/, "", value)
+              sub(/[[:space:]]+$/, "", value)
+              if (value ~ /^".*"$/) value = substr(value, 2, length(value) - 2)
+            }
+            END {
+              if (count != 1) { print "Expected exactly one root x-pentaho-apm-version in apm.yml" > "/dev/stderr"; exit 1 }
+              if (value !~ /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/) {
+                print "Invalid x-pentaho-apm-version in apm.yml: " value > "/dev/stderr"; exit 1
+              }
+              print value
+            }
+          ' apm.yml)"
+        fi
+        echo "value=$version" >> "$GITHUB_OUTPUT"
+    - uses: microsoft/apm-action@v1
+      with:
+        setup-only: 'true'
+        apm-version: ${{ steps.version.outputs.value }}
+    - name: Point APM at the Pentaho registry
+      if: ${{ inputs.artifactory-host != '' }}
+      shell: bash
+      env:
+        ARTIFACTORY_HOST: ${{ inputs.artifactory-host }}
+        REPOSITORY: ${{ inputs.repository }}
+        TOKEN: ${{ inputs.token }}
+      run: |
+        apm experimental enable registries
+        apm config set registry.pentaho-registry.url "https://${ARTIFACTORY_HOST}/artifactory/api/agentpackages/${REPOSITORY}"
+        apm config set registry.pentaho-registry.default true
+        if [[ -n "$TOKEN" ]]; then
+          echo "::add-mask::$TOKEN"
+          echo "APM_REGISTRY_TOKEN_PENTAHO_REGISTRY=$TOKEN" >> "$GITHUB_ENV"
+        fi
