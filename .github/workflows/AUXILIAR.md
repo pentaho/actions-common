@@ -178,7 +178,7 @@ Runs the standard PR checks for NPM-based projects: commit message validation, b
 | Job                      | Condition | Purpose                                                              |
 |--------------------------|-----------|-----------------------------------------------------------------------|
 | `check-commit-messages`  | always    | Validates commit messages via `check.yml`                            |
-| `common-job`             | always    | Install dependencies, build, test, Sonar scan, Frogbot scan, notify  |
+| `pr`                     | always    | Install dependencies, build, test, Sonar scan, Frogbot scan, notify  |
 
 ### Inputs
 
