@@ -95,7 +95,7 @@ jobs:
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
           password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
 
-      - name: Publish to registry
+      - name: Publish
         shell: bash
         run: npm run artifactory-publish -- --registry https:${{ env.PUBLISH_REGISTRY }}
 

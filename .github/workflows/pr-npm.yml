@@ -32,10 +32,11 @@ on:
         description: "The MS Teams webhook secret name"
 
 env:
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+
   SONAR_PROJECT_KEY: ${{ inputs.sonar_project_key || github.event.repository.name }}
   SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
-
-  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+  SONAR_LOGIN: ${{secrets.WINGMAN_SONAR_TOKEN}}
 
   SLACK_CHANNEL: "${{ inputs.slack_channels }}"
 
@@ -51,8 +52,8 @@ jobs:
       contents: read
       pull-requests: read
 
-  common-job:
-    name: Common Checks
+  pr:
+    name: Pull Request
     runs-on: [ k8s, orl-lab ]
 
     permissions:
@@ -97,7 +98,6 @@ jobs:
         uses: lumada-common-services/gh-composite-actions@stable
         env:
           sonar_utility: sonar-scanner
-          SONAR_LOGIN: ${{ secrets.WINGMAN_SONAR_TOKEN }}
           sonar_commands: '("-Dsonar.links.scm=https://github.com/${{ github.repository }}" -Dsonar.projectKey=${{env.SONAR_PROJECT_KEY}} -Dsonar.host.url=${{env.SONAR_HOST_URL}} -Dsonar.token=${{env.SONAR_LOGIN}} -Dsonar.pullrequest.key=${{github.event.number}} -Dsonar.pullrequest.branch=${{github.event.pull_request.head.ref}} -Dsonar.pullrequest.base=${{github.event.pull_request.base.ref}}")'
 
       - name: FrogBot scan
