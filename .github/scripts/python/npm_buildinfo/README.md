@@ -6,7 +6,7 @@ Vite/Rollup compiles npm packages into hashed chunks that Xray cannot identify. 
 
 1. finds every `sbom/bom.json` inside the given artifacts, through nested zip/jar/war/ear/kar and tar archives up to 5 levels deep (`node_modules/` and `.well-known/sbom` are skipped);
 2. looks up each npm package's tarball (`<name>/-/<basename>-<version>.tgz`) in Artifactory with one AQL query per package (non-admin AQL rejects `$or` batches);
-3. emits one `type: npm` module per distinct app SBOM, with `tgz` dependencies carrying sha1/md5/sha256. Xray matches these checksums to the npm package.
+3. emits one `type: npm` module per distinct app SBOM, with `tgz` dependencies carrying sha1/md5/sha256. Xray matches these checksums to the npm package. A package whose tarball exists only in local repositories (no remote `*-cache` copy) was published by us: it is reported as first-party and left out of the dependencies.
 
 ## Usage
 
@@ -27,7 +27,7 @@ python3 npm_buildinfo.py --build-number 11.1.0.0-442 --merge-into build-info.jso
 | `--build-number` | required | Module ids are `<app group/name>:<build number>` |
 | `--merge-into FILE` | - | Append modules to this build-info; modules with the same id are replaced, so reruns are idempotent |
 | `--output FILE` | stdout | Write the result here |
-| `--first-party-scope` | `@pentaho`, `@pentaho-apps` | npm scopes skipped (not in public caches); repeatable |
+| `--first-party-scope` | none | npm scope to treat as first-party without a lookup; repeatable. Not needed for packages published to our local npm repositories |
 | `--workers` | 12 (max 32) | Parallel AQL lookups |
 
 With no embedded SBOM the tool is a no-op (empty `modules`) and makes no Artifactory call.

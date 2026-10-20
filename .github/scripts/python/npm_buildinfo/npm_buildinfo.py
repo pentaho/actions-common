@@ -55,7 +55,6 @@ _ZIP_SUFFIXES = (".zip", ".jar", ".war", ".ear", ".kar")
 # Nested .tgz files are npm tarballs (node_modules caches), never app archives.
 _TAR_SUFFIXES = (".tar", ".tar.gz")
 
-FIRST_PARTY_SCOPES = ("@pentaho", "@pentaho-apps")
 ARTIFACTS_PROPERTY = "pdia.npm.artifacts"
 _FAILURE_MAX_RATIO = 0.5
 
@@ -283,10 +282,15 @@ class ArtifactoryClient:
 
 def _tarball_query(name: str, version: str) -> str:
     basename = name.rsplit("/", 1)[-1]
+    # Remote caches store <name>/-/<file>; npm publish to a local repo stores <name>/-/<scope>/<file>.
     return (
-        f'items.find({{"path":{{"$eq":"{name}/-"}},"name":{{"$eq":"{basename}-{version}.tgz"}}}})'
+        f'items.find({{"path":{{"$match":"{name}/-*"}},"name":{{"$eq":"{basename}-{version}.tgz"}}}})'
         '.include("repo","path","name","actual_sha1","actual_md5","sha256")'
     )
+
+
+def _is_cache(row: dict) -> bool:
+    return str(row.get("repo", "")).endswith("-cache")
 
 
 def _pick(rows: list[dict]) -> tuple[dict | None, str]:
@@ -298,7 +302,7 @@ def _pick(rows: list[dict]) -> tuple[dict | None, str]:
     by_sha = {r["sha256"]: r for r in rows}
     if len(by_sha) == 1:
         return next(iter(by_sha.values())), ""
-    cached = {r["sha256"]: r for r in rows if str(r.get("repo", "")).endswith("-cache")}
+    cached = {r["sha256"]: r for r in rows if _is_cache(r)}
     if len(cached) == 1:
         return next(iter(cached.values())), ""
     repos = ", ".join(sorted(f"{r.get('repo')}={str(r.get('sha256'))[:12]}" for r in rows))
@@ -307,23 +311,33 @@ def _pick(rows: list[dict]) -> tuple[dict | None, str]:
 
 def lookup_checksums(
     client: ArtifactoryClient, pkgs: list[tuple[str, str]], workers: int = 12,
-) -> tuple[dict, dict]:
-    """Resolve each npm tarball's checksums; returns ``(found, problems)``.
+) -> tuple[dict, dict, set]:
+    """Resolve each npm tarball's checksums; returns ``(found, problems, first_party)``.
 
+    A package whose tarball exists only in local repositories (never in a remote
+    ``*-cache``) was published by us, so it is first-party rather than a dependency.
     One query per package: non-admin AQL rejects ``$or`` batches with HTTP 400.
     """
     def one(pkg):
         try:
-            return pkg, _pick(client.aql(_tarball_query(*pkg))), None
+            return pkg, client.aql(_tarball_query(*pkg)), None
         except Exception as exc:  # noqa: BLE001 - counted below, never silent
-            return pkg, (None, f"AQL lookup failed: {exc}"), exc
+            return pkg, [], exc
 
     found: dict = {}
     problems: dict = {}
+    first_party: set = set()
     failures = 0
     with ThreadPoolExecutor(max(1, workers)) as pool:
-        for pkg, (row, problem), exc in pool.map(one, pkgs):
-            failures += exc is not None
+        for pkg, rows, exc in pool.map(one, pkgs):
+            if exc is not None:
+                failures += 1
+                problems[pkg] = f"AQL lookup failed: {exc}"
+                continue
+            if rows and not any(_is_cache(r) for r in rows):
+                first_party.add(pkg)
+                continue
+            row, problem = _pick(rows)
             if row is not None:
                 found[pkg] = row
             else:
@@ -332,7 +346,7 @@ def lookup_checksums(
         raise RuntimeError(
             f"{failures}/{len(pkgs)} AQL lookups failed; check ARTIFACTORY_URL and credentials"
         )
-    return found, problems
+    return found, problems, first_party
 
 
 # ── Build-info modules ──────────────────────────────────────────────────────
@@ -350,7 +364,7 @@ def _is_first_party(name: str, scopes) -> bool:
 
 def build_modules(
     sboms: list[EmbeddedSbom], found: dict, problems: dict, build_number: str,
-    first_party_scopes=FIRST_PARTY_SCOPES,
+    first_party=frozenset(), first_party_scopes=(),
 ) -> tuple[list[dict], dict]:
     """One ``type: npm`` module per distinct app SBOM, plus a summary."""
     groups: dict[tuple, dict] = {}
@@ -365,7 +379,7 @@ def build_modules(
     bases = [g["base"] for g in groups.values()]
 
     modules: list[dict] = []
-    first_party: set[str] = set()
+    skipped: set[str] = set()
     third_party: set[tuple[str, str]] = set()
     for group in sorted(groups.values(), key=lambda g: (g["base"], g["pkgs"])):
         mod_id = f"{group['base']}:{build_number}"
@@ -374,8 +388,8 @@ def build_modules(
             mod_id = f"{mod_id}:{digest}"
         deps = []
         for name, version in group["pkgs"]:
-            if _is_first_party(name, first_party_scopes):
-                first_party.add(f"{name}@{version}")
+            if (name, version) in first_party or _is_first_party(name, first_party_scopes):
+                skipped.add(f"{name}@{version}")
                 continue
             third_party.add((name, version))
             row = found.get((name, version))
@@ -402,7 +416,7 @@ def build_modules(
         "packages": len(third_party),
         "resolved": len(third_party) - len(unresolved),
         "unresolved": unresolved,
-        "first_party_skipped": sorted(first_party),
+        "first_party_skipped": sorted(skipped),
     }
     return modules, summary
 
@@ -423,8 +437,9 @@ def _parse_args(argv):
     parser.add_argument("--build-number", required=True, help="Build number used in the module ids")
     parser.add_argument("--merge-into", help="Build-info JSON to append the modules to (rewritten in place unless --output)")
     parser.add_argument("--output", help="Write here instead of stdout")
-    parser.add_argument("--first-party-scope", action="append",
-                        help=f"npm scope to skip (repeatable, default {' '.join(FIRST_PARTY_SCOPES)})")
+    parser.add_argument("--first-party-scope", action="append", default=[],
+                        help="npm scope to treat as first-party without a lookup (repeatable). By default "
+                             "a package is first-party when its tarball is only in local repositories")
     parser.add_argument("--workers", type=int, default=12, help="Parallel AQL lookups (default 12, max 32)")
     return parser.parse_args(argv)
 
@@ -443,7 +458,7 @@ def _write(data: dict, path: str | None) -> None:
 def main(argv=None) -> int:
     logging.basicConfig(level=logging.INFO, format="[npm-buildinfo] %(message)s", stream=sys.stderr)
     args = _parse_args(argv)
-    scopes = tuple(args.first_party_scope or FIRST_PARTY_SCOPES)
+    scopes = tuple(args.first_party_scope)
 
     try:
         sboms = find_embedded_sboms(args.artifacts)
@@ -454,11 +469,13 @@ def main(argv=None) -> int:
         log.info("found %s in %s!/%s", _root_name(sbom.bom) or "(unnamed app)", sbom.artifact, sbom.inner_path)
 
     wanted = sorted({p for s in sboms for p in npm_packages(s.bom) if not _is_first_party(p[0], scopes)})
-    found, problems = ({}, {})
+    found, problems, first_party = ({}, {}, set())
     if wanted:
-        found, problems = lookup_checksums(ArtifactoryClient.from_env(), wanted, min(args.workers, 32))
+        found, problems, first_party = lookup_checksums(
+            ArtifactoryClient.from_env(), wanted, min(args.workers, 32))
 
-    modules, summary = build_modules(sboms, found, problems, args.build_number, scopes)
+    modules, summary = build_modules(sboms, found, problems, args.build_number,
+                                     first_party=first_party, first_party_scopes=scopes)
     log.info("%d SBOM(s), %d module(s), %d package(s): %d resolved, %d unresolved, %d first-party skipped",
              summary["sboms"], summary["modules"], summary["packages"], summary["resolved"],
              len(summary["unresolved"]), len(summary["first_party_skipped"]))

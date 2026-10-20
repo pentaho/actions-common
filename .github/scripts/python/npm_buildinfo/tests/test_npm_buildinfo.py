@@ -6,9 +6,11 @@ shipped in semantic-model-editor / webttle (pdia-master 11.1.0.0-442) and AQL
 responses from repo.pentaho.com.
 """
 
+import fnmatch
 import io
 import json
 import os
+import re
 import sys
 import tarfile
 import tempfile
@@ -221,7 +223,10 @@ class TestLookupChecksums(unittest.TestCase):
         def post(url, data=None, **kwargs):
             resp = MagicMock(status_code=200)
             name = data.split('"name":{"$eq":"', 1)[1].split('"', 1)[0]
-            resp.json.return_value = {"results": results_by_name.get(name, [])}
+            op, value = re.search(r'"path":\{"(\$eq|\$match)":"([^"]*)"\}', data).groups()
+            rows = [r for r in results_by_name.get(name, [])
+                    if (fnmatch.fnmatchcase(r["path"], value) if op == "$match" else r["path"] == value)]
+            resp.json.return_value = {"results": rows}
             return resp
         session = MagicMock()
         session.post.side_effect = post
@@ -237,12 +242,22 @@ class TestLookupChecksums(unittest.TestCase):
             self._row("fontawesome-npm-remote-cache", "uikit-react-core-5.109.0.tgz", UIKIT_SHA256,
                       "@hitachivantara/uikit-react-core/-")]})
 
-        found, problems = nb.lookup_checksums(client, [("@hitachivantara/uikit-react-core", "5.109.0")])
+        found, problems, _ = nb.lookup_checksums(client, [("@hitachivantara/uikit-react-core", "5.109.0")])
 
         query = client.session.post.call_args.kwargs["data"]
-        self.assertIn('"path":{"$eq":"@hitachivantara/uikit-react-core/-"}', query)
+        self.assertIn('"path":{"$match":"@hitachivantara/uikit-react-core/-*"}', query)
         self.assertIn('"name":{"$eq":"uikit-react-core-5.109.0.tgz"}', query)
         self.assertEqual(found[("@hitachivantara/uikit-react-core", "5.109.0")]["sha256"], UIKIT_SHA256)
+        self.assertEqual(problems, {})
+
+    def test_npm_publish_layout_of_local_repositories_is_found(self):
+        pkg = ("@pentaho/common-ui", "0.11.0")
+        client = self._client({"common-ui-0.11.0.tgz": [
+            self._row("uikit-npm-release", "common-ui-0.11.0.tgz", "e" * 64, "@pentaho/common-ui/-/@pentaho")]})
+
+        found, problems, first_party = nb.lookup_checksums(client, [pkg])
+
+        self.assertEqual(first_party, {pkg})
         self.assertEqual(problems, {})
 
     def test_same_tarball_in_several_caches_resolves(self):
@@ -250,7 +265,7 @@ class TestLookupChecksums(unittest.TestCase):
             self._row("fontawesome-npm-remote-cache", "react-18.3.1.tgz", REACT_SHA256, "react/-"),
             self._row("registry-npm-remote-cache", "react-18.3.1.tgz", REACT_SHA256, "react/-")]})
 
-        found, problems = nb.lookup_checksums(client, [("react", "18.3.1")])
+        found, problems, _ = nb.lookup_checksums(client, [("react", "18.3.1")])
 
         self.assertEqual(found[("react", "18.3.1")]["sha256"], REACT_SHA256)
 
@@ -259,16 +274,39 @@ class TestLookupChecksums(unittest.TestCase):
             self._row("npm-local", "react-18.3.1.tgz", "f" * 64, "react/-"),
             self._row("registry-npm-remote-cache", "react-18.3.1.tgz", REACT_SHA256, "react/-")]})
 
-        found, _ = nb.lookup_checksums(client, [("react", "18.3.1")])
+        found, _, first_party = nb.lookup_checksums(client, [("react", "18.3.1")])
 
         self.assertEqual(found[("react", "18.3.1")]["sha256"], REACT_SHA256)
+        self.assertEqual(first_party, set())
+
+    def test_package_only_in_local_repositories_is_first_party(self):
+        pkg = ("@hv-internal/mds-client-ts", "2.1.0")
+        client = self._client({"mds-client-ts-2.1.0.tgz": [
+            self._row("pdc-npm-dev", "mds-client-ts-2.1.0.tgz", "e" * 64, "@hv-internal/mds-client-ts/-"),
+            self._row("pdc-npm-release", "mds-client-ts-2.1.0.tgz", "d" * 64, "@hv-internal/mds-client-ts/-")]})
+
+        found, problems, first_party = nb.lookup_checksums(client, [pkg])
+
+        self.assertEqual(first_party, {pkg})
+        self.assertEqual(found, {})
+        self.assertEqual(problems, {})
+
+    def test_private_package_in_a_public_scope_is_first_party(self):
+        pkg = ("@hitachivantara/redux-saga-map", "1.0.0")
+        client = self._client({"redux-saga-map-1.0.0.tgz": [
+            self._row("pntprv-npm-release", "redux-saga-map-1.0.0.tgz", "e" * 64,
+                      "@hitachivantara/redux-saga-map/-")]})
+
+        _, _, first_party = nb.lookup_checksums(client, [pkg])
+
+        self.assertEqual(first_party, {pkg})
 
     def test_unresolvable_conflict_is_reported_not_guessed(self):
         client = self._client({"react-18.3.1.tgz": [
             self._row("a-npm-remote-cache", "react-18.3.1.tgz", "e" * 64, "react/-"),
             self._row("b-npm-remote-cache", "react-18.3.1.tgz", REACT_SHA256, "react/-")]})
 
-        found, problems = nb.lookup_checksums(client, [("react", "18.3.1")])
+        found, problems, _ = nb.lookup_checksums(client, [("react", "18.3.1")])
 
         self.assertNotIn(("react", "18.3.1"), found)
         self.assertIn("conflicting checksums", problems[("react", "18.3.1")])
@@ -276,16 +314,17 @@ class TestLookupChecksums(unittest.TestCase):
     def test_cache_rows_without_sha256_are_never_picked(self):
         no_sha = [dict(self._row("a-npm-remote-cache", "react-18.3.1.tgz", None, "react/-"), actual_sha1="1" * 40),
                   dict(self._row("b-npm-remote-cache", "react-18.3.1.tgz", None, "react/-"), actual_sha1="2" * 40)]
-        found, problems = nb.lookup_checksums(self._client({"react-18.3.1.tgz": no_sha}), [("react", "18.3.1")])
+        found, problems, _ = nb.lookup_checksums(self._client({"react-18.3.1.tgz": no_sha}), [("react", "18.3.1")])
 
         self.assertEqual(found, {})
         self.assertIn(("react", "18.3.1"), problems)
 
     def test_missing_tarball_is_reported(self):
-        found, problems = nb.lookup_checksums(self._client({}), [("left-pad", "1.3.0")])
+        found, problems, first_party = nb.lookup_checksums(self._client({}), [("left-pad", "1.3.0")])
 
         self.assertEqual(found, {})
         self.assertEqual(problems, {("left-pad", "1.3.0"): "no tarball in Artifactory"})
+        self.assertEqual(first_party, set())
 
     def test_systemic_failure_raises_instead_of_looking_like_nothing_found(self):
         session = MagicMock()
@@ -325,11 +364,19 @@ class TestBuildModules(unittest.TestCase):
 
     def test_first_party_packages_are_skipped(self):
         modules, summary = nb.build_modules(
-            [self._sbom("a.zip", _bom())], self._found(), {}, "1")
+            [self._sbom("a.zip", _bom())], self._found(), {}, "1",
+            first_party={("@pentaho/app-shell-utils", "1.0.0")})
 
         ids = [d["id"] for d in modules[0]["dependencies"]]
         self.assertNotIn("@pentaho/app-shell-utils:1.0.0", ids)
         self.assertEqual(summary["first_party_skipped"], ["@pentaho/app-shell-utils@1.0.0"])
+        self.assertEqual(summary["unresolved"], {})
+
+    def test_no_scope_is_first_party_by_default(self):
+        _, summary = nb.build_modules([self._sbom("a.zip", _bom())], self._found(), {}, "1")
+
+        self.assertEqual(summary["first_party_skipped"], [])
+        self.assertIn("@pentaho/app-shell-utils@1.0.0", summary["unresolved"])
 
     def test_identical_sbom_in_several_artifacts_is_one_module(self):
         bom = _bom()
@@ -368,7 +415,8 @@ class TestBuildModules(unittest.TestCase):
         problems = {("axios", "1.19.0"): "no tarball in Artifactory"}
         found = {k: v for k, v in self._found().items() if k[0] != "axios"}
 
-        modules, summary = nb.build_modules([self._sbom("a.zip", _bom())], found, problems, "1")
+        modules, summary = nb.build_modules([self._sbom("a.zip", _bom())], found, problems, "1",
+                                            first_party={("@pentaho/app-shell-utils", "1.0.0")})
 
         self.assertEqual([d["id"] for d in modules[0]["dependencies"]],
                          ["@hitachivantara/uikit-react-core:5.109.0"])
@@ -425,8 +473,9 @@ class TestCli(_TmpDir):
         found = {("axios", "1.19.0"): {"sha256": AXIOS_SHA256, "actual_sha1": "a" * 40,
                                        "actual_md5": "b" * 32}}
         problems = {("@hitachivantara/uikit-react-core", "5.109.0"): "no tarball in Artifactory"}
+        first_party = {("@pentaho/app-shell-utils", "1.0.0")}
         with patch.object(nb.ArtifactoryClient, "from_env", return_value=MagicMock()), \
-                patch.object(nb, "lookup_checksums", return_value=(found, problems)):
+                patch.object(nb, "lookup_checksums", return_value=(found, problems, first_party)):
             rc = nb.main(["--build-number", "11.1.0.0-442", "--output", out, path])
 
         self.assertEqual(rc, 0)
@@ -435,6 +484,28 @@ class TestCli(_TmpDir):
         self.assertEqual(result["summary"]["sboms"], 1)
         self.assertEqual(result["summary"]["unresolved"],
                          {"@hitachivantara/uikit-react-core@5.109.0": "no tarball in Artifactory"})
+        self.assertEqual(result["summary"]["first_party_skipped"], ["@pentaho/app-shell-utils@1.0.0"])
+
+    def test_first_party_scope_option_skips_the_lookup(self):
+        path = self.write("a.zip", _zip_bytes({"web/sbom/bom.json": json.dumps(_bom())}))
+        out = os.path.join(self.tmp, "modules.json")
+        with patch.object(nb.ArtifactoryClient, "from_env", return_value=MagicMock()), \
+                patch.object(nb, "lookup_checksums", return_value=({}, {}, set())) as lookup:
+            rc = nb.main(["--build-number", "1", "--output", out, "--first-party-scope", "@pentaho", path])
+
+        self.assertEqual(rc, 0)
+        looked_up = lookup.call_args.args[1]
+        self.assertNotIn(("@pentaho/app-shell-utils", "1.0.0"), looked_up)
+        self.assertEqual(json.load(open(out))["summary"]["first_party_skipped"],
+                         ["@pentaho/app-shell-utils@1.0.0"])
+
+    def test_every_package_is_looked_up_by_default(self):
+        path = self.write("a.zip", _zip_bytes({"web/sbom/bom.json": json.dumps(_bom())}))
+        with patch.object(nb.ArtifactoryClient, "from_env", return_value=MagicMock()), \
+                patch.object(nb, "lookup_checksums", return_value=({}, {}, set())) as lookup:
+            nb.main(["--build-number", "1", "--output", os.path.join(self.tmp, "o.json"), path])
+
+        self.assertIn(("@pentaho/app-shell-utils", "1.0.0"), lookup.call_args.args[1])
 
     def test_merge_into_rewrites_the_build_info(self):
         path = self.write("a.zip", _zip_bytes({"web/sbom/bom.json": json.dumps(_bom())}))
@@ -442,7 +513,7 @@ class TestCli(_TmpDir):
         found = {("axios", "1.19.0"): {"sha256": AXIOS_SHA256, "actual_sha1": "a" * 40,
                                        "actual_md5": "b" * 32}}
         with patch.object(nb.ArtifactoryClient, "from_env", return_value=MagicMock()), \
-                patch.object(nb, "lookup_checksums", return_value=(found, {})):
+                patch.object(nb, "lookup_checksums", return_value=(found, {}, set())):
             rc = nb.main(["--build-number", "1", "--merge-into", bi, path])
 
         self.assertEqual(rc, 0)
