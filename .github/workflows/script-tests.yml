@@ -1,0 +1,42 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Script Tests
+
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/python/npm_buildinfo/**'
+      - '.github/workflows/script-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  npm-buildinfo:
+    name: npm_buildinfo unit tests
+    runs-on: k8s
+    container:
+      # Same Python as the pdia-master build-info step (jenkins-pipelines scripts/rt/build-info.sh).
+      image: ${{ vars.ARTIFACTORY_HOST }}/docker/python:3.11-slim
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: pip install --quiet -r .github/scripts/python/npm_buildinfo/requirements.txt
+
+      - name: Run tests
+        working-directory: .github/scripts/python/npm_buildinfo
+        run: python -m unittest discover -s tests -v
