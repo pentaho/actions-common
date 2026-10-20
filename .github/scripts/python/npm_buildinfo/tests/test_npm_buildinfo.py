@@ -152,6 +152,40 @@ class TestFindEmbeddedSboms(_TmpDir):
         self.assertEqual(len(found), 1)
         self.assertFalse(os.path.exists(os.path.join(self.tmp, "..", "..", "escape")))
 
+    def test_node_modules_exclusion_holds_across_archive_boundaries(self):
+        dep = _zip_bytes({"sbom/bom.json": json.dumps(_bom(app="some-dep", group="@vendor"))})
+        path = self.write("app.zip", _zip_bytes({
+            "web/sbom/bom.json": json.dumps(_bom()),
+            "web/node_modules/pkg/dist.zip": dep,
+        }))
+
+        self.assertEqual([f.inner_path for f in nb.find_embedded_sboms([path])], ["web/sbom/bom.json"])
+
+    def _tar_gz(self, members):
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            for name, data in members:
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                tf.addfile(info, io.BytesIO(data))
+        return buf.getvalue()
+
+    def test_skipped_tar_members_count_against_the_budget(self):
+        path = self.write("big.tar.gz", self._tar_gz([
+            ("pentaho-server/lib/huge.bin", b"\0" * 50_000),
+            ("pentaho-server/web/sbom/bom.json", json.dumps(_bom()).encode()),
+        ]))
+        with patch.object(nb, "MAX_TOTAL_BYTES", 20_000):
+            with self.assertRaises(nb.ArchiveLimitError):
+                nb.find_embedded_sboms([path])
+
+    def test_tar_member_reads_are_not_double_counted(self):
+        bom = json.dumps(_bom()).encode()
+        path = self.write("ok.tar.gz", self._tar_gz([("web/sbom/bom.json", bom)]))
+        # A single tar block plus header and padding stays under 3x the payload.
+        with patch.object(nb, "MAX_TOTAL_BYTES", len(bom) + 3 * 1024):
+            self.assertEqual(len(nb.find_embedded_sboms([path])), 1)
+
     def test_unreadable_artifact_is_skipped_not_fatal(self):
         path = self.write("broken.zip", b"PK\x03\x04 truncated")
         self.assertEqual(nb.find_embedded_sboms([path]), [])
@@ -238,6 +272,14 @@ class TestLookupChecksums(unittest.TestCase):
 
         self.assertNotIn(("react", "18.3.1"), found)
         self.assertIn("conflicting checksums", problems[("react", "18.3.1")])
+
+    def test_cache_rows_without_sha256_are_never_picked(self):
+        no_sha = [dict(self._row("a-npm-remote-cache", "react-18.3.1.tgz", None, "react/-"), actual_sha1="1" * 40),
+                  dict(self._row("b-npm-remote-cache", "react-18.3.1.tgz", None, "react/-"), actual_sha1="2" * 40)]
+        found, problems = nb.lookup_checksums(self._client({"react-18.3.1.tgz": no_sha}), [("react", "18.3.1")])
+
+        self.assertEqual(found, {})
+        self.assertIn(("react", "18.3.1"), problems)
 
     def test_missing_tarball_is_reported(self):
         found, problems = nb.lookup_checksums(self._client({}), [("left-pad", "1.3.0")])

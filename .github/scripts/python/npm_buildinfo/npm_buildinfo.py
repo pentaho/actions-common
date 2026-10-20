@@ -93,8 +93,11 @@ class _Budget:
 
 
 def _is_sbom_entry(name: str) -> bool:
-    parts = name.replace("\\", "/").split("/")
-    return parts[-2:] == ["sbom", "bom.json"] and "node_modules" not in parts
+    return name.replace("\\", "/").split("/")[-2:] == ["sbom", "bom.json"]
+
+
+def _in_node_modules(name: str) -> bool:
+    return "node_modules" in name.replace("\\", "/").split("/")
 
 
 def _nested_kind(name: str) -> str | None:
@@ -106,14 +109,15 @@ def _nested_kind(name: str) -> str | None:
     return None
 
 
-def _copy_limited(src, dst, budget: _Budget, limit: int) -> int:
+def _copy_limited(src, dst, budget: _Budget | None, limit: int) -> int:
     total = 0
     while True:
         chunk = src.read(1024 * 1024)
         if not chunk:
             return total
         total += len(chunk)
-        budget.read(len(chunk))
+        if budget is not None:
+            budget.read(len(chunk))
         if total > limit:
             raise ValueError("entry larger than declared")
         if dst is not None:
@@ -132,16 +136,24 @@ def _parse_sbom(data: bytes) -> dict | None:
     return bom
 
 
-def _handle_entry(name, size, packed, opener, artifact, prefix, depth, budget, out):
-    """Inspect one archive member; recurse into nested archives via a temp file."""
+def _handle_entry(name, size, packed, opener, artifact, prefix, depth, budget, out, prepaid=False):
+    """Inspect one archive member; recurse into nested archives via a temp file.
+
+    *prepaid* members were already charged to the budget (tar members are
+    decompressed whether read or skipped).
+    """
     path = f"{prefix}{name}"
+    # Packages under node_modules may ship their own SBOM, even inside nested archives.
+    if _in_node_modules(name):
+        return
+    charge = None if prepaid else budget
     if _is_sbom_entry(name):
         if size > MAX_SBOM_BYTES:
             log.warning("skipping oversized SBOM %s!/%s (%d bytes)", artifact, path, size)
             return
         with opener() as src:
             buf = tempfile.SpooledTemporaryFile(max_size=MAX_SBOM_BYTES)
-            _copy_limited(src, buf, budget, MAX_SBOM_BYTES)
+            _copy_limited(src, buf, charge, MAX_SBOM_BYTES)
         buf.seek(0)
         bom = _parse_sbom(buf.read())
         if bom is None:
@@ -159,7 +171,7 @@ def _handle_entry(name, size, packed, opener, artifact, prefix, depth, budget, o
         return
     with tempfile.TemporaryFile() as tmp:
         with opener() as src:
-            _copy_limited(src, tmp, budget, size)
+            _copy_limited(src, tmp, charge, size)
         tmp.seek(0)
         _walk(tmp, kind, artifact, f"{path}!/", depth + 1, budget, out)
 
@@ -180,8 +192,10 @@ def _walk(fileobj, kind, artifact, prefix, depth, budget, out) -> None:
                     if not member.isfile():
                         continue
                     budget.entry()
+                    budget.read(member.size)
                     _handle_entry(member.name, member.size, 0,
-                                  lambda m=member: tf.extractfile(m), artifact, prefix, depth, budget, out)
+                                  lambda m=member: tf.extractfile(m), artifact, prefix, depth, budget, out,
+                                  prepaid=True)
     except ArchiveLimitError:
         raise
     except (zipfile.BadZipFile, tarfile.TarError, OSError, ValueError, EOFError) as exc:
@@ -278,10 +292,13 @@ def _tarball_query(name: str, version: str) -> str:
 def _pick(rows: list[dict]) -> tuple[dict | None, str]:
     if not rows:
         return None, "no tarball in Artifactory"
-    by_sha = {r.get("sha256"): r for r in rows if r.get("sha256")}
+    rows = [r for r in rows if r.get("sha256")]
+    if not rows:
+        return None, "tarball has no sha256 in Artifactory"
+    by_sha = {r["sha256"]: r for r in rows}
     if len(by_sha) == 1:
         return next(iter(by_sha.values())), ""
-    cached = {r.get("sha256"): r for r in rows if str(r.get("repo", "")).endswith("-cache")}
+    cached = {r["sha256"]: r for r in rows if str(r.get("repo", "")).endswith("-cache")}
     if len(cached) == 1:
         return next(iter(cached.values())), ""
     repos = ", ".join(sorted(f"{r.get('repo')}={str(r.get('sha256'))[:12]}" for r in rows))
