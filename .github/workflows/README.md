@@ -34,4 +34,5 @@ Documents the **auxiliary and supporting workflows** that are either called inte
 | [`merge-npm.yml`](merge-npm.yml) | Runs on merge for NPM projects: builds, runs a Sonarqube scan, and publishes packages to the dev Artifactory registry. |
 | [`release-npm.yml`](release-npm.yml) | Promotes an NPM package release to the release Artifactory registry, with optional dry-run. |
 | [`bootstrap-image.yml`](bootstrap-image.yml) | Builds and pushes the CI runner Docker image to Artifactory for JDK 17 and JDK 21. |
+| [`script-tests.yml`](script-tests.yml) | Runs the unit tests of the shared Python scripts (`.github/scripts/python/npm_buildinfo`) on pull requests that touch them. |
 
