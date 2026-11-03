@@ -20,17 +20,47 @@ python3 npm_buildinfo.py --build-number 11.1.0.0-442 webttle-plugin-ee-11.1.0.0-
 
 # Append the modules to an existing build-info (bare or the GET /api/build envelope); rewritten in place
 python3 npm_buildinfo.py --build-number 11.1.0.0-442 --merge-into build-info.json *.zip
+
+# Add the modules to the published build-info and ask Xray to reindex it
+python3 npm_buildinfo.py --build-number 11.1.0.0-442 --publish-to pentaho-server-ee-master *.zip
 ```
 
 | Option | Default | Effect |
 |---|---|---|
 | `--build-number` | required | Module ids are `<app group/name>:<build number>` |
 | `--merge-into FILE` | - | Append modules to this build-info; modules with the same id are replaced, so reruns are idempotent |
+| `--publish-to NAME` | - | Fetch build-info `NAME/<build number>`, merge the modules, `PUT` it back with the same name, number and `started` (replacing that run), then `POST /xray/api/v1/forceReindex`. Excludes `--merge-into` |
+| `--dry-run` | off | With `--publish-to`: write the merged build-info to `--output` and publish nothing |
 | `--output FILE` | stdout | Write the result here |
 | `--first-party-scope` | none | npm scope to treat as first-party without a lookup; repeatable. Not needed for packages published to our local npm repositories |
 | `--workers` | 12 (max 32) | Parallel AQL lookups |
 
-With no embedded SBOM the tool is a no-op (empty `modules`) and makes no Artifactory call.
+With no embedded SBOM the tool is a no-op (empty `modules`) and makes no Artifactory call; with `--publish-to` the build-info is left untouched.
+
+`--publish-to` needs a user that can overwrite build-info (deploy/delete on the build) and trigger an Xray reindex. The reindex is always requested: Xray does not reliably rescan a replaced run on its own. The tool does not wait for the scan.
+
+## GitHub Action
+
+[`.github/actions/npm-buildinfo`](../../../actions/npm-buildinfo/action.yml) runs the tool with `--publish-to` after `mvn deploy`. `merge.yml` calls it in the release-candidate job when the caller sets `add_npm_buildinfo: true`:
+
+```yaml
+jobs:
+  merge:
+    uses: pentaho/actions-common/.github/workflows/merge.yml@stable
+    with:
+      add_npm_buildinfo: true
+```
+
+| Input | Default | Effect |
+|---|---|---|
+| `build_name`, `build_number` | required | The published build (`-Dbuild.name`/`-Dbuild.number`) |
+| `artifacts` | `**/target/*.zip`, `**/target/*.tar.gz` | Newline-separated globs of the archives to scan |
+| `artifactory_url` | required | Host root, e.g. `https://repo.pentaho.com` |
+| `artifactory_user`, `artifactory_password` | required | Credentials with the rights above |
+| `dry_run` | `false` | Write the merged build-info to `$RUNNER_TEMP/npm-buildinfo-dry-run.json` and publish nothing |
+| `fail_on_error` | `false` | Fail the job on error; by default a warning is emitted and the build continues |
+
+The action installs `requirements.txt` into a venv under `$RUNNER_TEMP` (the CI image blocks system pip installs) and exits cleanly when no archive matches.
 
 ## Output
 
