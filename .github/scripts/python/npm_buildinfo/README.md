@@ -47,7 +47,10 @@ With no embedded SBOM the tool is a no-op (empty `modules`) and makes no Artifac
 jobs:
   merge:
     uses: pentaho/actions-common/.github/workflows/merge.yml@stable
+    secrets: inherit
     with:
+      base_version: ${{ inputs.base_version }}
+      run_release_candidate: true
       add_npm_buildinfo: true
 ```
 

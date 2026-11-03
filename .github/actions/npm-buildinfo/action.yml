@@ -70,11 +70,13 @@ runs:
         shopt -s globstar nullglob
         declare -A seen=()
         files=()
-        while IFS= read -r pattern; do
-          [[ -z "${pattern//[[:space:]]/}" ]] && continue
+        while read -r pattern; do
+          [[ -z "$pattern" ]] && continue
+          IFS=
           for f in $pattern; do
             [[ -f "$f" && -z "${seen[$f]:-}" ]] && { seen[$f]=1; files+=("$f"); }
           done
+          unset IFS
         done <<< "$ARTIFACT_GLOBS"
         if (( ${#files[@]} == 0 )); then
           echo "No built archive matched; build-info $BUILD_NAME/$BUILD_NUMBER left unchanged."
