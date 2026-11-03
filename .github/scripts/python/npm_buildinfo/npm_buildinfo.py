@@ -37,6 +37,7 @@ import tempfile
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import NamedTuple
+from urllib.parse import quote
 
 import requests
 
@@ -279,6 +280,33 @@ class ArtifactoryClient:
             raise RuntimeError(f"AQL HTTP {resp.status_code}")
         return resp.json().get("results", [])
 
+    def get_build_info(self, name: str, number: str) -> dict:
+        resp = self.session.get(
+            f"{self.base_url}/artifactory/api/build/{quote(name, safe='')}/{quote(number, safe='')}",
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"build-info GET HTTP {resp.status_code}")
+        return resp.json()["buildInfo"]
+
+    def put_build_info(self, build_info: dict) -> None:
+        """Same name, number and started replace the stored run (DEVO-14568 test builds)."""
+        resp = self.session.put(f"{self.base_url}/artifactory/api/build", json=build_info, timeout=120)
+        if resp.status_code not in (200, 204):
+            raise RuntimeError(f"build-info PUT HTTP {resp.status_code}")
+
+    def force_reindex(self, name: str, number: str) -> None:
+        """Xray does not reliably rescan a replaced run on its own; a reindex sent mid-scan is kept."""
+        resp = self.session.post(
+            f"{self.base_url}/xray/api/v1/forceReindex",
+            json={"builds": [{"name": name, "number": number}]}, timeout=60,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"Xray forceReindex HTTP {resp.status_code}")
+        queued = (resp.json().get("sent_to_reindex") or {}).get("builds") or []
+        if not any(b.get("name") == name and b.get("number") == number for b in queued):
+            raise RuntimeError("Xray forceReindex: build not queued")
+
 
 def _tarball_query(name: str, version: str) -> str:
     basename = name.rsplit("/", 1)[-1]
@@ -441,7 +469,18 @@ def _parse_args(argv):
                         help="npm scope to treat as first-party without a lookup (repeatable). By default "
                              "a package is first-party when its tarball is only in local repositories")
     parser.add_argument("--workers", type=int, default=12, help="Parallel AQL lookups (default 12, max 32)")
-    return parser.parse_args(argv)
+    parser.add_argument("--publish-to", metavar="BUILD_NAME",
+                        help="Append the modules to the published build-info BUILD_NAME/--build-number, "
+                             "write it back and ask Xray to reindex it")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="With --publish-to: write the merged build-info to --output (or stdout) "
+                             "and publish nothing")
+    args = parser.parse_args(argv)
+    if args.dry_run and not args.publish_to:
+        parser.error("--dry-run needs --publish-to")
+    if args.publish_to and args.merge_into:
+        parser.error("--publish-to and --merge-into are exclusive")
+    return args
 
 
 def _write(data: dict, path: str | None) -> None:
@@ -453,6 +492,28 @@ def _write(data: dict, path: str | None) -> None:
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(text)
     shutil.move(tmp, path)
+
+
+def _publish(args, modules: list[dict]) -> int:
+    name, number = args.publish_to, args.build_number
+    if not modules:
+        log.info("no npm modules: build-info %s/%s left unchanged", name, number)
+        return 0
+    client = ArtifactoryClient.from_env()
+    try:
+        build_info = merge_into_build_info(client.get_build_info(name, number), modules)
+        if args.dry_run:
+            _write(build_info, args.output)
+            log.info("dry run: %s/%s not published", name, number)
+            return 0
+        client.put_build_info(build_info)
+        log.info("build-info %s/%s updated with %d npm module(s)", name, number, len(modules))
+        client.force_reindex(name, number)
+        log.info("Xray reindex queued for %s/%s", name, number)
+    except (RuntimeError, requests.RequestException, KeyError, ValueError) as exc:
+        log.error("could not publish npm modules to %s/%s: %s", name, number, exc)
+        return 1
+    return 0
 
 
 def main(argv=None) -> int:
@@ -482,6 +543,8 @@ def main(argv=None) -> int:
     for pkg, problem in summary["unresolved"].items():
         log.warning("unresolved %s: %s", pkg, problem)
 
+    if args.publish_to:
+        return _publish(args, modules)
     if args.merge_into:
         with open(args.merge_into, encoding="utf-8") as fh:
             build_info = json.load(fh)

@@ -1,0 +1,98 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: npm build-info modules
+description: >
+  After `mvn deploy`, add the npm packages bundled into this build's web apps (their embedded
+  sbom/bom.json) to the published build-info and ask Xray to reindex it, so Xray scans them.
+  Does nothing when no artifact carries an SBOM. Does not wait for the Xray scan.
+inputs:
+  build_name:
+    description: Published build name (the -Dbuild.name of mvn deploy)
+    required: true
+  build_number:
+    description: Published build number (the -Dbuild.number of mvn deploy)
+    required: true
+  artifacts:
+    description: Newline-separated globs of the built archives to scan for embedded SBOMs
+    required: false
+    default: |
+      **/target/*.zip
+      **/target/*.tar.gz
+  artifactory_url:
+    description: Artifactory host root, e.g. https://repo.pentaho.com
+    required: true
+  artifactory_user:
+    description: User allowed to overwrite build-info and trigger an Xray reindex
+    required: true
+  artifactory_password:
+    description: Password or token for artifactory_user
+    required: true
+  dry_run:
+    description: Print the merged build-info and publish nothing
+    required: false
+    default: "false"
+  fail_on_error:
+    description: Fail the job when the modules cannot be added (default warns and continues)
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Add npm modules to the build-info
+      shell: bash
+      env:
+        ARTIFACTORY_URL: ${{ inputs.artifactory_url }}
+        ARTIFACTORY_USER: ${{ inputs.artifactory_user }}
+        ARTIFACTORY_PASSWORD: ${{ inputs.artifactory_password }}
+        BUILD_NAME: ${{ inputs.build_name }}
+        BUILD_NUMBER: ${{ inputs.build_number }}
+        ARTIFACT_GLOBS: ${{ inputs.artifacts }}
+        DRY_RUN: ${{ inputs.dry_run }}
+        FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+      run: |
+        set -uo pipefail
+        tool_dir="$GITHUB_ACTION_PATH/../../scripts/python/npm_buildinfo"
+
+        give_up() {
+          if [[ "$FAIL_ON_ERROR" == "true" ]]; then echo "::error::$1"; exit 1; fi
+          echo "::warning::$1"; exit 0
+        }
+
+        shopt -s globstar nullglob
+        declare -A seen=()
+        files=()
+        while read -r pattern; do
+          [[ -z "$pattern" ]] && continue
+          IFS=
+          for f in $pattern; do
+            [[ -f "$f" && -z "${seen[$f]:-}" ]] && { seen[$f]=1; files+=("$f"); }
+          done
+          unset IFS
+        done <<< "$ARTIFACT_GLOBS"
+        if (( ${#files[@]} == 0 )); then
+          echo "No built archive matched; build-info $BUILD_NAME/$BUILD_NUMBER left unchanged."
+          exit 0
+        fi
+
+        venv="$RUNNER_TEMP/npm-buildinfo-venv"
+        { python3 -m venv "$venv" && "$venv/bin/pip" install --quiet -r "$tool_dir/requirements.txt"; } \
+          || give_up "could not install the npm_buildinfo requirements"
+
+        args=(--build-number "$BUILD_NUMBER" --publish-to "$BUILD_NAME")
+        if [[ "$DRY_RUN" == "true" ]]; then
+          args+=(--dry-run --output "$RUNNER_TEMP/npm-buildinfo-dry-run.json")
+        fi
+        "$venv/bin/python" "$tool_dir/npm_buildinfo.py" "${args[@]}" "${files[@]}" \
+          || give_up "npm modules were not added to build-info $BUILD_NAME/$BUILD_NUMBER (see the log above)"
+        if [[ "$DRY_RUN" == "true" ]]; then
+          echo "Dry run: merged build-info written to $RUNNER_TEMP/npm-buildinfo-dry-run.json"
+        fi

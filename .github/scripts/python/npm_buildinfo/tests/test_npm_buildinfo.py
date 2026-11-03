@@ -530,5 +530,144 @@ class TestCli(_TmpDir):
         self.assertEqual(json.load(open(out))["modules"], [])
 
 
+def _resp(status, payload=None):
+    resp = MagicMock(status_code=status)
+    resp.json.return_value = payload if payload is not None else {}
+    return resp
+
+
+class TestClientBuildInfo(unittest.TestCase):
+    """REST calls used by --publish-to, shapes from repo.pentaho.com (DEVO-14568 test builds)."""
+
+    def _client(self):
+        session = MagicMock()
+        return nb.ArtifactoryClient("https://repo.example.com/", session=session), session
+
+    def test_get_build_info_returns_the_stored_run(self):
+        client, session = self._client()
+        session.get.return_value = _resp(200, {"uri": "x", "buildInfo": {"name": "b", "number": "1"}})
+
+        self.assertEqual(client.get_build_info("pentaho-app-shell-master", "0.1.16-rc.3"),
+                         {"name": "b", "number": "1"})
+        self.assertEqual(session.get.call_args.args[0],
+                         "https://repo.example.com/artifactory/api/build/pentaho-app-shell-master/0.1.16-rc.3")
+
+    def test_build_identity_is_path_encoded(self):
+        client, session = self._client()
+        session.get.return_value = _resp(200, {"buildInfo": {}})
+
+        client.get_build_info("a b", "1/2")
+
+        self.assertTrue(session.get.call_args.args[0].endswith("/api/build/a%20b/1%2F2"))
+
+    def test_put_build_info_sends_the_whole_document(self):
+        client, session = self._client()
+        session.put.return_value = _resp(204)
+        bi = {"name": "b", "number": "1", "started": "s", "modules": []}
+
+        client.put_build_info(bi)
+
+        self.assertEqual(session.put.call_args.args[0], "https://repo.example.com/artifactory/api/build")
+        self.assertEqual(session.put.call_args.kwargs["json"], bi)
+
+    def test_a_rejected_put_raises_with_the_status_only(self):
+        client, session = self._client()
+        session.put.return_value = _resp(403, {"errors": [{"message": "not permitted"}]})
+
+        with self.assertRaisesRegex(RuntimeError, "HTTP 403"):
+            client.put_build_info({"name": "b", "number": "1"})
+
+    def test_force_reindex_asks_xray_for_that_build(self):
+        client, session = self._client()
+        session.post.return_value = _resp(200, {"sent_to_reindex": {"builds": [
+            {"name": "b", "number": "1", "build_repo": "artifactory-build-info"}]}})
+
+        client.force_reindex("b", "1")
+
+        self.assertEqual(session.post.call_args.args[0], "https://repo.example.com/xray/api/v1/forceReindex")
+        self.assertEqual(session.post.call_args.kwargs["json"], {"builds": [{"name": "b", "number": "1"}]})
+
+    def test_a_reindex_xray_did_not_queue_raises(self):
+        client, session = self._client()
+        session.post.return_value = _resp(200, {"failed_send_to_reindex": {"builds": [{"name": "b", "number": "1"}]}})
+
+        with self.assertRaisesRegex(RuntimeError, "not queued"):
+            client.force_reindex("b", "1")
+
+
+class TestCliPublish(_TmpDir):
+    """--publish-to: read the published run, append the npm modules, write it back, reindex."""
+
+    FOUND = {("axios", "1.19.0"): {"sha256": AXIOS_SHA256, "actual_sha1": "a" * 40, "actual_md5": "b" * 32}}
+    STORED = {"version": "1.0.1", "name": "pentaho-app-shell-master", "number": "0.1.16-rc.3",
+              "started": "2026-11-02T19:01:44.034+0000",
+              "modules": [{"id": "com.pentaho:pentaho-app-shell-core-assembly:0.1.16-rc.3", "artifacts": []}]}
+
+    def _run(self, argv, client):
+        with patch.object(nb.ArtifactoryClient, "from_env", return_value=client), \
+                patch.object(nb, "lookup_checksums", return_value=(self.FOUND, {}, set())):
+            return nb.main(argv)
+
+    def _client(self):
+        client = MagicMock()
+        client.get_build_info.return_value = json.loads(json.dumps(self.STORED))
+        return client
+
+    def test_publish_appends_the_modules_writes_back_and_reindexes(self):
+        path = self.write("pentaho-app-shell-core-assembly-0.1.16-rc.3.zip",
+                          _zip_bytes({"app-shell/sbom/bom.json": json.dumps(_bom())}))
+        client = self._client()
+
+        rc = self._run(["--build-number", "0.1.16-rc.3", "--publish-to", "pentaho-app-shell-master", path], client)
+
+        self.assertEqual(rc, 0)
+        client.get_build_info.assert_called_once_with("pentaho-app-shell-master", "0.1.16-rc.3")
+        written = client.put_build_info.call_args.args[0]
+        self.assertEqual({k: written[k] for k in ("name", "number", "started")},
+                         {k: self.STORED[k] for k in ("name", "number", "started")})
+        self.assertEqual([m.get("type") for m in written["modules"]], [None, "npm"])
+        self.assertEqual([c[0] for c in client.method_calls if c[0] != "get_build_info"],
+                         ["put_build_info", "force_reindex"])
+        client.force_reindex.assert_called_once_with("pentaho-app-shell-master", "0.1.16-rc.3")
+
+    def test_without_an_sbom_the_build_info_is_not_touched(self):
+        path = self.write("plain.zip", _zip_bytes({"README.txt": "hi"}))
+        client = self._client()
+
+        rc = self._run(["--build-number", "1", "--publish-to", "b", path], client)
+
+        self.assertEqual(rc, 0)
+        self.assertEqual(client.method_calls, [])
+
+    def test_dry_run_writes_the_merged_build_info_and_publishes_nothing(self):
+        path = self.write("a.zip", _zip_bytes({"web/sbom/bom.json": json.dumps(_bom())}))
+        out = os.path.join(self.tmp, "merged.json")
+        client = self._client()
+
+        rc = self._run(["--build-number", "0.1.16-rc.3", "--publish-to", "pentaho-app-shell-master",
+                        "--dry-run", "--output", out, path], client)
+
+        self.assertEqual(rc, 0)
+        client.put_build_info.assert_not_called()
+        client.force_reindex.assert_not_called()
+        self.assertEqual(json.load(open(out))["modules"][1]["type"], "npm")
+
+    def test_a_failed_write_back_is_an_error(self):
+        path = self.write("a.zip", _zip_bytes({"web/sbom/bom.json": json.dumps(_bom())}))
+        client = self._client()
+        client.put_build_info.side_effect = RuntimeError("build-info PUT HTTP 403")
+
+        with self.assertLogs("npm_buildinfo", "ERROR") as logs:
+            rc = self._run(["--build-number", "1", "--publish-to", "b", path], client)
+
+        self.assertEqual(rc, 1)
+        client.force_reindex.assert_not_called()
+        self.assertIn("HTTP 403", "\n".join(logs.output))
+
+    def test_dry_run_needs_publish_to(self):
+        with self.assertRaises(SystemExit):
+            nb.main(["--build-number", "1", "--dry-run", "a.zip"])
+
+
 if __name__ == "__main__":
     unittest.main()

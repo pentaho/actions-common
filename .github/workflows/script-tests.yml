@@ -15,6 +15,7 @@ on:
   pull_request:
     paths:
       - '.github/scripts/python/npm_buildinfo/**'
+      - '.github/actions/npm-buildinfo/**'
       - '.github/workflows/script-tests.yml'
 
 permissions:

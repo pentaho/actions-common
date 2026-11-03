@@ -108,6 +108,11 @@ on:
         required: false
         default: ""
         description: "Newline-separated KEY=VALUE pairs to replace in `.github/release-versions.properties`"
+      add_npm_buildinfo:
+        type: boolean
+        required: false
+        default: false
+        description: "Add the npm packages bundled in the build's web apps (embedded sbom/bom.json) to the RC build-info and reindex it in Xray"
     outputs:
       current-version:
         value: ${{ jobs.release-candidate.outputs.current-version }}
@@ -449,6 +454,16 @@ jobs:
           int_test_reporter: 'java-junit'
           int_test_fail_on_error: 'true'
           int_test_report_path: '**/target/failsafe-reports/TEST*.xml'
+
+      - name: Add npm modules to the build-info
+        if: ${{ inputs.add_npm_buildinfo == true }}
+        uses: pentaho/actions-common/.github/actions/npm-buildinfo@stable
+        with:
+          build_name: ${{ steps.post-setup.outputs.build_name }}
+          build_number: ${{ steps.post-setup.outputs.build_number }}
+          artifactory_url: ${{ env.ARTIFACTORY_HOST }}
+          artifactory_user: ${{ env.NEXUS_DEPLOY_USER }}
+          artifactory_password: ${{ env.NEXUS_DEPLOY_PASSWORD }}
 
       - name: Sonarqube scan
         id: Sonarqube
