@@ -1,0 +1,11 @@
+{
+  "name": "actions-common-template-tests",
+  "private": true,
+  "scripts": {
+    "test": "node test-report-template.cjs"
+  },
+  "devDependencies": {
+    "handlebars": "4.7.10",
+    "handlebars-helpers-ctrf": "0.1.0"
+  }
+}

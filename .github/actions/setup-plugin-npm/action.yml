@@ -1,0 +1,40 @@
+name: Configure plugin npm workspace
+description: Configure Git and authenticate npm when the workspace contains package.json files.
+inputs:
+  registry:
+    description: Pentaho npm registry URL without the protocol
+    required: true
+  username:
+    description: Registry username
+    required: true
+  password:
+    description: Registry password
+    required: true
+  verbose:
+    description: Print whether npm configuration was needed
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Configure Git
+      uses: pentaho/actions-common/.github/actions/git-config@stable
+
+    - name: Detect npm
+      id: npm
+      uses: pentaho/actions-common/.github/actions/detect-npm@stable
+
+    - name: Authenticate npm
+      if: ${{ steps.npm.outputs.has_npm == 'true' }}
+      uses: pentaho/actions-common/.github/actions/npm-registry-auth@stable
+      with:
+        pentaho_registry: ${{ inputs.registry }}
+        username: ${{ inputs.username }}
+        password: ${{ inputs.password }}
+
+    - name: Report npm setup
+      if: ${{ inputs.verbose == 'true' }}
+      shell: bash
+      env:
+        HAS_NPM: ${{ steps.npm.outputs.has_npm }}
+      run: |
+        printf 'npm workspace detected: %s\n' "$HAS_NPM"

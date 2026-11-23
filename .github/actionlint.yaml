@@ -1,0 +1,2 @@
+self-hosted-runner:
+  labels: [k8s, orl-lab]

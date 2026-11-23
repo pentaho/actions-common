@@ -1,0 +1,89 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Stage Pentaho Server fixtures
+description: >
+  Stage the Pentaho repository SQL scripts (read from the Pentaho Server image) and the logs
+  directory into a shared volume, verify the staged plugins and generate the Pentaho Server
+  service bind mounts.
+inputs:
+  volume_dir:
+    description: Path of the shared volume inside the current job container (e.g. /volume)
+    required: true
+  host_volume_path:
+    description: Path of the same shared volume on the runner host (used to build the service volumes)
+    required: true
+  server_image:
+    description: Pentaho Server image that ships the PostgreSQL scripts
+    required: true
+  server_sql_path:
+    description: PostgreSQL scripts folder; defaults to data/postgresql under the server home derived from plugin_path
+    required: false
+    default: ""
+  registry_username:
+    description: Username for the server image registry
+    required: false
+    default: ""
+  registry_password:
+    description: Password for the server image registry
+    required: false
+    default: ""
+  plugin_path:
+    description: Pentaho Server system folder where every staged plugin is mounted
+    required: false
+    default: /home/devuser/pentaho/pentaho-server/pentaho-solutions/system/
+  logs_path:
+    description: Tomcat logs folder; defaults to tomcat/logs under the server home derived from plugin_path
+    required: false
+    default: ""
+  required_plugins:
+    description: Comma-, space-, tab-, or newline-separated plugin folder names that must contain a nonempty plugin.xml
+    required: false
+    default: ""
+  verbose:
+    description: Print SQL filenames and generated plugin mounts
+    default: "false"
+outputs:
+  server_image:
+    description: Immutable Pentaho Server registry digest used for both SQL extraction and the service
+    value: ${{ steps.sql.outputs.server_image }}
+  mounts:
+    description: Docker --mount options for the Pentaho Server service
+    value: ${{ steps.stage.outputs.mounts }}
+  plugins:
+    description: Comma separated list of staged plugin folder names
+    value: ${{ steps.stage.outputs.plugins }}
+runs:
+  using: composite
+  steps:
+    - id: sql
+      shell: bash
+      env:
+        SERVER_IMAGE: ${{ inputs.server_image }}
+        SERVER_SQL_PATH: ${{ inputs.server_sql_path }}
+        PLUGIN_PATH: ${{ inputs.plugin_path }}
+        REGISTRY_USERNAME: ${{ inputs.registry_username }}
+        REGISTRY_PASSWORD: ${{ inputs.registry_password }}
+        SQL_OUTPUT_DIR: ${{ runner.temp }}/pentaho-server-sql
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/extract-sql.sh"
+
+    - id: stage
+      shell: bash
+      env:
+        VOLUME_DIR: ${{ inputs.volume_dir }}
+        HOST_VOLUME_PATH: ${{ inputs.host_volume_path }}
+        PLUGIN_PATH: ${{ inputs.plugin_path }}
+        LOGS_PATH: ${{ inputs.logs_path }}
+        REQUIRED_PLUGINS: ${{ inputs.required_plugins }}
+        SQL_SOURCE_DIR: ${{ runner.temp }}/pentaho-server-sql
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/stage-fixtures.sh"

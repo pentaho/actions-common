@@ -1,0 +1,84 @@
+name: Build Pentaho plugins
+description: >
+  Run Maven with the plugin install directory and optional unit-test reporting with transient
+  check-run 404 retries.
+inputs:
+  settings_file:
+    description: Maven settings file returned by the root actions-common action
+    required: true
+  additional_mvn_directives:
+    description: Additional Maven arguments; shell-style quoting and newlines are supported, shell expansion is not
+    default: ""
+  run_unit_tests:
+    description: Run and report unit tests
+    default: "false"
+  post_build_command:
+    description: Optional bash commands run after the build, with MAVEN_SETTINGS_FILE and PLUGINS_DIR set
+    default: ""
+  verbose:
+    description: Print tool versions and installed plugin descriptors
+    default: "false"
+runs:
+  using: composite
+  steps:
+    # github.action_path is the host path; GITHUB_ACTION_PATH is translated inside job containers.
+    - name: Resolve build script
+      id: script
+      shell: bash
+      run: echo "path=$GITHUB_ACTION_PATH/build.sh" >> "$GITHUB_OUTPUT"
+
+    - name: Build and unit tests
+      id: build
+      uses: lumada-common-services/gh-composite-actions@stable
+      with:
+        command: bash "$PLUGIN_BUILD_SCRIPT"
+      env:
+        PLUGIN_BUILD_SCRIPT: ${{ steps.script.outputs.path }}
+        MAVEN_SETTINGS_FILE: ${{ inputs.settings_file }}
+        MVN_DIRECTIVES: ${{ inputs.additional_mvn_directives }}
+        RUN_UNIT_TESTS: ${{ inputs.run_unit_tests }}
+        VERBOSE: ${{ inputs.verbose }}
+        CI: "true"
+        # The external wrapper hardcodes dorny/test-reporter@v3; run its build path only.
+        cmd_type: BUILD
+
+    - name: Report unit tests
+      id: unit-test-result
+      if: ${{ always() && inputs.run_unit_tests == 'true' }}
+      uses: dorny/test-reporter@79b4b4400dc2354b89e9dd811ef9caa9bdd4f665
+      with:
+        name: ${{ env.report_prefix }}${{ github.job }}-UNIT_TEST
+        path: "**/target/surefire-reports/*.xml"
+        reporter: java-junit
+        only-summary: "true"
+        fail-on-error: "true"
+        fail-on-empty: "false"
+        use-actions-summary: "false"
+
+    - name: Update build summary tracking
+      if: ${{ always() }}
+      shell: bash
+      env:
+        BUILD_OUTCOME: ${{ steps.build.outcome }}
+        REPORT_OUTCOME: ${{ steps.unit-test-result.outcome }}
+        REPORT_CONCLUSION: ${{ steps.unit-test-result.outputs.conclusion }}
+        REPORT_URL: ${{ steps.unit-test-result.outputs.url_html }}
+        RUN_UNIT_TESTS: ${{ inputs.run_unit_tests }}
+      run: bash "$GITHUB_ACTION_PATH/update-summary.sh"
+
+    - name: Post-build command
+      if: ${{ inputs.post_build_command != '' }}
+      shell: bash
+      env:
+        POST_BUILD_COMMAND: ${{ inputs.post_build_command }}
+        MAVEN_SETTINGS_FILE: ${{ inputs.settings_file }}
+        PLUGINS_DIR: ${{ github.workspace }}/pentaho-build/pentaho-solutions/system
+        VERBOSE: ${{ inputs.verbose }}
+      run: |
+        mkdir -p "$PLUGINS_DIR"
+        # No xtrace: expanded commands can leak derived credentials that secret masking misses.
+        bash -euo pipefail -c "$POST_BUILD_COMMAND"
+        if [[ "$VERBOSE" == true ]]; then
+          echo "Plugin descriptors after post-build command:"
+          find "$PLUGINS_DIR" -mindepth 2 -maxdepth 2 -name plugin.xml -print | sort
+        fi

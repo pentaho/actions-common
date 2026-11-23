@@ -1,0 +1,65 @@
+name: Notify integration test results
+description: Report setup/test status, platform version and per-browser counts to Slack.
+inputs:
+  setup_result:
+    description: Setup job result
+    required: true
+  tests_result:
+    description: Test job result
+    required: true
+  summary:
+    description: Test count summary
+    default: "Tests: no results found"
+  server_version:
+    description: Tested platform version
+    default: ""
+  server_build_name:
+    description: Server image build name
+    required: true
+  server_context:
+    description: Web application context
+    required: true
+  playwright_project:
+    description: Browser selection
+    required: true
+  practitest_url:
+    description: Optional Test Sets & Runs URL
+    default: ""
+  channel:
+    description: Slack channel
+    required: true
+  token:
+    description: Slack token
+    required: true
+  verbose:
+    description: Print notification status and test counts
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Prepare notification
+      id: payload
+      shell: bash
+      env:
+        SETUP_RESULT: ${{ inputs.setup_result }}
+        TESTS_RESULT: ${{ inputs.tests_result }}
+        TESTS_SUMMARY: ${{ inputs.summary }}
+        SERVER_VERSION: ${{ inputs.server_version }}
+        SERVER_BUILD_NAME: ${{ inputs.server_build_name }}
+        SERVER_CONTEXT: ${{ inputs.server_context }}
+        PLAYWRIGHT_PROJECT: ${{ inputs.playwright_project }}
+        PRACTITEST_URL: ${{ inputs.practitest_url }}
+        SLACK_CHANNEL: ${{ inputs.channel }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        EVENT_NAME: ${{ github.event_name }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/payload.sh"
+
+    - name: Send Slack notification
+      uses: hv-actions/slack-action@stable
+      env:
+        SLACK_TOKEN: ${{ inputs.token }}
+      with:
+        title: Pentaho Plugin Integration Tests
+        channel: ${{ inputs.channel }}
+        raw-input: ${{ steps.payload.outputs.json }}

@@ -1,0 +1,88 @@
+name: Notify workflow results
+description: Send pull request or integration-test workflow results to Slack.
+inputs:
+  format:
+    description: Notification format
+    default: pull_request
+  title:
+    description: Optional title for integration_tests format
+    default: ""
+  status_icons:
+    description: Include status icons in integration_tests format
+    default: "false"
+  results:
+    description: Space separated job results for pull_request format
+    default: ""
+  setup_result:
+    description: Setup job result for integration_tests format
+    default: ""
+  tests_result:
+    description: Integration test job result for integration_tests format
+    default: ""
+  server_build_name:
+    description: Server image build name for integration_tests format
+    default: ""
+  server_context:
+    description: Web application context for integration_tests format
+    default: ""
+  playwright_project:
+    description: Browser selection for integration_tests format
+    default: ""
+  practitest_url:
+    description: Optional Test Sets & Runs URL for integration_tests format
+    default: ""
+  jobs_summary:
+    description: Human-readable job results line for pull_request format
+    default: ""
+  summary:
+    description: Test count summary
+    default: "Tests: no results found"
+  server_version:
+    description: Tested platform version
+    default: ""
+  channel:
+    description: Slack channel
+    required: true
+  token:
+    description: Slack token
+    required: true
+  verbose:
+    description: Print notification status
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Prepare notification
+      id: payload
+      shell: bash
+      env:
+        FORMAT: ${{ inputs.format }}
+        NOTIFICATION_TITLE: ${{ inputs.title }}
+        STATUS_ICONS: ${{ inputs.status_icons }}
+        RESULTS: ${{ inputs.results }}
+        SETUP_RESULT: ${{ inputs.setup_result }}
+        TESTS_RESULT: ${{ inputs.tests_result }}
+        SERVER_BUILD_NAME: ${{ inputs.server_build_name }}
+        SERVER_CONTEXT: ${{ inputs.server_context }}
+        PLAYWRIGHT_PROJECT: ${{ inputs.playwright_project }}
+        PRACTITEST_URL: ${{ inputs.practitest_url }}
+        JOBS_SUMMARY: ${{ inputs.jobs_summary }}
+        TESTS_SUMMARY: ${{ inputs.summary }}
+        SERVER_VERSION: ${{ inputs.server_version }}
+        SLACK_CHANNEL: ${{ inputs.channel }}
+        WORKFLOW_NAME: ${{ github.workflow }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        EVENT_NAME: ${{ github.event_name }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/payload.sh"
+
+    - name: Send Slack notification
+      uses: hv-actions/slack-action@stable
+      env:
+        SLACK_TOKEN: ${{ inputs.token }}
+      with:
+        title: ${{ steps.payload.outputs.title }}
+        channel: ${{ inputs.channel }}
+        raw-input: ${{ steps.payload.outputs.json }}

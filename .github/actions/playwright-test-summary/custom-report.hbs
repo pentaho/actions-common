@@ -1,0 +1,135 @@
+{{#if ctrf.summary.failed}}
+![failed](https://ctrf.io/assets/github/x-circle.svg)  **{{ctrf.summary.failed}} all failures (including expected failures)**{{#if report.insights.extra.summary.failed.change}} *{{#if (gt report.insights.extra.summary.failed.change 0)}}↑{{report.insights.extra.summary.failed.change}}{{else}}↓{{abs report.insights.extra.summary.failed.change}}{{/if}}*{{/if}}
+{{/if}}
+![passed](https://ctrf.io/assets/github/check-circle.svg)  **{{ctrf.summary.passed}} passed**{{#if report.insights.extra.summary.passed.change}} *{{#if (gt report.insights.extra.summary.passed.change 0)}}↑{{report.insights.extra.summary.passed.change}}{{else}}↓{{abs report.insights.extra.summary.passed.change}}{{/if}}*{{/if}}
+{{#if ctrf.summary.skipped}}
+![skipped](https://ctrf.io/assets/github/skip.svg)  **{{ctrf.summary.skipped}} skipped**{{#if report.insights.extra.summary.skipped.change}} *{{#if (gt report.insights.extra.summary.skipped.change 0)}}↑{{report.insights.extra.summary.skipped.change}}{{else}}↓{{abs report.insights.extra.summary.skipped.change}}{{/if}}*{{/if}}
+{{/if}}
+{{#if ctrf.summary.pending}}
+![pending](https://ctrf.io/assets/github/hourglass.svg)  **{{ctrf.summary.pending}} pending**{{#if report.insights.extra.summary.pending.change}} *{{#if (gt report.insights.extra.summary.pending.change 0)}}↑{{report.insights.extra.summary.pending.change}}{{else}}↓{{abs report.insights.extra.summary.pending.change}}{{/if}}*{{/if}}
+{{/if}}
+{{#if ctrf.summary.other}}
+![other](https://ctrf.io/assets/github/question.svg)  **{{ctrf.summary.other}} other**{{#if report.insights.extra.summary.other.change}} *{{#if (gt report.insights.extra.summary.other.change 0)}}↑{{report.insights.extra.summary.other.change}}{{else}}↓{{abs report.insights.extra.summary.other.change}}{{/if}}*{{/if}}
+{{/if}}
+{{#if (countFlakyTests ctrf.tests)}}
+![alert](https://ctrf.io/assets/github/alert.svg)  **{{countFlakyTests ctrf.tests}} flaky**{{#if report.insights.extra.summary.flaky.change}} *{{#if (gt report.insights.extra.summary.flaky.change 0)}}↑{{report.insights.extra.summary.flaky.change}}{{else}}↓{{abs report.insights.extra.summary.flaky.change}}{{/if}}*{{/if}}
+{{/if}}
+
+#### Details
+
+![tests](https://ctrf.io/assets/github/beaker.svg)  {{ctrf.summary.tests}} tests{{#if ctrf.summary.suites}} in {{ctrf.summary.suites}} suites{{/if}}{{#if report.insights.extra.summary.tests.change}} *{{#if (gt report.insights.extra.summary.tests.change 0)}}↑{{report.insights.extra.summary.tests.change}}{{else}}↓{{abs report.insights.extra.summary.tests.change}}{{/if}}*{{/if}}
+![clock](https://ctrf.io/assets/github/clock.svg)  {{formatDurationFromTimes ctrf.summary.start ctrf.summary.stop}}{{#if report.insights.extra.summary.duration.change}} *{{#if (gt report.insights.extra.summary.duration.change 0)}}↑{{formatDuration report.insights.extra.summary.duration.change}}{{else}}↓{{formatDuration (abs report.insights.extra.summary.duration.change)}}{{/if}}*{{/if}}
+{{#if ctrf.tool.name}}
+![tool](https://ctrf.io/assets/github/tools.svg)  {{ctrf.tool.name}}
+{{/if}}
+{{#if ctrf.environment.appName}}
+{{#if ctrf.environment.appVersion}}
+![app](https://ctrf.io/assets/github/versions.svg)  {{ctrf.environment.appName}} v{{ctrf.environment.appVersion}}
+{{else}}
+![app](https://ctrf.io/assets/github/versions.svg)  {{ctrf.environment.appName}}
+{{/if}}
+{{/if}}
+{{#if ctrf.environment.buildName}}
+{{#if ctrf.environment.buildNumber}}
+{{#if ctrf.environment.buildUrl}}
+![build](https://ctrf.io/assets/github/play.svg)  {{github.workflow}} ![arrow-right](https://ctrf.io/assets/github/arrow-right.svg) {{ctrf.environment.buildName}} ![link](https://ctrf.io/assets/github/link.svg) [#{{ctrf.environment.buildNumber}}]({{ctrf.environment.buildUrl}})
+{{/if}}
+{{/if}}
+{{/if}}
+{{#if github.pullRequestNumber}}
+{{#if github.pullRequest.title}}
+![pull-request](https://ctrf.io/assets/github/git-pull-request.svg) {{github.pullRequest.title}} ![link](https://ctrf.io/assets/github/link.svg) [#{{github.pullRequestNumber}}]({{github.pullRequest.htmlUrl}})
+{{else}}
+![pull-request](https://ctrf.io/assets/github/git-pull-request.svg) #{{github.pullRequestNumber}}
+{{/if}}
+{{else}}
+{{#if github.context.commits}} ![commit](https://ctrf.io/assets/github/commit.svg) {{#with (splitLines github.context.commits.[0].message)}}{{#each this}}{{#if @first}}{{this}}{{/if}}{{/each}}{{/with}}{{#if github.context.commits.[0].id}} ![link](https://ctrf.io/assets/github/link.svg) [{{sliceString github.context.commits.[0].id 0 7}}]({{github.context.commits.[0].url}}){{/if}}{{else}}{{#if github.sha}} ![commit](https://ctrf.io/assets/github/commit.svg) {{#if github.repository.htmlUrl}}[{{sliceString github.sha 0 7}}]({{github.repository.htmlUrl}}/commit/{{github.sha}}){{else}}`{{sliceString github.sha 0 7}}`{{/if}}{{/if}}{{/if}}
+{{/if}}
+{{#unless github.pullRequestNumber}}
+{{#if ctrf.environment.branchName}}
+![branch](https://ctrf.io/assets/github/git-branch.svg) {{ctrf.environment.branchName}}{{#if github.repository.htmlUrl}} ![link](https://ctrf.io/assets/github/link.svg) [view]({{github.repository.htmlUrl}}/tree/{{ctrf.environment.branchName}}){{/if}}
+{{/if}}
+{{/unless}}
+{{#if ctrf.environment.testEnvironment}}
+![test-environment](https://ctrf.io/assets/github/gear.svg) {{ctrf.environment.testEnvironment}}
+{{/if}}
+
+{{#if (anyFailedTests ctrf.tests)}}
+<details><summary><strong> Unexpected Failures
+</strong></summary>
+
+{{#each ctrf.tests}}
+{{#if (eq status "failed")}}
+{{#if suite}}
+{{formatTestPath suite name}}
+{{else}}
+{{name}}
+{{/if}}
+{{/if}}
+{{/each}}
+</details>
+{{/if}}
+
+{{#if (countFlakyTests ctrf.tests)}}
+<details><summary><strong> Flaky Tests
+</strong></summary>
+
+{{#each ctrf.tests}}
+{{#if (eq flaky true)}}
+{{#if suite}}
+{{formatTestPath suite name}}
+{{else}}
+{{name}}
+{{/if}}
+{{/if}}
+{{/each}}
+</details>
+{{/if}}
+
+{{#if ctrf.summary.skipped}}
+<details><summary><strong> Skipped Tests
+</strong></summary>
+
+{{#each ctrf.tests}}
+{{#if (eq status "skipped")}}
+{{#if suite}}
+{{formatTestPath suite name}}
+{{else}}
+{{name}}
+{{/if}}
+{{/if}}
+{{/each}}
+</details>
+{{/if}}
+
+{{#if ctrf.summary.pending}}
+<details><summary><strong> Pending Tests
+</strong></summary>
+
+{{#each ctrf.tests}}
+{{#if (eq status "pending")}}
+{{#if suite}}
+{{formatTestPath suite name}}
+{{else}}
+{{name}}
+{{/if}}
+{{/if}}
+{{/each}}
+</details>
+{{/if}}
+
+{{#if ctrf.summary.other}}
+<details><summary><strong> Other Tests
+</strong></summary>
+
+{{#each ctrf.tests}}
+{{#if (eq status "other")}}
+{{#if suite}}
+{{formatTestPath suite name}}
+{{else}}
+{{name}}
+{{/if}}
+{{/if}}
+{{/each}}
+</details>
+{{/if}}

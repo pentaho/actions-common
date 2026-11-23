@@ -1,0 +1,473 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Pentaho npm integration tests workflow
+on:
+  workflow_call:
+    inputs:
+      use_pr_build:
+        type: boolean
+        required: false
+        default: false
+        description: "Download pentaho-plugins from this run; false tests the server's bundled plugins"
+      required_plugins:
+        type: string
+        required: false
+        default: ""
+        description: "Comma-, space-, tab-, or newline-separated plugin folders that must contain a nonempty plugin.xml"
+      server_image:
+        type: string
+        required: false
+        default: ""
+        description: "Pentaho Server image. Defaults to <ARTIFACTORY_HOST>/docker/pentaho-app-shell/<server_build_name>/<server_context>"
+      server_build_name:
+        type: string
+        required: false
+        default: pdia-master
+        description: "Pentaho Server image build name"
+      server_context:
+        type: string
+        required: false
+        default: pentaho
+        description: "Pentaho Server image context (also the web application name)"
+      server_url:
+        type: string
+        required: false
+        default: http://pba:8080
+        description: "Server URL without the application context, used as the test BASE_URL prefix"
+      working_directory:
+        type: string
+        required: false
+        default: "."
+        description: "Folder with the package.json that runs the tests"
+      test_script:
+        type: string
+        required: false
+        default: test
+        description: "npm script that runs the Playwright tests (e.g. a lerna run playwright:test script)"
+      test_args:
+        type: string
+        required: false
+        default: ""
+        description: "Whitespace- or newline-separated arguments appended to the npm script after --"
+      playwright_project:
+        type: string
+        required: false
+        default: all
+        description: "Playwright project exported as PLAYWRIGHT_PROJECT"
+      playwright_browsers:
+        type: string
+        required: false
+        default: chromium firefox webkit chrome msedge
+        description: "Browsers passed to 'npx playwright install --with-deps'. Leave empty to skip the installation"
+      playwright_install_timeout_minutes:
+        type: number
+        required: false
+        default: 10
+        description: "Timeout of the npm dependency and Playwright browser installation step"
+      timeout_minutes:
+        type: number
+        required: false
+        default: 60
+        description: "Timeout of the test job, including the Pentaho Server startup"
+      artifact_prefix:
+        type: string
+        required: false
+        default: ""
+        description: "Prefix of the uploaded artifacts. Defaults to <repository>-it-<run_id>-<run_attempt>"
+      container_image:
+        type: string
+        required: false
+        description: "Image to be used"
+      slack_channels:
+        type: string
+        required: false
+        description: "Slack channel(s) to send notifications to."
+      ms_teams_webhook_secret_name:
+        type: string
+        required: false
+        default: ""
+        description: "The MS Teams webhook secret name"
+      practitest_working_directory:
+        type: string
+        required: false
+        default: ""
+        description: "Set to enable Practitest: folder whose package.json defines practitest_script; empty skips publishing"
+      practitest_script:
+        type: string
+        required: false
+        default: upload
+        description: "npm script in practitest_working_directory that uploads the results"
+      practitest_env_file:
+        type: string
+        required: false
+        default: .env
+        description: "Practitest settings file (PT_PROJECT_ID, filters, attributes), relative to practitest_working_directory; passed as PT_ENV_FILE"
+      practitest_results_dir:
+        type: string
+        required: false
+        default: ""
+        description: "Playwright results folder (playwright-report), relative to practitest_working_directory; passed as PT_RESULTS_DIR. Empty keeps the uploader default"
+      server_version_file:
+        type: string
+        required: false
+        default: src/resources/.auth/server-version.json
+        description: "JSON file saved by global setup from api/version/show, relative to working_directory"
+      report_title:
+        type: string
+        required: false
+        default: Publish Test Report
+        description: "Title of the CTRF GitHub report"
+      ctrf_report_path:
+        type: string
+        required: false
+        default: ""
+        description: "Repository-relative CTRF report glob; empty finds ctrf-report.json files under working_directory"
+      ctrf_artifact_name:
+        type: string
+        required: false
+        default: ctrf-report
+        description: "Stable processed CTRF artifact name for historical comparisons; use a distinct name per matrix combination, without run IDs"
+      report_template_path:
+        type: string
+        required: false
+        default: ""
+        description: "Repository-relative Handlebars template; empty uses the bundled custom CTRF report"
+      report_guide_path:
+        type: string
+        required: false
+        default: ""
+        description: "Optional repository-relative failure inspection guide; local artifact instructions are always included"
+      summary_format:
+        type: string
+        required: false
+        default: compact
+        description: "compact or multiline; multiline uses capitalized browser names on separate lines"
+      slack_title:
+        type: string
+        required: false
+        default: ""
+        description: "Optional integration-test Slack notification title"
+      slack_status_icons:
+        type: boolean
+        required: false
+        default: false
+        description: "Include status icons in the integration-test Slack notification"
+      verbose:
+        type: boolean
+        required: false
+        default: false
+        description: "Print tool versions, staged files, report paths and service logs; normal command output is always visible"
+    outputs:
+      tests_summary:
+        description: "Human-readable summary of the test counts"
+        value: ${{ jobs.tests.outputs.tests_summary }}
+      tests_total:
+        description: "Total number of tests"
+        value: ${{ jobs.tests.outputs.tests_total }}
+      tests_passed:
+        description: "Number of passed tests"
+        value: ${{ jobs.tests.outputs.tests_passed }}
+      tests_failed:
+        description: "Number of failed tests"
+        value: ${{ jobs.tests.outputs.tests_failed }}
+      tests_skipped:
+        description: "Number of skipped tests"
+        value: ${{ jobs.tests.outputs.tests_skipped }}
+      server_version:
+        description: "Pentaho Server version saved by test global setup"
+        value: ${{ jobs.tests.outputs.server_version }}
+      practitest_url:
+        description: "Practitest Test Sets & Runs URL, when published"
+        value: ${{ jobs.tests.outputs.practitest_url }}
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+  VOLUME_PATH: ${{ format('/home/runner/caches/pentaho/{0}/{1}', github.repository, github.run_id) }}
+  ARTIFACT_PREFIX: ${{ inputs.artifact_prefix || format('{0}-it-{1}-{2}', github.event.repository.name, github.run_id, github.run_attempt) }}
+
+jobs:
+  setup:
+    name: Setup integration test environment
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: 15
+
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      options: >-
+        --cpus=1
+        --memory=1g
+      volumes:
+        - ${{ format('/home/runner/caches/pentaho/{0}/{1}', github.repository, github.run_id) }}:/volume
+
+    outputs:
+      mounts: ${{ steps.fixtures.outputs.mounts }}
+      server_image: ${{ steps.fixtures.outputs.server_image }}
+
+    steps:
+      - name: Empty volume
+        shell: bash
+        run: find /volume -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+
+      - name: Download plugins artifact
+        if: ${{ inputs.use_pr_build }}
+        uses: actions/download-artifact@v8
+        with:
+          name: pentaho-plugins
+          path: /volume/pentaho-solutions/system
+
+      - name: Stage Pentaho Server fixtures
+        id: fixtures
+        uses: pentaho/actions-common/.github/actions/pentaho-server-fixtures@ci-it
+        with:
+          volume_dir: /volume
+          host_volume_path: ${{ env.VOLUME_PATH }}
+          server_image: ${{ inputs.server_image || format('{0}/docker/pentaho-app-shell/{1}/{2}', vars.ARTIFACTORY_HOST, inputs.server_build_name, inputs.server_context) }}
+          registry_username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          registry_password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          required_plugins: ${{ inputs.required_plugins }}
+          verbose: ${{ inputs.verbose }}
+
+  tests:
+    name: Playwright integration tests
+    needs: setup
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      options: >-
+        --cpus=4
+        --memory=6g
+        --shm-size=2g
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+        - ${{ format('/home/runner/caches/pentaho/{0}/{1}', github.repository, github.run_id) }}:/volume
+
+    services:
+      postgres:
+        image: postgres:15
+        volumes:
+          - ${{ format('/home/runner/caches/pentaho/{0}/{1}', github.repository, github.run_id) }}/postgres:/docker-entrypoint-initdb.d:ro
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        # TCP only answers after the init scripts ran (initdb listens on the socket only).
+        options: >-
+          --health-cmd "pg_isready --host=127.0.0.1 --username=postgres --dbname=postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+          --health-start-period 30s
+          --memory=1g
+          --cpus=1
+      pba:
+        image: ${{ needs.setup.outputs.server_image }}
+        credentials:
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+        options: >-
+          ${{ needs.setup.outputs.mounts }}
+          --memory=6g
+          --cpus=2
+          --health-cmd "curl -fsS -o /dev/null http://localhost:8080/${{ inputs.server_context }}/Login || exit 1"
+          --health-interval 30s
+          --health-timeout 30s
+          --health-retries 20
+          --health-start-period 120s
+
+    outputs:
+      tests_summary: ${{ steps.summary.outputs.summary }}
+      tests_total: ${{ steps.summary.outputs.total }}
+      tests_passed: ${{ steps.summary.outputs.passed }}
+      tests_failed: ${{ steps.summary.outputs.failed }}
+      tests_skipped: ${{ steps.summary.outputs.skipped }}
+      server_version: ${{ steps.summary.outputs.server_version }}
+      practitest_url: ${{ steps.practitest.outputs.sets_url }}
+
+    env:
+      HOME: /root
+      CI: "true"
+      BASE_URL: ${{ inputs.server_url }}/${{ inputs.server_context }}/
+      WEBAPP_NAME: ${{ inputs.server_context }}
+      PLAYWRIGHT_PROJECT: ${{ inputs.playwright_project }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Configure npm workspace
+        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@ci-it
+        with:
+          registry: ${{ env.NPM_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Install Playwright dependencies
+        timeout-minutes: ${{ inputs.playwright_install_timeout_minutes }}
+        uses: pentaho/actions-common/.github/actions/install-playwright@ci-it
+        with:
+          working_directory: ${{ inputs.working_directory }}
+          browsers: ${{ inputs.playwright_browsers }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Run Playwright tests
+        id: run-tests
+        uses: pentaho/actions-common/.github/actions/run-playwright@ci-it
+        with:
+          working_directory: ${{ inputs.working_directory }}
+          install_dependencies: false
+          script: ${{ inputs.test_script }}
+          args: ${{ inputs.test_args }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Summarize test results
+        id: summary
+        if: ${{ always() }}
+        uses: pentaho/actions-common/.github/actions/playwright-test-summary@ci-it
+        with:
+          search_directory: ${{ inputs.working_directory }}
+          server_version_file: ${{ inputs.server_version_file }}
+          report_title: ${{ inputs.report_title }}
+          report_path: ${{ inputs.ctrf_report_path }}
+          artifact_name: ${{ inputs.ctrf_artifact_name }}
+          template_path: ${{ inputs.report_template_path }}
+          guide_path: ${{ inputs.report_guide_path }}
+          summary_format: ${{ inputs.summary_format }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Publish results to Practitest
+        id: practitest
+        if: >-
+          ${{ !cancelled() && inputs.practitest_working_directory != '' &&
+              steps.summary.outputs.server_version != '' &&
+              (steps.run-tests.outputs.test_outcome == 'success' ||
+               steps.run-tests.outputs.test_outcome == 'failure') }}
+        uses: pentaho/actions-common/.github/actions/practitest-publish@ci-it
+        with:
+          server_version: ${{ steps.summary.outputs.server_version }}
+          server_context: ${{ inputs.server_context }}
+          working_directory: ${{ inputs.practitest_working_directory }}
+          script: ${{ inputs.practitest_script }}
+          env_file: ${{ inputs.practitest_env_file }}
+          results_dir: ${{ inputs.practitest_results_dir }}
+          api_token: ${{ secrets.PRACTITEST_PAT }}
+          username: ${{ secrets.PRACTITEST_USERNAME }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Collect service logs
+        if: ${{ always() }}
+        uses: pentaho/actions-common/.github/actions/collect-service-logs@ci-it
+        with:
+          server_container: ${{ job.services.pba.id }}
+          postgres_container: ${{ job.services.postgres.id }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_PREFIX }}-results
+          retention-days: 5
+          overwrite: true
+          include-hidden-files: true
+          if-no-files-found: warn
+          path: |
+            ${{ inputs.working_directory }}/**/playwright-report/
+            !**/node_modules/**
+
+      - name: Upload server logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_PREFIX }}-server-logs
+          retention-days: 5
+          overwrite: true
+          if-no-files-found: warn
+          path: /volume/logs/
+
+      - name: Report MS Teams notification
+        if: ${{ always() && inputs.ms_teams_webhook_secret_name != '' }}
+        uses: lumada-common-services/gh-composite-actions@stable
+        env:
+          teams_Webhook_Url: ${{ secrets[inputs.ms_teams_webhook_secret_name] }}
+          steps_json: ${{ toJson(steps) }}
+          report: true
+
+  notify:
+    name: Notify integration test results
+    needs: [setup, tests]
+    if: ${{ always() && inputs.slack_channels != '' }}
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: 5
+    steps:
+      - uses: pentaho/actions-common/.github/actions/notify-slack@ci-it
+        with:
+          format: integration_tests
+          title: ${{ inputs.slack_title }}
+          status_icons: ${{ inputs.slack_status_icons }}
+          setup_result: ${{ needs.setup.result }}
+          tests_result: ${{ needs.tests.result }}
+          summary: ${{ needs.tests.outputs.tests_summary }}
+          server_version: ${{ needs.tests.outputs.server_version }}
+          server_build_name: ${{ inputs.server_build_name }}
+          server_context: ${{ inputs.server_context }}
+          playwright_project: ${{ inputs.playwright_project }}
+          practitest_url: ${{ needs.tests.outputs.practitest_url }}
+          channel: ${{ inputs.slack_channels }}
+          token: ${{ secrets.SLACK_TOKEN }}
+          verbose: ${{ inputs.verbose }}
+
+  cleanup:
+    name: Clean integration test volume
+    needs: [setup, tests]
+    if: ${{ always() && needs.setup.result != 'skipped' }}
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: 10
+
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - ${{ format('/home/runner/caches/pentaho/{0}/{1}', github.repository, github.run_id) }}:/volume
+
+    steps:
+      # A failed service start (e.g. Postgres init or Pentaho Server health check) skips every tests
+      # step, including the log upload; keep the Tomcat logs before the volume is emptied.
+      - name: Preserve logs from failed test job
+        if: ${{ needs.tests.result == 'failure' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_PREFIX }}-startup-server-logs
+          retention-days: 5
+          if-no-files-found: ignore
+          path: /volume/logs/
+
+      - name: Empty volume
+        if: ${{ always() }}
+        shell: bash
+        run: find /volume -mindepth 1 -maxdepth 1 -exec rm -rf {} +

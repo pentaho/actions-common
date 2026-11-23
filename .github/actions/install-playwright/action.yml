@@ -1,0 +1,22 @@
+name: Install Playwright dependencies
+description: Install the caller's npm dependencies and selected Playwright browsers.
+inputs:
+  working_directory:
+    description: Directory containing package.json
+    default: "."
+  browsers:
+    description: Browsers to install with system dependencies; empty skips browser installation
+    default: chromium firefox webkit chrome msedge
+  verbose:
+    description: Print tool versions and the installation directory
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Install dependencies and browsers
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        PLAYWRIGHT_BROWSERS: ${{ inputs.browsers }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/install.sh"

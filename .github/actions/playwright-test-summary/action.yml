@@ -1,0 +1,107 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Summarize Playwright test results
+description: >
+  Aggregate CTRF reports (ctrf-report.json) or, when none exist, Playwright JSON reporter files
+  found under playwright-report folders. Publish the CTRF report with historical comparisons and read
+  the version saved by global setup. Requires actions:read and contents:read.
+inputs:
+  search_directory:
+    description: Directory searched recursively for test reports (node_modules and .git are skipped)
+    required: false
+    default: "."
+  server_version_file:
+    description: JSON file saved by global setup from api/version/show, relative to search_directory
+    default: src/resources/.auth/server-version.json
+  report_title:
+    description: Title of the CTRF GitHub report
+    default: Publish Test Report
+  report_path:
+    description: Optional repository-relative CTRF report glob (glob/minimatch syntax, e.g. braces); defaults to ctrf-report.json files under search_directory
+    default: ""
+  artifact_name:
+    description: Stable name used to upload processed CTRF reports and fetch matching history; use a distinct name per matrix combination
+    default: ctrf-report
+  template_path:
+    description: Optional repository-relative Handlebars template; defaults to the bundled custom report
+    default: ""
+  guide_path:
+    description: Optional repository-relative document explaining how to inspect failures
+    default: ""
+  summary_format:
+    description: "compact or multiline; multiline uses capitalized browser names on separate lines"
+    default: compact
+  verbose:
+    description: Print parsed report paths
+    default: "false"
+outputs:
+  summary:
+    description: Human-readable summary of the test counts
+    value: ${{ steps.summarize.outputs.summary }}
+  total:
+    description: Total number of tests
+    value: ${{ steps.summarize.outputs.total }}
+  passed:
+    description: Number of passed tests (Playwright flaky tests count as passed)
+    value: ${{ steps.summarize.outputs.passed }}
+  failed:
+    description: Number of failed tests
+    value: ${{ steps.summarize.outputs.failed }}
+  skipped:
+    description: Number of skipped tests
+    value: ${{ steps.summarize.outputs.skipped }}
+  found:
+    description: "true when at least one report was parsed"
+    value: ${{ steps.summarize.outputs.found }}
+  server_version:
+    description: Tested platform version read from the global setup JSON file
+    value: ${{ steps.summarize.outputs.server_version }}
+runs:
+  using: composite
+  steps:
+    - id: summarize
+      shell: bash
+      env:
+        SEARCH_DIRECTORY: ${{ inputs.search_directory }}
+        SERVER_VERSION_FILE: ${{ inputs.server_version_file }}
+        REPORT_GUIDE_PATH: ${{ inputs.guide_path }}
+        SUMMARY_FORMAT: ${{ inputs.summary_format }}
+        GUIDE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+        GUIDE_REF: ${{ github.head_ref || github.ref_name }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: node "$GITHUB_ACTION_PATH/summarize.cjs"
+
+    - name: Check CTRF report files and template
+      id: report-files
+      shell: bash
+      env:
+        SEARCH_DIRECTORY: ${{ inputs.search_directory }}
+        REPORT_PATH: ${{ inputs.report_path }}
+        REPORT_TEMPLATE_PATH: ${{ inputs.template_path }}
+      run: node "$GITHUB_ACTION_PATH/check-reports.cjs"
+
+    - name: Publish Playwright test report
+      if: ${{ steps.report-files.outputs.found == 'true' }}
+      uses: ctrf-io/github-test-reporter@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        title: ${{ inputs.report_title }}
+        report-path: ${{ steps.report-files.outputs.report_path }}
+        template-path: ${{ steps.report-files.outputs.template_path }}
+        custom-report: true
+        fetch-previous-results: true
+        upload-artifact: true
+        artifact-name: ${{ inputs.artifact_name }}
+        exit-on-empty: true
+        exit-on-fail: false
+        use-suite-name: true

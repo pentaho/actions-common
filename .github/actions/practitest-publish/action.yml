@@ -1,0 +1,78 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Publish Playwright results to Practitest
+description: >
+  Use the tested platform version saved by global setup and run the caller's
+  Practitest uploader npm script with the MANUAL_* environment contract.
+inputs:
+  server_version:
+    description: Tested Pentaho Server version (for example 11.0.0.4-332)
+    required: true
+  server_context:
+    description: Pentaho Server context used during the tests (MANUAL_SERVER_CONTEXT)
+    required: true
+  build_plugin:
+    description: Optional plugin name reported with the build (MANUAL_BUILD_PLUGIN)
+    required: false
+    default: ""
+  working_directory:
+    description: Folder whose package.json defines the upload script (a local uploader or a suite that depends on a packaged one)
+    required: true
+  script:
+    description: npm script that uploads the results
+    required: false
+    default: upload
+  env_file:
+    description: Practitest settings file (PT_PROJECT_ID, filters, attributes), relative to working_directory; exported as an absolute PT_ENV_FILE
+    required: false
+    default: .env
+  results_dir:
+    description: Playwright results folder (playwright-report), relative to working_directory; exported as an absolute PT_RESULTS_DIR. Empty keeps the uploader default
+    required: false
+    default: ""
+  project_id:
+    description: Practitest project ID for the job summary links. Defaults to PT_PROJECT_ID from env_file
+    required: false
+    default: ""
+  api_token:
+    description: Practitest API token (MANUAL_API_TOKEN)
+    required: true
+  username:
+    description: Practitest API username (PT_USERNAME, optional)
+    required: false
+    default: ""
+  verbose:
+    description: Print the platform version, uploader directory and result link
+    default: "false"
+outputs:
+  sets_url:
+    description: Practitest Test Sets & Runs link, including PT_TESTSET_FILTER_ID when configured
+    value: ${{ steps.upload.outputs.sets_url }}
+runs:
+  using: composite
+  steps:
+    - name: Publish test results and link Practitest
+      id: upload
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        MANUAL_BUILD_NUMBER: ${{ inputs.server_version }}
+        MANUAL_SERVER_CONTEXT: ${{ inputs.server_context }}
+        MANUAL_BUILD_PLUGIN: ${{ inputs.build_plugin }}
+        MANUAL_API_TOKEN: ${{ inputs.api_token }}
+        PT_USERNAME: ${{ inputs.username }}
+        SCRIPT: ${{ inputs.script }}
+        ENV_FILE: ${{ inputs.env_file }}
+        RESULTS_DIR: ${{ inputs.results_dir }}
+        PROJECT_ID: ${{ inputs.project_id }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/publish.sh"

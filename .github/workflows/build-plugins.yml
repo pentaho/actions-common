@@ -1,0 +1,121 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Pentaho build plugins workflow
+on:
+  workflow_call:
+    inputs:
+      additional_mvn_directives:
+        type: string
+        required: false
+        default: ""
+        description: "Additional directives for the Maven command (e.g. -f <pom> -pl <modules> -am)"
+      run_unit_tests:
+        type: boolean
+        required: false
+        default: false
+        description: "Run and report the unit tests (the caller must grant 'checks: write')"
+      post_build_command:
+        type: string
+        required: false
+        default: ""
+        description: "Optional bash commands run after the build; $MAVEN_SETTINGS_FILE and $PLUGINS_DIR (the uploaded system folder) are set"
+      node_version:
+        type: string
+        required: false
+        default: ""
+        description: "Optional Node version installed before npm configuration, Maven and post_build_command"
+      artifact_retention_days:
+        type: number
+        required: false
+        default: 5
+        description: "Retention in days for the uploaded plugins artifact"
+      timeout_minutes:
+        type: number
+        required: false
+        default: 60
+        description: "Timeout of the build job"
+      container_image:
+        type: string
+        required: false
+        description: "Image to be used"
+      verbose:
+        type: boolean
+        required: false
+        default: false
+        description: "Print tool versions and staged plugin details (normal command output is always visible)"
+
+env:
+  RESOLVE_REPO_MIRROR: https://${{ vars.ARTIFACTORY_HOST }}/artifactory/pnt-mvn
+  NPM_REGISTRY: //${{ vars.ARTIFACTORY_HOST }}/artifactory/api/npm/npm/
+
+  NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+  NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+jobs:
+  build:
+    name: Build and stage plugins
+    runs-on: [ k8s, orl-lab ]
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+
+    container:
+      image: ${{ inputs.container_image || vars.PDIA_AC_CONTAINER_IMAGE }}
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+      volumes:
+        - /home/runner/caches/pentaho/.m2:/root/.m2
+
+    steps:
+      - name: Set up Node
+        if: ${{ inputs.node_version != '' }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Retrieve settings file
+        id: common-maven
+        uses: pentaho/actions-common@stable
+
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.HV_ACTIONS_GIT_TOKEN || github.token }}
+          persist-credentials: false
+
+      - name: Configure npm workspace
+        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@ci-it
+        with:
+          registry: ${{ env.NPM_REGISTRY }}
+          username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Build
+        uses: pentaho/actions-common/.github/actions/build-plugins@ci-it
+        with:
+          settings_file: ${{ steps.common-maven.outputs.settings-file-path }}
+          additional_mvn_directives: ${{ inputs.additional_mvn_directives }}
+          run_unit_tests: ${{ inputs.run_unit_tests }}
+          post_build_command: ${{ inputs.post_build_command }}
+          verbose: ${{ inputs.verbose }}
+
+      - name: Upload plugins
+        uses: actions/upload-artifact@v7
+        with:
+          name: pentaho-plugins
+          path: pentaho-build/pentaho-solutions/system/
+          retention-days: ${{ inputs.artifact_retention_days }}
+          if-no-files-found: error
+          include-hidden-files: true
+          overwrite: true

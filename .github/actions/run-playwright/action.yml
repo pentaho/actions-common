@@ -1,0 +1,45 @@
+name: Run npm Playwright tests
+description: Install npm dependencies and browsers, then run the caller's test script.
+inputs:
+  working_directory:
+    description: Directory containing package.json
+    default: "."
+  script:
+    description: npm test script
+    default: test
+  args:
+    description: Whitespace- or newline-separated arguments appended after --
+    default: ""
+  browsers:
+    description: Browsers to install with system dependencies; empty skips installation
+    default: chromium firefox webkit chrome msedge
+  install_dependencies:
+    description: Install dependencies before testing; false when the workflow already ran install-playwright
+    default: "true"
+  verbose:
+    description: Print tool versions and test configuration
+    default: "false"
+outputs:
+  test_outcome:
+    description: Outcome of the test step (skipped if installation failed)
+    value: ${{ steps.tests.outcome }}
+runs:
+  using: composite
+  steps:
+    - name: Install Playwright dependencies
+      if: ${{ inputs.install_dependencies == 'true' }}
+      uses: pentaho/actions-common/.github/actions/install-playwright@ci-it
+      with:
+        working_directory: ${{ inputs.working_directory }}
+        browsers: ${{ inputs.browsers }}
+        verbose: ${{ inputs.verbose }}
+
+    - name: Run integration tests
+      id: tests
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        TEST_SCRIPT: ${{ inputs.script }}
+        TEST_ARGS: ${{ inputs.args }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/run.sh"

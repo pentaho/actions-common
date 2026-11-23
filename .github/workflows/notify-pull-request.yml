@@ -1,0 +1,63 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Pentaho pull request notification workflow
+on:
+  workflow_call:
+    inputs:
+      slack_channels:
+        type: string
+        required: true
+        description: "Slack channel(s) to send notifications to"
+      results:
+        type: string
+        required: true
+        description: "Space separated job results, e.g. join(needs.*.result, ' '); any failure reports failure, then any cancelled reports cancelled"
+      jobs_summary:
+        type: string
+        required: false
+        default: ""
+        description: "Human-readable job results line, e.g. 'Build: success, Integration tests: failure'"
+      tests_summary:
+        type: string
+        required: false
+        default: ""
+        description: "Test count summary (tests_summary output of integration-tests-npm.yml)"
+      server_version:
+        type: string
+        required: false
+        default: ""
+        description: "Tested platform version (server_version output of integration-tests-npm.yml)"
+      verbose:
+        type: boolean
+        required: false
+        default: false
+        description: "Print the resolved notification status"
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Slack Notification
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: 5
+    steps:
+      - uses: pentaho/actions-common/.github/actions/notify-slack@ci-it
+        with:
+          format: pull_request
+          results: ${{ inputs.results }}
+          jobs_summary: ${{ inputs.jobs_summary }}
+          summary: ${{ inputs.tests_summary }}
+          server_version: ${{ inputs.server_version }}
+          channel: ${{ inputs.slack_channels }}
+          token: ${{ secrets.SLACK_TOKEN }}
+          verbose: ${{ inputs.verbose }}

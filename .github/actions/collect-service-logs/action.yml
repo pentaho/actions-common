@@ -1,0 +1,25 @@
+name: Collect integration service logs
+description: Save Pentaho Server and Postgres console logs and optionally print them.
+inputs:
+  server_container:
+    description: Pentaho Server service container ID
+    required: true
+  postgres_container:
+    description: Postgres service container ID
+    required: true
+  directory:
+    description: Log destination
+    default: /volume/logs
+  verbose:
+    description: Print service logs to the workflow console
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PAS_CONTAINER: ${{ inputs.server_container }}
+        POSTGRES_CONTAINER: ${{ inputs.postgres_container }}
+        LOG_DIRECTORY: ${{ inputs.directory }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/collect.sh"

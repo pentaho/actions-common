@@ -15,7 +15,11 @@ on:
   pull_request:
     paths:
       - '.github/scripts/python/npm_buildinfo/**'
-      - '.github/actions/npm-buildinfo/**'
+      - '.github/scripts/tests/**'
+      - '.github/actions/**'
+      - '.github/workflows/build-plugins.yml'
+      - '.github/workflows/integration-tests-npm.yml'
+      - '.github/workflows/notify-pull-request.yml'
       - '.github/workflows/script-tests.yml'
 
 permissions:
@@ -41,3 +45,29 @@ jobs:
       - name: Run tests
         working-directory: .github/scripts/python/npm_buildinfo
         run: python -m unittest discover -s tests -v
+
+  plugin-workflows:
+    name: Plugin workflow script tests
+    runs-on: k8s
+    container:
+      image: ${{ vars.ARTIFACTORY_HOST }}/docker/node:22-bookworm
+      credentials:
+        username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+        password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install test dependencies
+        run: |
+          apt-get update -qq
+          apt-get install -y --no-install-recommends bash python3 jq
+          npm ci --prefix .github/scripts/tests
+
+      - name: Run tests
+        shell: bash
+        run: |
+          node --test .github/scripts/tests/test-plugin-workflows.cjs
+          npm test --prefix .github/scripts/tests
