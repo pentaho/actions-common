@@ -51,6 +51,10 @@ case "$FORMAT" in
     if [[ "${STATUS_ICONS:-false}" == true ]]; then
       status_text+=" $icon"
     fi
+    version_text="Version: ${SERVER_VERSION:-unknown}"
+    if [[ -n "${PLUGIN_VERSION:-}" ]]; then
+      version_text+=" | Plugin version: $PLUGIN_VERSION"
+    fi
     payload="$(jq -cn \
       --arg status "$status" \
       --arg status_text "$status_text" \
@@ -58,7 +62,7 @@ case "$FORMAT" in
       --arg channel "$SLACK_CHANNEL" \
       --arg event "Event: <$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID|$EVENT_NAME>" \
       --arg branch "Branch: $BRANCH" \
-      --arg version "Version: ${SERVER_VERSION:-unknown}" \
+      --arg version "$version_text" \
       --arg server "Server: $SERVER_BUILD_NAME ($SERVER_CONTEXT), Project: $PLAYWRIGHT_PROJECT" \
       --arg summary "${TESTS_SUMMARY:-Tests: no results found}" \
       --arg practitest "${PRACTITEST_URL:-}" \

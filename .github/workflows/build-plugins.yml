@@ -33,6 +33,16 @@ on:
         required: false
         default: ""
         description: "Optional Node version installed before npm configuration, Maven and post_build_command"
+      sonar_project_key:
+        type: string
+        required: false
+        default: ""
+        description: "SonarQube project key; empty skips the scan. Pull request parameters are only sent on pull_request events"
+      frogbot_scan:
+        type: boolean
+        required: false
+        default: false
+        description: "Run the FrogBot scan on pull_request events; a -pl in additional_mvn_directives limits the scanned modules"
       artifact_retention_days:
         type: number
         required: false
@@ -59,6 +69,9 @@ env:
 
   NEXUS_DEPLOY_USER: ${{ secrets.PENTAHO_CICD_ONE_USER }}
   NEXUS_DEPLOY_PASSWORD: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+
+  SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+  SONAR_LOGIN: ${{ secrets.WINGMAN_SONAR_TOKEN }}
 
 jobs:
   build:
@@ -94,7 +107,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure npm workspace
-        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@ci-it
+        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@stable
         with:
           registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
@@ -102,13 +115,32 @@ jobs:
           verbose: ${{ inputs.verbose }}
 
       - name: Build
-        uses: pentaho/actions-common/.github/actions/build-plugins@ci-it
+        uses: pentaho/actions-common/.github/actions/build-plugins@stable
         with:
           settings_file: ${{ steps.common-maven.outputs.settings-file-path }}
           additional_mvn_directives: ${{ inputs.additional_mvn_directives }}
           run_unit_tests: ${{ inputs.run_unit_tests }}
           post_build_command: ${{ inputs.post_build_command }}
           verbose: ${{ inputs.verbose }}
+
+      - name: Sonarqube scan
+        if: ${{ inputs.sonar_project_key != '' }}
+        uses: pentaho/actions-common/.github/actions/sonarqube-scan@stable
+        with:
+          project_key: ${{ inputs.sonar_project_key }}
+          host_url: ${{ env.SONAR_HOST_URL }}
+          token: ${{ env.SONAR_LOGIN }}
+          pull_request: ${{ github.event_name == 'pull_request' }}
+
+      - name: FrogBot scan
+        if: ${{ inputs.frogbot_scan && github.event_name == 'pull_request' }}
+        uses: pentaho/actions-common/.github/actions/frogbot-scan@stable
+        with:
+          artifactory_url: https://${{ vars.ARTIFACTORY_HOST }}
+          access_token: ${{ secrets.JF_ACCESS_TOKEN }}
+          git_token: ${{ secrets.HV_ACTIONS_GIT_TOKEN }}
+          maven_mode: directives
+          maven_directives: ${{ inputs.additional_mvn_directives }}
 
       - name: Upload plugins
         uses: actions/upload-artifact@v7

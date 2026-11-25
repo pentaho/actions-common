@@ -40,6 +40,9 @@ inputs:
   summary_format:
     description: "compact or multiline; multiline uses capitalized browser names on separate lines"
     default: compact
+  summary_group_by:
+    description: "browser or module; module prefixes each browser line with the report's first folder below search_directory (e.g. Browse Files - Chrome)"
+    default: browser
   verbose:
     description: Print parsed report paths
     default: "false"
@@ -75,6 +78,7 @@ runs:
         SERVER_VERSION_FILE: ${{ inputs.server_version_file }}
         REPORT_GUIDE_PATH: ${{ inputs.guide_path }}
         SUMMARY_FORMAT: ${{ inputs.summary_format }}
+        SUMMARY_GROUP_BY: ${{ inputs.summary_group_by }}
         GUIDE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
         GUIDE_REF: ${{ github.head_ref || github.ref_name }}
         VERBOSE: ${{ inputs.verbose }}

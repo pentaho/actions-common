@@ -40,6 +40,9 @@ inputs:
   server_version:
     description: Tested platform version
     default: ""
+  plugin_version:
+    description: Tested plugin version (integration_tests format); empty omits it
+    default: ""
   channel:
     description: Slack channel
     required: true
@@ -69,6 +72,7 @@ runs:
         JOBS_SUMMARY: ${{ inputs.jobs_summary }}
         TESTS_SUMMARY: ${{ inputs.summary }}
         SERVER_VERSION: ${{ inputs.server_version }}
+        PLUGIN_VERSION: ${{ inputs.plugin_version }}
         SLACK_CHANNEL: ${{ inputs.channel }}
         WORKFLOW_NAME: ${{ github.workflow }}
         PR_NUMBER: ${{ github.event.pull_request.number }}

@@ -1,0 +1,191 @@
+name: Analyze Playwright failures
+description: >
+  Summarize Playwright failure output (expected, flaky and unexpected failures) and analyze
+  flaky and unexpected failures with the Copilot CLI; the result is appended to the job summary.
+  Failures are classified from Playwright JSON reporter files under playwright-report folders
+  (expectedStatus and final status); without such a report nothing is classified.
+
+inputs:
+  working_directory:
+    description: Folder searched for Playwright failure output; generated files are written there
+    required: false
+    default: "."
+  report_output_path:
+    description: "Comma-separated find -path patterns of Playwright output folders; only failed-attempt artifacts inside matching folders are analyzed."
+    required: false
+    default: "*/playwright-report/output/*,*/playwright-report/*/output/*"
+  copilot_token:
+    description: GitHub token used by the Copilot CLI; it is the only credential passed to the sandboxed CLI.
+    required: true
+  node_version:
+    description: Node.js version to use for installing and running the Copilot CLI.
+    required: false
+    default: lts/*
+  model:
+    description: Copilot model to use for failure analysis.
+    required: false
+    default: gpt-6.1-terra
+  effort:
+    description: Reasoning effort to use for failure analysis.
+    required: false
+    default: low
+
+runs:
+  using: composite
+  steps:
+    - name: Check Playwright failures on report output path
+      id: playwright-report-data
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        REPORT_OUTPUT_PATH: ${{ inputs.report_output_path }}
+      run: |
+        IFS=',' read -ra PATTERNS <<< "$REPORT_OUTPUT_PATH"
+        find_args=()
+        for pattern in "${PATTERNS[@]}"; do
+          pattern="$(echo "$pattern" | xargs)"
+          [ -z "$pattern" ] && continue
+          if [ ${#find_args[@]} -gt 0 ]; then
+            find_args+=(-o)
+          fi
+          # find prints ./-prefixed paths; accept patterns with or without that prefix.
+          find_args+=(-path "$pattern")
+          [[ "$pattern" == ./* ]] || find_args+=(-o -path "./$pattern")
+        done
+        if [ ${#find_args[@]} -eq 0 ]; then
+          echo "has-report-data=false" >> "$GITHUB_OUTPUT"
+          echo "No report-output-path patterns provided. Skipping failure analysis."
+        elif [ -n "$(find . -type f \( "${find_args[@]}" \) -print -quit)" ]; then
+          echo "has-report-data=true" >> "$GITHUB_OUTPUT"
+        # JSON-only reports still classify failures without artifacts (e.g. API assertion failures).
+        elif [ -n "$(find . -path '*/node_modules' -prune -o -type f -path '*/playwright-report/*' -name '*.json' -print -quit)" ]; then
+          echo "has-report-data=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "has-report-data=false" >> "$GITHUB_OUTPUT"
+          echo "No Playwright failure report files found. Skipping failure analysis."
+        fi
+
+    - name: Set up Node.js environment
+      if: ${{ steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node_version }}
+
+    - name: Install Copilot CLI
+      if: ${{ steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: npm install -g @github/copilot
+
+    - name: Generate Expected Failures
+      id: generate-expected-md
+      if: ${{ !cancelled() && steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        REPORT_OUTPUT_PATH: ${{ inputs.report_output_path }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run-generator.sh" generate-expected-md.cjs "$REPORT_OUTPUT_PATH"
+        if [ -f expected-failures.md ]; then
+          echo "expected-failures-path=expected-failures.md" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Generate Flaky CSV List
+      id: generate-flaky-csv
+      if: ${{ !cancelled() && steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        REPORT_OUTPUT_PATH: ${{ inputs.report_output_path }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run-generator.sh" generate-flaky-csv.cjs "$REPORT_OUTPUT_PATH"
+        if [ -f flaky-list.csv ]; then
+          echo "flaky-list-path=flaky-list.csv" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Analyze Flaky CSV List
+      id: analyze-flaky-list
+      if: ${{ !cancelled() && steps.generate-flaky-csv.outputs.flaky-list-path != '' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot_token }}
+        ANALYSIS_INPUT_PATH: ${{ steps.generate-flaky-csv.outputs.flaky-list-path }}
+        ANALYSIS_LABEL: "Flaky"
+        ANALYSIS_MODEL: ${{ inputs.model }}
+        ANALYSIS_EFFORT: ${{ inputs.effort }}
+        ANALYSIS_OUTPUT_PATH: flaky-analysis.md
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run-failure-analysis.sh"
+        if [ -f flaky-analysis.md ]; then
+          echo "analysis-output-path=flaky-analysis.md" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Generate Unexpected Failures CSV List
+      id: generate-unexpected-csv
+      if: ${{ !cancelled() && steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        REPORT_OUTPUT_PATH: ${{ inputs.report_output_path }}
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run-generator.sh" generate-unexpected-csv.cjs "$REPORT_OUTPUT_PATH"
+        if [ -f unexpected-failures-list.csv ]; then
+          echo "unexpected-failures-list-path=unexpected-failures-list.csv" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Analyze Unexpected Failures CSV List
+      id: analyze-unexpected-failures
+      if: ${{ !cancelled() && steps.generate-unexpected-csv.outputs.unexpected-failures-list-path != '' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        COPILOT_GITHUB_TOKEN: ${{ inputs.copilot_token }}
+        ANALYSIS_INPUT_PATH: ${{ steps.generate-unexpected-csv.outputs.unexpected-failures-list-path }}
+        ANALYSIS_LABEL: "Unexpected"
+        ANALYSIS_MODEL: ${{ inputs.model }}
+        ANALYSIS_EFFORT: ${{ inputs.effort }}
+        ANALYSIS_OUTPUT_PATH: unexpected-analysis.md
+      run: |
+        bash "${GITHUB_ACTION_PATH}/run-failure-analysis.sh"
+        if [ -f unexpected-analysis.md ]; then
+          echo "analysis-output-path=unexpected-analysis.md" >> "$GITHUB_OUTPUT"
+        fi
+
+    # Runs after failed generation or analysis steps too, so available reports and fallbacks are published.
+    - name: Compose Failures Analysis Summary
+      if: ${{ !cancelled() && steps.playwright-report-data.outputs.has-report-data == 'true' }}
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        EXPECTED_FAILURES_PATH: ${{ steps.generate-expected-md.outputs.expected-failures-path }}
+        FLAKY_ANALYSIS_PATH: ${{ steps.analyze-flaky-list.outputs.analysis-output-path }}
+        UNEXPECTED_ANALYSIS_PATH: ${{ steps.analyze-unexpected-failures.outputs.analysis-output-path }}
+      run: |
+        render_section() {
+          local title="$1"
+          local content_path="$2"
+          local fallback_text="$3"
+
+          echo "<details>"
+          echo "<summary>${title}</summary>"
+          echo
+
+          if [ -n "$content_path" ] && [ -f "$content_path" ]; then
+            sed -E '/^#[[:space:]]+Copilot .+ Analysis[[:space:]]*$/d' "$content_path"
+          else
+            echo "$fallback_text"
+          fi
+
+          echo
+          echo "</details>"
+          echo
+        }
+
+        {
+          echo "# Failures Analysis"
+          echo
+          render_section "Expected Failures" "$EXPECTED_FAILURES_PATH" "No expected failures report generated."
+          render_section "Copilot Flaky Analysis" "$FLAKY_ANALYSIS_PATH" "No flaky failures analysis generated."
+          render_section "Copilot Unexpected Analysis" "$UNEXPECTED_ANALYSIS_PATH" "No unexpected failures analysis generated."
+        } >> "$GITHUB_STEP_SUMMARY"

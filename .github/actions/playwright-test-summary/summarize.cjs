@@ -64,7 +64,17 @@ function suiteParts(suite) {
   return parts.filter(part => typeof part === "string").map(part => part.trim()).filter(Boolean);
 }
 
-function summarize(root) {
+function titleCase(value) {
+  return value.split(/[-_\s]+/).filter(Boolean).map(word => word[0].toUpperCase() + word.slice(1)).join(" ");
+}
+
+// Module = first folder of the report path below the search root (e.g. "browse-files/automation/...").
+function moduleName(root, file) {
+  const [first, ...rest] = path.relative(root, file).split(path.sep);
+  return rest.length > 0 ? titleCase(first) : "";
+}
+
+function summarize(root, groupBy = "browser") {
   const count = () => ({ total: 0, passed: 0, failed: 0, skipped: 0 });
   const totals = count();
   const browsers = Object.create(null);
@@ -83,7 +93,11 @@ function summarize(root) {
       const [project] = suiteParts(suite);
       if (project === "setup") continue;
       const explicitBrowser = typeof reportedBrowser === "string" ? reportedBrowser.trim() : "";
-      const browser = explicitBrowser || project || "Tests";
+      let browser = explicitBrowser || project || "Tests";
+      if (groupBy === "module") {
+        const module = moduleName(root, file);
+        if (module) browser = `${module} - ${browser[0].toUpperCase()}${browser.slice(1)}`;
+      }
       const key = ["pending", "skipped"].includes(status)
         ? "skipped"
         : status === "passed" ? "passed" : "failed";
@@ -126,7 +140,11 @@ function main() {
   if (!["compact", "multiline"].includes(summaryFormat)) {
     throw new Error(`Unsupported summary format: ${summaryFormat}`);
   }
-  const { totals, browsers, parsed, ctrfFound } = summarize(root);
+  const groupBy = process.env.SUMMARY_GROUP_BY || "browser";
+  if (!["browser", "module"].includes(groupBy)) {
+    throw new Error(`Unsupported summary grouping: ${groupBy}`);
+  }
+  const { totals, browsers, parsed, ctrfFound } = summarize(root, groupBy);
   const workspace = process.env.GITHUB_WORKSPACE || process.cwd();
   let guideLink = "";
   if (process.env.REPORT_GUIDE_PATH) {

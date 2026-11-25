@@ -1,0 +1,32 @@
+name: SonarQube scan
+description: Run the shared SonarQube scanner with optional pull request and working directory settings.
+inputs:
+  project_key:
+    description: SonarQube project key
+    required: true
+  host_url:
+    description: SonarQube server URL
+    required: true
+  token:
+    description: SonarQube token
+    required: true
+  pull_request:
+    description: Include pull request analysis parameters
+    default: "false"
+  working_directory:
+    description: Optional SonarQube working directory
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: SonarQube scan
+      uses: lumada-common-services/gh-composite-actions@stable
+      env:
+        sonar_utility: sonar-scanner
+        sonar_commands: >-
+          ("-Dsonar.links.scm=https://github.com/${{ github.repository }}"
+          ${{ inputs.working_directory != '' && format('-Dsonar.working.directory={0}', inputs.working_directory) || '' }}
+          -Dsonar.projectKey=${{ inputs.project_key }}
+          -Dsonar.host.url=${{ inputs.host_url }}
+          -Dsonar.token=${{ inputs.token }}
+          ${{ inputs.pull_request == 'true' && format('-Dsonar.pullrequest.key={0} -Dsonar.pullrequest.branch={1} -Dsonar.pullrequest.base={2}', github.event.number, github.event.pull_request.head.ref, github.event.pull_request.base.ref) || '' }})

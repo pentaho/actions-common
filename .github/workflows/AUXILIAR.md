@@ -426,8 +426,9 @@ Both shared workflows use `workflow_call`. Add `pull_request` and `workflow_disp
 
 | Job       | Condition                                              | Purpose |
 |-----------|--------------------------------------------------------|---------|
-| `setup`   | always                                                 | Empties the run's volume, downloads `pentaho-plugins` when `use_pr_build` is true, copies SQL from the server image, verifies plugins and generates Docker bind mounts. |
-| `tests`   | `setup` succeeded                                      | Waits for healthy Postgres and Pentaho Server services, runs `npm install`, installs browsers, optionally applies custom locale overrides and runs the test script. Summarizes results, publishes the CTRF report and optional Practitest results, and uploads results/logs. |
+| `setup`   | always                                                 | Empties the run's volume, downloads `pentaho-plugins` when `use_pr_build` is true or Artifactory plugin assemblies when `plugins_artifacts` is set, copies SQL from the server image, verifies plugins and generates Docker bind mounts. |
+| `tests`   | `setup` succeeded                                      | Waits for healthy Postgres and Pentaho Server services, runs `npm install`, installs browsers, optionally applies custom locale overrides and runs the test script. Summarizes results, publishes the CTRF report and optional Practitest results, and uploads results/logs. When `analyze_failures` is true and tests fail, archives the `playwright-report` folders (artifacts and JSON reports), folders matching `analyze_failures_report_output_path`, and bounded referenced test sources as `<artifact_prefix>-failure-analysis-input` (1-day retention). |
+| `analyze-failures` | `tests` uploaded failure analysis input | Non-blocking. Runs without a container, services, checkout or token permissions (`permissions: {}`); its only secret is `COPILOT_CLI_TOKEN`. Downloads and extracts the failure archive (symbolic links removed) and runs `analyze-playwright-failures`. |
 | `notify`  | always, when `slack_channels` is set                     | Sends setup/test status, platform version, per-browser counts and optional Practitest link to Slack, including setup failures. |
 | `cleanup` | always, when setup ran                                 | When `tests` failed, uploads `/volume/logs` as `<artifact_prefix>-startup-server-logs` (covers service start failures, which skip every test step), then empties the shared volume. |
 
@@ -437,7 +438,7 @@ The path `/home/runner/caches/pentaho/<owner>/<repo>/<run_id>` is derived by the
 
 | Folder                         | Content |
 |--------------------------------|---------|
-| `pentaho-solutions/system/<p>` | Plugins downloaded from `pentaho-plugins`, mounted at `/home/devuser/pentaho/pentaho-server/pentaho-solutions/system/<p>`. `use_pr_build: false` uses the image's bundled plugins. |
+| `pentaho-solutions/system/<p>` | Plugins downloaded from `pentaho-plugins` or unzipped from `plugins_artifacts`, mounted at `/home/devuser/pentaho/pentaho-server/pentaho-solutions/system/<p>`. `use_pr_build: false` uses the image's bundled plugins. |
 | `postgres/`                    | Pentaho repository SQL scripts, mounted read-only as the Postgres init scripts (copied from the server image, see below) |
 | `logs/`                        | Tomcat logs (mounted into the server) and the `pba` / `postgres` service console logs |
 
@@ -468,6 +469,10 @@ The `setup` job reads the scripts from the Pentaho Server image, so the reposito
 | Input                          | Type    | Required | Default | Description |
 |--------------------------------|---------|----------|---------|-------------|
 | `use_pr_build`                 | boolean | No       | `false` | Download this run's fixed `pentaho-plugins` artifact; otherwise test bundled plugins |
+| `plugins_artifacts`            | string  | No       | `""`    | Comma-, space- or newline-separated Artifactory Maven paths (e.g. `com/pentaho/pentaho-app-shell-core-assembly`); each `<path>/<version>/<artifactId>-<version>.zip` is unzipped into the staged system folder. Needs `JF_ACCESS_TOKEN` |
+| `plugins_version`              | string  | No       | `""`    | Version of `plugins_artifacts`; empty resolves the latest build of `plugins_build_name` |
+| `plugins_build_name`           | string  | No       | `""`    | Artifactory build name used to resolve the latest version (e.g. `pentaho-app-shell-master`) |
+| `plugins_repository`           | string  | No       | `pntprv-maven-dev` | Maven repository of `plugins_artifacts`; use `pntpub-maven-release` for released versions |
 | `required_plugins`             | string  | No       | `""`    | Comma-, space-, tab-, or newline-separated plugin folders that must contain a nonempty `plugin.xml` |
 | `server_image`                 | string  | No       | `<ARTIFACTORY_HOST>/docker/pentaho-app-shell/<server_build_name>/<server_context>` | Pentaho Server image; also the source of the Postgres init scripts |
 | `server_build_name`            | string  | No       | `pdia-master` | Pentaho Server image build name |
@@ -481,6 +486,7 @@ The `setup` job reads the scripts from the Pentaho Server image, so the reposito
 | `playwright_install_timeout_minutes` | number | No | `10` | Separate timeout for npm dependency and browser installation |
 | `apply_custom_locales`         | boolean | No       | `false` | After installation, copy the `@pentaho/common-automation-resources` locale overrides into the running server's plugin `locales` folders; `working_directory` must depend on that package |
 | `timeout_minutes`              | number  | No       | `60`    | Test job timeout, including the server startup |
+| `results_path`                 | string  | No       | `""`    | Newline-separated, repository-relative result paths uploaded as `<artifact_prefix>-results` (e.g. `**/automation/playwright-report/`); empty uploads `<working_directory>/**/playwright-report/`. `node_modules` is always excluded |
 | `artifact_prefix`              | string  | No       | `<repo>-it-<run_id>-<run_attempt>` | Prefix of the `-results`, `-server-logs` and (on test failure) `-startup-server-logs` artifacts |
 | `container_image`              | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override |
 | `slack_channels`               | string  | No       |         | Destination accepted by `hv-actions/slack-action`; empty skips Slack |
@@ -498,6 +504,10 @@ The `setup` job reads the scripts from the Pentaho Server image, so the reposito
 | `report_template_path`         | string  | No       | `""`    | Repository-relative Handlebars template; empty uses the bundled custom report |
 | `report_guide_path`            | string  | No       | `""`    | Optional repository-relative failure inspection guide, linked on the PR's source repository/ref |
 | `summary_format`              | string  | No       | `compact` | `compact` uses one line; `multiline` uses capitalized browser names on separate lines |
+| `summary_group_by`            | string  | No       | `browser` | `browser`, or `module` to prefix each browser line with the CTRF report's first folder below `working_directory`, title-cased (`browse-files/…` → `Browse Files - Chrome`) |
+| `analyze_failures`            | boolean | No       | `false` | When the test script fails, run [`analyze-playwright-failures`](../actions/analyze-playwright-failures/action.yml) (non-blocking); runs in the separate `analyze-failures` job; needs the `COPILOT_CLI_TOKEN` secret |
+| `analyze_failures_report_output_path` | string | No | `*/playwright-report/output/*,*/playwright-report/*/output/*` | Comma-separated `find -path` patterns, relative to `working_directory`, of failure artifact folders (`error-context.md`, traces); forwarded as the action's `report_output_path` |
+| `analyze_failures_timeout_minutes` | number | No  | `10`    | Timeout of the `analyze-failures` job |
 | `verbose`                      | boolean | No       | `false` | Print tool versions, staged SQL/plugin details, parsed report paths and service console logs |
 
 ### Outputs
@@ -511,6 +521,7 @@ The `setup` job reads the scripts from the Pentaho Server image, so the reposito
 | `tests_skipped` | Skipped tests |
 | `server_version` | Version saved by global setup, normalized from `11.0.0.4.338` to `11.0.0.4-338` |
 | `practitest_url` | Test Sets & Runs link when Practitest publishing succeeds |
+| `plugins_version` | Version of the downloaded `plugins_artifacts`; also sent to Practitest as `MANUAL_BUILD_PLUGIN` and to Slack |
 
 Counts come from each test's status in `ctrf-report.json`, not the raw CTRF summary: expected failures count as passed, pending as skipped, and tests whose suite starts with the `setup` project are excluded. CTRF `suite` may be a `project > file > title` string or an array starting with the project. Counts are grouped by the test's explicit `browser` field, falling back to the suite's project name, then `Tests`.
 
@@ -520,7 +531,7 @@ CTRF reports feed `ctrf-io/github-test-reporter` with `custom-report: true` and 
 
 Historical comparisons are enabled with `fetch-previous-results: true`. The reporter uploads its processed CTRF report with `upload-artifact: true` and uses the same `ctrf_artifact_name` for history lookup and upload. History comes from matching earlier runs of the caller workflow (same branch or pull request), not from the HTML-report artifact. Trend arrows appear for nonzero changes when a usable baseline exists; the first run, expired history, or a new artifact name has no historical comparison. Callers must grant `actions: read` as well as `contents: read`; the reusable workflow grants these permissions and the action supplies `GITHUB_TOKEN` to the reporter. Direct `playwright-test-summary` consumers use its `artifact_name` input and need the same permissions.
 
-The `<artifact_prefix>-results` artifact contains `playwright-report/` folders under `working_directory`, including hidden files but excluding `node_modules`, and is retained for 5 days. The upload warns if no matching files exist. Suites should write every Playwright output under `playwright-report/` (HTML report, `outputDir` traces and error context, JSON and CTRF reports), as Scheduler and Analyzer do, so the artifact keeps them; files written elsewhere, such as Playwright's default `outputDir`, are not uploaded. The reporter also retains its processed CTRF report separately under `ctrf_artifact_name` using the repository's default artifact retention.
+The `<artifact_prefix>-results` artifact contains `playwright-report/` folders under `working_directory` (or the `results_path` entries), including hidden files but excluding `node_modules`, and is retained for 5 days. The upload warns if no matching files exist. Suites should write every Playwright output under `playwright-report/` (HTML report, `outputDir` traces and error context, JSON and CTRF reports), as Scheduler and Analyzer do, so the artifact keeps them; files written elsewhere, such as Playwright's default `outputDir`, are not uploaded. The reporter also retains its processed CTRF report separately under `ctrf_artifact_name` using the repository's default artifact retention.
 
 The job summary always includes local HTML-report and trace-viewing commands. Trace viewing requires a trace retained under `playwright-report/` or one included in the HTML report. `report_guide_path` adds a verified document link when configured; the removed Scheduler helper linked to a document that was not present in that repository. `summary_format: multiline` preserves Scheduler's capitalized, per-browser Slack lines through multiline GitHub outputs.
 
@@ -553,9 +564,14 @@ The existing optional MS Teams notification still uses `gh-composite-actions` wi
 |--------|----------------|
 | [`setup-plugin-npm`](../actions/setup-plugin-npm/action.yml) | Shared Git setup, npm detection and registry authentication for build and tests |
 | [`build-plugins`](../actions/build-plugins/action.yml) | Maven invocation in `build.sh`, optional JUnit check reporting with transient 404 retries, and summary tracking in `update-summary.sh` |
+| [`sonarqube-scan`](../actions/sonarqube-scan/action.yml) | Shared SonarQube configuration, with optional pull request parameters and working directory |
+| [`frogbot-scan`](../actions/frogbot-scan/action.yml) | Shared FrogBot configuration with Maven and npm path exclusions; `prepare.sh` validates PR modules with `curl` or uses Python 3 to extract `-pl`/`--projects` and the reactor POM (`-f`/`--file`) from shell-style Maven directives, including multiline input; selections containing spaces or tabs are dropped with a warning because `MAVEN_ARGS` cannot quote them |
 | [`pentaho-server-fixtures`](../actions/pentaho-server-fixtures/action.yml) | `extract-sql.sh` reads the server image; `stage-fixtures.sh` verifies plugins and generates bind mounts |
 | [`install-playwright`](../actions/install-playwright/action.yml) | `install.sh` installs dependencies/browsers in a separately time-limited workflow step |
 | [`apply-custom-locales`](../actions/apply-custom-locales/action.yml) | Runs the `copy-custom-locales` bin of `@pentaho/common-automation-resources` (resolved from `working_directory`) against the `pba` service, or any named container, via `docker exec` |
+| [`download-plugin-artifacts`](../actions/download-plugin-artifacts/action.yml) | Resolves the latest build version with `get-latest-version` when none is given; `download.sh` downloads and unzips the plugin assembly zips |
+| [`stage-playwright-sources`](../actions/stage-playwright-sources/action.yml) | Lists source files referenced by expected failures lacking issue annotations. Only regular JavaScript/TypeScript files inside the working directory are included; hidden paths, `node_modules` and symlinks are excluded. Limits are 2 MiB per file, 20 MiB total and 1,000 files. |
+| [`analyze-playwright-failures`](../actions/analyze-playwright-failures/action.yml) | `playwright-outcomes.cjs` classifies tests from Playwright JSON reporter files under `playwright-report` folders: expected (`expectedStatus` `failed`, final status `expected`), flaky (final status `flaky`) and unexpected (final status `unexpected`). Repeated executions retain separate outcomes; artifact layout (retry folders, `trace.zip`) is never used. Without a JSON report a warning is printed and nothing is classified. Each test is mapped to folders of relevant attempts, including unexpected passes, through attachment paths. `generate-*.cjs` build expected-failure Markdown (issue from the test's `issue` annotation, else its declaration at the reported source location) and flaky/unexpected CSV lists from folders matching `report_output_path` (with or without `./`). Source fallback reads only bounded regular files whose real paths stay inside the analysis or configured workspace root; embedded source snippets are ignored because they may include neighboring tests, and ambiguous source syntax or annotation objects fail closed. Flaky and unexpected tests always get JSON-derived fallback contexts alongside their artifact folders, so assertion errors and status details remain available even when artifacts only contain page snapshots. Summary composition also runs after a failed analysis step; `run-failure-analysis.sh` copies each CSV and listed artifacts (regular files up to 2 MiB, no symbolic links) into a temporary sandbox with `stage-analysis-input.cjs`, then runs Copilot CLI under `env -i` with only `PATH`, throwaway `HOME`, proxy settings and `COPILOT_GITHUB_TOKEN`. CLI gets read-only `view`, `glob` and `grep`; shell, write, URL, memory, built-in MCP servers and custom instructions are disabled. Result is appended to job summary |
 | [`run-playwright`](../actions/run-playwright/action.yml) | `run.sh` invokes the test script; direct callers still install dependencies by default |
 | [`playwright-test-summary`](../actions/playwright-test-summary/action.yml) | `summarize.cjs` aggregates counts/version, `check-reports.cjs` resolves report/template paths, and the reporter fetches history, renders the bundled or caller template and uploads processed CTRF |
 | [`practitest-publish`](../actions/practitest-publish/action.yml) | `publish.sh` runs the caller's uploader; `link.cjs` reads `PT_ENV_FILE` (default `.env`) and builds result links |
@@ -565,9 +581,9 @@ The existing optional MS Teams notification still uses `gh-composite-actions` wi
 
 Nontrivial shell is in `.sh` files; JSON/report processing remains in external `.cjs` files. Actions call them through `"$GITHUB_ACTION_PATH/<script>"`, never `${{ github.action_path }}`: the expression yields the runner host path (`/runner/_work/_actions/...`), which does not exist inside job containers (`/__w/_actions/...`).
 
-`script-tests.yml` runs npm build-info unit tests and the plugin workflow script regression suite in separate jobs on pull requests touching their scripts, shared actions or covered workflows. The plugin job uses the Artifactory `node:22-bookworm` image, installs Bash, Python 3 and jq with `apt-get`, runs `.github/scripts/tests/test-plugin-workflows.cjs` with Node's built-in test runner, and runs the report-template tests with the reporter's Handlebars/helper packages. It installs the locked template-test dependencies with `npm ci --prefix .github/scripts/tests`. Python 3 is needed by the build action's shell-argument parser. The runner needs access to the image, Debian package repositories and npm registry. Script tests stub Docker, Maven and npm; no Docker daemon is needed.
+`script-tests.yml` runs npm build-info unit tests and the plugin workflow, scanner and failure-analysis regression suites in separate jobs on pull requests touching their scripts, shared actions or covered workflows. The plugin job uses the Artifactory `node:22-bookworm` image, installs Bash, Python 3 and jq with `apt-get`, runs `.github/scripts/tests/test-plugin-workflows.cjs`, `test-scanner-actions.cjs` and `test-failure-analysis.cjs` with Node's built-in test runner, and runs the report-template tests with the reporter's Handlebars/helper packages. It installs the locked template-test dependencies with `npm ci --prefix .github/scripts/tests`. Python 3 is needed by the build and FrogBot actions' shell-argument parsers. The runner needs access to the image, Debian package repositories and npm registry. Script tests stub Docker, Maven, npm and scanner API requests; no Docker daemon is needed.
 
-While in validation, the build, integration-test and notification workflows reference their shared actions at `@ci-it`, and callers use `@ci-it`. When promoting to `stable`, switch those internal action refs (and the callers) to `@stable` in the same change.
+The build, integration-test and notification workflow examples and their shared actions use `@stable`.
 
 ### Required Variables & Secrets
 
@@ -632,7 +648,7 @@ jobs:
           (github.event_name == 'workflow_dispatch' ||
            (needs.check-commit-messages.result == 'success' &&
             github.event.pull_request.head.repo.full_name == github.repository)) }}
-    uses: pentaho/actions-common/.github/workflows/build-plugins.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/build-plugins.yml@stable
     secrets: inherit
     with:
       additional_mvn_directives: -pl assemblies/my-plugin -am
@@ -642,7 +658,7 @@ jobs:
   integration-tests:
     needs: build
     if: ${{ !cancelled() && needs.build.result == 'success' }}
-    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@stable
     secrets: inherit
     with:
       use_pr_build: true
@@ -694,7 +710,7 @@ permissions:
 
 jobs:
   integration-tests:
-    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@stable
     secrets: inherit
     with:
       use_pr_build: true
@@ -719,7 +735,7 @@ permissions:
 
 jobs:
   integration-tests:
-    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/integration-tests-npm.yml@stable
     secrets: inherit
     with:
       working_directory: automation
@@ -775,6 +791,8 @@ Builds a Maven project with `-DbiserverHome`, so the plugin assemblies unzip the
 | `artifact_retention_days`   | number  | No       | `5`     | Retention of the uploaded plugin artifact |
 | `timeout_minutes`           | number  | No       | `60`    | Build job timeout |
 | `container_image`           | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override |
+| `sonar_project_key`         | string  | No       | `""`    | Run a SonarQube scan (via `sonarqube-scan`, `WINGMAN_SONAR_TOKEN`) after the build; pull requests send PR decoration parameters. Empty skips the scan |
+| `frogbot_scan`              | boolean | No       | `false` | On pull requests, run a FrogBot scan (`JF_ACCESS_TOKEN`, `HV_ACTIONS_GIT_TOKEN`); `-f`/`--file` and `-pl`/`--projects` from `additional_mvn_directives` are forwarded as `MAVEN_ARGS` |
 | `verbose`                   | boolean | No       | `false` | Print Maven version, install directory and staged plugin descriptors; normal Maven output remains visible |
 
 ### Usage Example
@@ -782,7 +800,7 @@ Builds a Maven project with `-DbiserverHome`, so the plugin assemblies unzip the
 ```yaml
 jobs:
   build:
-    uses: pentaho/actions-common/.github/workflows/build-plugins.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/build-plugins.yml@stable
     secrets: inherit
     with:
       additional_mvn_directives: -pl assemblies/my-plugin-ee -am
@@ -830,7 +848,7 @@ jobs:
   slack-notification:
     needs: [check-commit-messages, build, integration-tests]
     if: ${{ always() }}
-    uses: pentaho/actions-common/.github/workflows/notify-pull-request.yml@ci-it
+    uses: pentaho/actions-common/.github/workflows/notify-pull-request.yml@stable
     secrets: inherit
     with:
       slack_channels: my-plugin-build

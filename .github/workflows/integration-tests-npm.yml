@@ -18,6 +18,26 @@ on:
         required: false
         default: false
         description: "Download pentaho-plugins from this run; false tests the server's bundled plugins"
+      plugins_artifacts:
+        type: string
+        required: false
+        default: ""
+        description: "Comma-, space- or newline-separated Artifactory Maven paths (e.g. com/pentaho/my-plugin-assembly) unzipped into pentaho-solutions/system; empty skips the download"
+      plugins_version:
+        type: string
+        required: false
+        default: ""
+        description: "Version of plugins_artifacts; empty resolves the latest build of plugins_build_name"
+      plugins_build_name:
+        type: string
+        required: false
+        default: ""
+        description: "Artifactory build name used to resolve the latest plugins_artifacts version"
+      plugins_repository:
+        type: string
+        required: false
+        default: pntprv-maven-dev
+        description: "Artifactory Maven repository of plugins_artifacts (e.g. pntpub-maven-release for released versions)"
       required_plugins:
         type: string
         required: false
@@ -83,6 +103,11 @@ on:
         required: false
         default: 60
         description: "Timeout of the test job, including the Pentaho Server startup"
+      results_path:
+        type: string
+        required: false
+        default: ""
+        description: "Newline-separated, repository-relative upload-artifact paths of the test results; empty uploads <working_directory>/**/playwright-report/. node_modules is always excluded"
       artifact_prefix:
         type: string
         required: false
@@ -156,6 +181,26 @@ on:
         required: false
         default: compact
         description: "compact or multiline; multiline uses capitalized browser names on separate lines"
+      summary_group_by:
+        type: string
+        required: false
+        default: browser
+        description: "browser or module; module prefixes each browser line with the report's first folder below working_directory (e.g. Browse Files - Chrome)"
+      analyze_failures:
+        type: boolean
+        required: false
+        default: false
+        description: "When tests fail, summarize expected, flaky and unexpected failures and analyze them with the Copilot CLI (requires the COPILOT_CLI_TOKEN secret)"
+      analyze_failures_report_output_path:
+        type: string
+        required: false
+        default: "*/playwright-report/output/*,*/playwright-report/*/output/*"
+        description: "Comma-separated find -path patterns, relative to working_directory, of the Playwright failure artifact folders (error-context.md, traces) to analyze; matching folders are packaged with the playwright-report folders"
+      analyze_failures_timeout_minutes:
+        type: number
+        required: false
+        default: 10
+        description: "Timeout of the Copilot failure analysis step"
       slack_title:
         type: string
         required: false
@@ -190,6 +235,9 @@ on:
       server_version:
         description: "Pentaho Server version saved by test global setup"
         value: ${{ jobs.tests.outputs.server_version }}
+      plugins_version:
+        description: "Downloaded plugins_artifacts version, when plugins_artifacts is set"
+        value: ${{ jobs.setup.outputs.plugins_version }}
       practitest_url:
         description: "Practitest Test Sets & Runs URL, when published"
         value: ${{ jobs.tests.outputs.practitest_url }}
@@ -223,6 +271,7 @@ jobs:
     outputs:
       mounts: ${{ steps.fixtures.outputs.mounts }}
       server_image: ${{ steps.fixtures.outputs.server_image }}
+      plugins_version: ${{ steps.plugins.outputs.version }}
 
     steps:
       - name: Empty volume
@@ -236,9 +285,25 @@ jobs:
           name: pentaho-plugins
           path: /volume/pentaho-solutions/system
 
+      - name: Download plugin artifacts
+        id: plugins
+        if: ${{ inputs.plugins_artifacts != '' }}
+        uses: pentaho/actions-common/.github/actions/download-plugin-artifacts@stable
+        with:
+          artifacts: ${{ inputs.plugins_artifacts }}
+          version: ${{ inputs.plugins_version }}
+          build_name: ${{ inputs.plugins_build_name }}
+          repository: ${{ inputs.plugins_repository }}
+          artifact_dir: /volume/pentaho-solutions/system
+          artifactory_url: https://${{ vars.ARTIFACTORY_HOST }}/artifactory
+          artifactory_user: ${{ secrets.PENTAHO_CICD_ONE_USER }}
+          artifactory_password: ${{ secrets.PENTAHO_CICD_ONE_KEY }}
+          access_token: ${{ secrets.JF_ACCESS_TOKEN }}
+          verbose: ${{ inputs.verbose }}
+
       - name: Stage Pentaho Server fixtures
         id: fixtures
-        uses: pentaho/actions-common/.github/actions/pentaho-server-fixtures@ci-it
+        uses: pentaho/actions-common/.github/actions/pentaho-server-fixtures@stable
         with:
           volume_dir: /volume
           host_volume_path: ${{ env.VOLUME_PATH }}
@@ -307,6 +372,7 @@ jobs:
       tests_skipped: ${{ steps.summary.outputs.skipped }}
       server_version: ${{ steps.summary.outputs.server_version }}
       practitest_url: ${{ steps.practitest.outputs.sets_url }}
+      failure_analysis_input: ${{ steps.failure-output.outputs.archive != '' }}
 
     env:
       HOME: /root
@@ -322,7 +388,7 @@ jobs:
           persist-credentials: false
 
       - name: Configure npm workspace
-        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@ci-it
+        uses: pentaho/actions-common/.github/actions/setup-plugin-npm@stable
         with:
           registry: ${{ env.NPM_REGISTRY }}
           username: ${{ secrets.PENTAHO_CICD_ONE_USER }}
@@ -331,7 +397,7 @@ jobs:
 
       - name: Install Playwright dependencies
         timeout-minutes: ${{ inputs.playwright_install_timeout_minutes }}
-        uses: pentaho/actions-common/.github/actions/install-playwright@ci-it
+        uses: pentaho/actions-common/.github/actions/install-playwright@stable
         with:
           working_directory: ${{ inputs.working_directory }}
           browsers: ${{ inputs.playwright_browsers }}
@@ -339,14 +405,14 @@ jobs:
 
       - name: Apply custom locale overrides
         if: ${{ inputs.apply_custom_locales }}
-        uses: pentaho/actions-common/.github/actions/apply-custom-locales@ci-it
+        uses: pentaho/actions-common/.github/actions/apply-custom-locales@stable
         with:
           container: ${{ job.services.pba.id }}
           working_directory: ${{ inputs.working_directory }}
 
       - name: Run Playwright tests
         id: run-tests
-        uses: pentaho/actions-common/.github/actions/run-playwright@ci-it
+        uses: pentaho/actions-common/.github/actions/run-playwright@stable
         with:
           working_directory: ${{ inputs.working_directory }}
           install_dependencies: false
@@ -357,7 +423,7 @@ jobs:
       - name: Summarize test results
         id: summary
         if: ${{ always() }}
-        uses: pentaho/actions-common/.github/actions/playwright-test-summary@ci-it
+        uses: pentaho/actions-common/.github/actions/playwright-test-summary@stable
         with:
           search_directory: ${{ inputs.working_directory }}
           server_version_file: ${{ inputs.server_version_file }}
@@ -367,7 +433,63 @@ jobs:
           template_path: ${{ inputs.report_template_path }}
           guide_path: ${{ inputs.report_guide_path }}
           summary_format: ${{ inputs.summary_format }}
+          summary_group_by: ${{ inputs.summary_group_by }}
           verbose: ${{ inputs.verbose }}
+
+      # The Copilot analysis runs in the analyze-failures job, away from this job's services and secrets.
+      - name: Collect Playwright failure sources for analysis
+        id: failure-sources
+        if: ${{ always() && inputs.analyze_failures && steps.run-tests.outputs.test_outcome == 'failure' }}
+        continue-on-error: true
+        uses: pentaho/actions-common/.github/actions/stage-playwright-sources@stable
+        with:
+          working_directory: ${{ inputs.working_directory }}
+
+      - name: Package Playwright failure output for analysis
+        id: failure-output
+        if: ${{ always() && inputs.analyze_failures && steps.run-tests.outputs.test_outcome == 'failure' }}
+        continue-on-error: true
+        shell: bash
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          REPORT_OUTPUT_PATH: ${{ inputs.analyze_failures_report_output_path }}
+          SOURCE_LIST: ${{ steps.failure-sources.outputs.source_list }}
+        run: |
+          archive="$RUNNER_TEMP/playwright-failure-output.tgz"
+          # playwright-report folders hold the JSON reports whose Playwright outcomes classify
+          # expected, flaky and unexpected failures; failure artifact folders outside them are added too.
+          {
+            find . -path '*/node_modules' -prune -o -type d -name playwright-report -prune -print0
+            IFS=',' read -ra patterns <<< "$REPORT_OUTPUT_PATH"
+            for pattern in "${patterns[@]}"; do
+              pattern="${pattern#"${pattern%%[![:space:]]*}"}"
+              pattern="${pattern%"${pattern##*[![:space:]]}"}"
+              [ -z "$pattern" ] && continue
+              find . -path '*/node_modules' -prune -o -type d -name playwright-report -prune \
+                -o \( -path "$pattern" -o -path "./${pattern#./}" \) -prune -print0
+            done
+            if [ -n "$SOURCE_LIST" ]; then
+              cat "$SOURCE_LIST"
+            else
+              echo "::warning::Playwright failure source list unavailable; issue fallback may be incomplete." >&2
+            fi
+          } | tar --null -czf "$archive" --files-from=-
+          if [ -n "$(tar -tzf "$archive" | head -n 1)" ]; then
+            echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          else
+            echo "No Playwright report folders found. Skipping failure analysis."
+          fi
+
+      - name: Upload Playwright failure output for analysis
+        if: ${{ always() && steps.failure-output.outputs.archive != '' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.ARTIFACT_PREFIX }}-failure-analysis-input
+          retention-days: 1
+          overwrite: true
+          if-no-files-found: error
+          path: ${{ steps.failure-output.outputs.archive }}
 
       - name: Publish results to Practitest
         id: practitest
@@ -376,10 +498,11 @@ jobs:
               steps.summary.outputs.server_version != '' &&
               (steps.run-tests.outputs.test_outcome == 'success' ||
                steps.run-tests.outputs.test_outcome == 'failure') }}
-        uses: pentaho/actions-common/.github/actions/practitest-publish@ci-it
+        uses: pentaho/actions-common/.github/actions/practitest-publish@stable
         with:
           server_version: ${{ steps.summary.outputs.server_version }}
           server_context: ${{ inputs.server_context }}
+          build_plugin: ${{ needs.setup.outputs.plugins_version }}
           working_directory: ${{ inputs.practitest_working_directory }}
           script: ${{ inputs.practitest_script }}
           env_file: ${{ inputs.practitest_env_file }}
@@ -390,7 +513,7 @@ jobs:
 
       - name: Collect service logs
         if: ${{ always() }}
-        uses: pentaho/actions-common/.github/actions/collect-service-logs@ci-it
+        uses: pentaho/actions-common/.github/actions/collect-service-logs@stable
         with:
           server_container: ${{ job.services.pba.id }}
           postgres_container: ${{ job.services.postgres.id }}
@@ -406,7 +529,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: warn
           path: |
-            ${{ inputs.working_directory }}/**/playwright-report/
+            ${{ inputs.results_path || format('{0}/**/playwright-report/', inputs.working_directory) }}
             !**/node_modules/**
 
       - name: Upload server logs
@@ -427,6 +550,38 @@ jobs:
           steps_json: ${{ toJson(steps) }}
           report: true
 
+  analyze-failures:
+    name: Analyze Playwright failures
+    needs: tests
+    if: ${{ always() && needs.tests.outputs.failure_analysis_input == 'true' }}
+    runs-on: [k8s, orl-lab]
+    timeout-minutes: ${{ inputs.analyze_failures_timeout_minutes }}
+    continue-on-error: true
+    # Isolated from the tests job: no container, services, checkout, token scopes or secrets
+    # other than the Copilot token, which the action passes only to the sandboxed CLI.
+    permissions: {}
+    steps:
+      - name: Download Playwright failure output
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.ARTIFACT_PREFIX }}-failure-analysis-input
+          path: ${{ runner.temp }}/failure-analysis-input
+
+      - name: Extract Playwright failure output
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/failure-analysis"
+          tar --no-same-owner --no-same-permissions -xzf "$RUNNER_TEMP/failure-analysis-input/playwright-failure-output.tgz" \
+            -C "$RUNNER_TEMP/failure-analysis"
+          find "$RUNNER_TEMP/failure-analysis" -type l -delete
+
+      - name: Analyze Playwright failures with Copilot
+        uses: pentaho/actions-common/.github/actions/analyze-playwright-failures@stable
+        with:
+          working_directory: ${{ runner.temp }}/failure-analysis
+          report_output_path: ${{ inputs.analyze_failures_report_output_path }}
+          copilot_token: ${{ secrets.COPILOT_CLI_TOKEN }}
+
   notify:
     name: Notify integration test results
     needs: [setup, tests]
@@ -434,7 +589,7 @@ jobs:
     runs-on: [k8s, orl-lab]
     timeout-minutes: 5
     steps:
-      - uses: pentaho/actions-common/.github/actions/notify-slack@ci-it
+      - uses: pentaho/actions-common/.github/actions/notify-slack@stable
         with:
           format: integration_tests
           title: ${{ inputs.slack_title }}
@@ -443,6 +598,7 @@ jobs:
           tests_result: ${{ needs.tests.result }}
           summary: ${{ needs.tests.outputs.tests_summary }}
           server_version: ${{ needs.tests.outputs.server_version }}
+          plugin_version: ${{ needs.setup.outputs.plugins_version }}
           server_build_name: ${{ inputs.server_build_name }}
           server_context: ${{ inputs.server_context }}
           playwright_project: ${{ inputs.playwright_project }}

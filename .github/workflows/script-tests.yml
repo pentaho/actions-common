@@ -19,8 +19,13 @@ on:
       - '.github/actions/**'
       - '.github/workflows/build-plugins.yml'
       - '.github/workflows/integration-tests-npm.yml'
+      - '.github/workflows/merge-npm.yml'
+      - '.github/workflows/merge.yml'
       - '.github/workflows/notify-pull-request.yml'
       - '.github/workflows/pdi-plugin-compatibility-test.yml'
+      - '.github/workflows/pr-npm.yml'
+      - '.github/workflows/pr.yml'
+
       - '.github/workflows/script-tests.yml'
 
 permissions:
@@ -70,5 +75,5 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
-          node --test .github/scripts/tests/test-plugin-workflows.cjs
+          node --test .github/scripts/tests/test-plugin-workflows.cjs .github/scripts/tests/test-scanner-actions.cjs .github/scripts/tests/test-failure-analysis.cjs
           npm test --prefix .github/scripts/tests

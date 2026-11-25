@@ -25,7 +25,7 @@ const SKIPPED_SQL_FILES = [
 ];
 const SERVER_IMAGE_DIGEST = "registry.example/server@sha256:" + "a".repeat(64);
 
-// Fake docker/mvn/npm/npx executable. Logs every call to STUB_LOG and simulates the tools the scripts use.
+// Fake executables log every call to STUB_LOG and simulate the tools the scripts use.
 function stubMain() {
   const fs = require("node:fs");
   const path = require("node:path");
@@ -41,12 +41,33 @@ function stubMain() {
     context: env.MANUAL_SERVER_CONTEXT ?? null,
     env_file: env.PT_ENV_FILE ?? null,
     results_dir: env.PT_RESULTS_DIR ?? null,
+    container: env.CONTAINER ?? null,
+    dst: env.DST ?? null,
+    src: env.SRC ?? null,
   }) + "\n");
   if ([tool, ...args.slice(0, 1)].join(" ") === env.FAIL_COMMAND) {
-    console.error("stub command failed");
-    process.exit(7);
+    const calls = fs.readFileSync(env.STUB_LOG, "utf8").trim().split("\n")
+      .map(line => JSON.parse(line)).filter(call => call.tool === tool).length;
+    if (!env.FAIL_ON_CALL || calls === Number(env.FAIL_ON_CALL)) {
+      console.error("stub command failed");
+      process.exit(7);
+    }
   }
-  if (tool === "docker") {
+  if (tool === "curl") {
+    const output = args.indexOf("-o");
+    if (output !== -1) {
+      fs.writeFileSync(args[output + 1], args.at(-1));
+    } else {
+      console.log(JSON.stringify({ results: [{ "build.number": env.STUB_RESOLVED_VERSION }] }));
+    }
+  } else if (tool === "unzip") {
+    const url = fs.readFileSync(args[1], "utf8");
+    const folder = path.join(args[args.indexOf("-d") + 1], path.basename(url, ".zip"));
+    fs.mkdirSync(folder, { recursive: true });
+    fs.writeFileSync(path.join(folder, "plugin.xml"), url);
+  } else if (tool === "jq") {
+    console.log(JSON.parse(fs.readFileSync(0, "utf8")).results[0]["build.number"] ?? "null");
+  } else if (tool === "docker") {
     if (args[0] === "image" && args[1] === "inspect") {
       console.log(env.IMAGE_REPO_DIGEST);
     } else if (args[0] === "create") {
@@ -113,6 +134,24 @@ function splitOnce(line, separator) {
   return [line.slice(0, index), line.slice(index + separator.length)];
 }
 
+// Returns the dedented `run: |` script of a single-step composite action.
+function actionRunScript(name) {
+  const lines = fs.readFileSync(path.join(ACTIONS, name, "action.yml"), "utf8").split("\n");
+  const start = lines.findIndex(line => /^\s+run: \|\s*$/.test(line));
+  assert.notEqual(start, -1, `No run block in ${name}`);
+  assert.equal(lines.slice(start + 1).findIndex(line => /^\s+run:/.test(line)), -1, `${name} has several run blocks`);
+  const keyIndent = lines[start].search(/\S/);
+  const body = [];
+  for (const line of lines.slice(start + 1)) {
+    if (line.trim() !== "" && line.search(/\S/) <= keyIndent) {
+      break;
+    }
+    body.push(line);
+  }
+  const indent = Math.min(...body.filter(line => line.trim()).map(line => line.search(/\S/)));
+  return body.map(line => line.slice(indent)).join("\n");
+}
+
 function useWorkflowSed(workspace) {
   if (process.platform === "darwin") {
     // The workflow uses GNU sed; adapt its in-place flag for local macOS runs.
@@ -127,7 +166,7 @@ class Workspace {
     this.base = fs.realpathSync(fs.mkdtempSync(path.join(TESTS_DIR, ".workspace-")));
     this.bin = path.join(this.base, "bin");
     fs.mkdirSync(this.bin);
-    for (const tool of ["docker", "mvn", "npm", "npx"]) {
+    for (const tool of ["docker", "mvn", "npm", "npx", "curl", "unzip"]) {
       const executable = path.join(this.bin, tool);
       fs.writeFileSync(executable, STUB);
       fs.chmodSync(executable, 0o755);
@@ -157,6 +196,23 @@ class Workspace {
     fs.rmSync(this.base, { recursive: true, force: true });
   }
 
+  // Runs a composite action's inline script with the shell flags GitHub uses for `shell: bash`.
+  runAction(name, env = {}) {
+    const script = path.join(this.base, `${name}.sh`);
+    fs.writeFileSync(script, actionRunScript(name));
+    const merged = { ...this.env, ...env };
+    for (const [key, value] of Object.entries(merged)) {
+      if (value === undefined) {
+        delete merged[key];
+      }
+    }
+    return spawnSync("bash", ["--noprofile", "--norc", "-eo", "pipefail", script], {
+      cwd: this.base,
+      env: merged,
+      encoding: "utf8",
+    });
+  }
+
   runScript(relative, { success = true, ...env } = {}) {
     const script = path.join(ACTIONS, relative);
     const runner = path.extname(script) === ".cjs" ? process.execPath : "bash";
@@ -172,6 +228,18 @@ class Workspace {
       assert.notEqual(result.status, 0, text);
     }
     return text;
+  }
+
+  downloadPlugins(env = {}) {
+    return this.runScript("download-plugin-artifacts/download.sh", {
+      ARTIFACTS: "com/pentaho/plugin-one com/pentaho/plugin-two",
+      ARTIFACT_DIR: path.join(this.base, "plugins folder"),
+      ARTIFACTORY_URL: "https://registry.example/artifactory/",
+      ACCESS_TOKEN: "test-download-token",
+      VERSION: "11.0.0.4.338",
+      REPOSITORY: "",
+      ...env,
+    });
   }
 
   outputs() {
@@ -626,6 +694,102 @@ describe("WorkflowScripts", () => {
     assert.ok(!fs.existsSync(path.join(w.base, "pentaho-build")));
   });
 
+  for (const [name, separator] of [
+    ["comma", ","], ["space", " "], ["newline", "\n"], ["crlf", "\r\n"], ["mixed", ", \r\n\t"]
+  ]) {
+    test(`test_plugin_download_accepts_${name}_separated_maven_paths`, () => {
+      w.downloadPlugins({ ARTIFACTS: `/com/pentaho/plugin-one/${separator}com/pentaho/plugin-two` });
+      const downloads = w.commands("curl");
+      const extractions = w.commands("unzip");
+      assert.equal(downloads.length, 2);
+      assert.equal(extractions.length, 2);
+      for (const [index, artifact] of ["plugin-one", "plugin-two"].entries()) {
+        const zip = downloads[index].args[4];
+        const url = `https://registry.example/artifactory/pntprv-maven-dev/com/pentaho/${artifact}/11.0.0.4.338/${artifact}-11.0.0.4.338.zip`;
+        assert.deepEqual(downloads[index].args,
+          ["-LgfsS", "-H", "Authorization: Bearer test-download-token", "-o", zip, url]);
+        assert.deepEqual(extractions[index].args, ["-qo", zip, "-d", path.join(w.base, "plugins folder")]);
+        assert.equal(fs.readFileSync(path.join(w.base, "plugins folder", `${artifact}-11.0.0.4.338`, "plugin.xml"), "utf8"), url);
+        assert.ok(!fs.existsSync(zip), "temporary download was not removed");
+      }
+      assert.deepEqual(w.outputs(), { version: "11.0.0.4.338" });
+    });
+  }
+
+  test("test_plugin_download_uses_explicit_version_and_repository", () => {
+    w.downloadPlugins({ VERSION: "12.0.1", REPOSITORY: "pntpub-maven-release", ARTIFACTORY_URL: "https://registry.example/artifactory" });
+    assert.deepEqual(w.commands("curl").map(call => call.args.at(-1)), [
+      "https://registry.example/artifactory/pntpub-maven-release/com/pentaho/plugin-one/12.0.1/plugin-one-12.0.1.zip",
+      "https://registry.example/artifactory/pntpub-maven-release/com/pentaho/plugin-two/12.0.1/plugin-two-12.0.1.zip",
+    ]);
+    assert.deepEqual(w.outputs(), { version: "12.0.1" });
+  });
+
+  test("test_plugin_download_uses_resolved_latest_version", () => {
+    fs.writeFileSync(path.join(w.bin, "jq"), STUB, { mode: 0o755 });
+    const inputs = {
+      build_name: "plugin-build", artifactory_url: "https://registry.example/artifactory",
+      artifactory_user: "test-user", artifactory_password: "test-password",
+    };
+    const script = actionRunScript("get-latest-version")
+      .replace(/\$\{\{ inputs\.([a-z_]+) \}\}/g, (_, name) => {
+        assert.ok(Object.hasOwn(inputs, name), `unknown resolver input: ${name}`);
+        return inputs[name];
+      });
+    const latestOutput = path.join(w.base, "latest-output");
+    const resolution = spawnSync("bash", ["--noprofile", "--norc", "-eo", "pipefail", "-c", script], {
+      cwd: w.base, encoding: "utf8",
+      env: { ...w.env, GITHUB_OUTPUT: latestOutput, STUB_RESOLVED_VERSION: "12.0.2.456" },
+    });
+    assert.equal(resolution.status, 0, resolution.stdout + resolution.stderr);
+    const version = fs.readFileSync(latestOutput, "utf8").trim().split("=")[1];
+    assert.equal(version, "12.0.2.456");
+    w.downloadPlugins({ VERSION: version });
+    const urls = w.commands("curl").map(call => call.args.at(-1));
+    assert.deepEqual(urls.slice(1), [
+      "https://registry.example/artifactory/pntprv-maven-dev/com/pentaho/plugin-one/12.0.2.456/plugin-one-12.0.2.456.zip",
+      "https://registry.example/artifactory/pntprv-maven-dev/com/pentaho/plugin-two/12.0.2.456/plugin-two-12.0.2.456.zip",
+    ]);
+    assert.deepEqual(w.outputs(), { version });
+    const action = fs.readFileSync(path.join(ACTIONS, "download-plugin-artifacts/action.yml"), "utf8");
+    assert.match(action, /if: \$\{\{ inputs\.version == '' \}\}/);
+    assert.match(action, /uses: pentaho\/actions-common\/\.github\/actions\/get-latest-version@stable/);
+    assert.match(action, /VERSION: \$\{\{ inputs\.version \|\| steps\.latest\.outputs\.version \}\}/);
+    assert.match(action, /value: \$\{\{ steps\.download\.outputs\.version \}\}/);
+    assert.match(action, /run: bash "\$GITHUB_ACTION_PATH\/download\.sh"/);
+  });
+
+  for (const tool of ["curl", "unzip"]) {
+    for (const call of [1, 2]) {
+      test(`test_plugin_download_${tool}_failure_on_artifact_${call}_does_not_publish_version`, () => {
+        const text = w.downloadPlugins({
+          success: false, FAIL_COMMAND: `${tool} ${tool === "curl" ? "-LgfsS" : "-qo"}`, FAIL_ON_CALL: String(call),
+        });
+        assert.match(text, /stub command failed/);
+        assert.equal(w.commands("curl").length, call);
+        assert.equal(w.commands("unzip").length, tool === "curl" ? call - 1 : call);
+        assert.ok(!fs.existsSync(w.output), "failed download published a version output");
+        for (const download of w.commands("curl")) {
+          assert.ok(!fs.existsSync(download.args[4]), "failed download left a temporary archive");
+        }
+      });
+    }
+  }
+
+  for (const version of ["", "null"]) {
+    test(`test_plugin_download_rejects_${version || "empty"}_version_before_commands`, () => {
+      assert.match(w.downloadPlugins({ success: false, VERSION: version }), /latest build version could not be resolved/);
+      assert.ok(!fs.existsSync(w.log));
+      assert.ok(!fs.existsSync(w.output));
+    });
+  }
+
+  test("test_plugin_download_rejects_separator_only_artifact_list", () => {
+    assert.match(w.downloadPlugins({ success: false, ARTIFACTS: ", \r\n\t," }), /No artifacts given/);
+    assert.ok(!fs.existsSync(w.log));
+    assert.ok(!fs.existsSync(w.output));
+  });
+
   test("test_install_matches_scheduler_and_browser_selection", () => {
     w.runScript("install-playwright/install.sh", { PLAYWRIGHT_BROWSERS: "chromium firefox webkit chrome msedge" });
     assert.deepEqual(w.commands("npm")[0].args, ["install"]);
@@ -660,6 +824,64 @@ describe("WorkflowScripts", () => {
     assert.deepEqual(w.commands("npm").at(-1).args, ["run", "test"]);
   });
 
+  test("test_custom_locales_forward_container_and_target_with_default_source", () => {
+    const result = w.runAction("apply-custom-locales", {
+      CONTAINER: "pba-container",
+      DST: "/server/system",
+      SOURCE_DIR: "",
+      SRC: undefined,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const [call] = w.commands("npm");
+    assert.deepEqual(call.args, ["exec", "--no", "--", "copy-custom-locales"]);
+    assert.deepEqual(pick(call, ["container", "dst", "src"]),
+      { container: "pba-container", dst: "/server/system", src: null });
+    assert.equal(w.commands("npm").length, 1);
+  });
+
+  test("test_custom_locales_source_override_sets_src", () => {
+    const result = w.runAction("apply-custom-locales", {
+      CONTAINER: "pba-container",
+      DST: "/server/system",
+      SOURCE_DIR: "custom/locales dir",
+      SRC: undefined,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.deepEqual(pick(w.commands("npm")[0], ["container", "dst", "src"]),
+      { container: "pba-container", dst: "/server/system", src: "custom/locales dir" });
+  });
+
+  test("test_custom_locales_failure_propagates", () => {
+    const result = w.runAction("apply-custom-locales", {
+      CONTAINER: "pba-container",
+      DST: "/server/system",
+      SOURCE_DIR: "",
+      FAIL_COMMAND: "npm exec",
+    });
+    assert.equal(result.status, 7, result.stdout + result.stderr);
+    assert.ok(result.stderr.includes("stub command failed"));
+  });
+
+  test("test_custom_locales_run_only_when_enabled_between_install_and_tests", () => {
+    const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/integration-tests-npm.yml"), "utf8");
+    assert.match(workflow, /apply_custom_locales:\s+type: boolean\s+required: false\s+default: false/);
+    const install = indexOf(workflow, "- name: Install Playwright dependencies");
+    const locales = indexOf(workflow, "- name: Apply custom locale overrides");
+    const run = indexOf(workflow, "- name: Run Playwright tests");
+    assertLess(install, locales);
+    assertLess(locales, run);
+    const step = workflow.slice(locales, run);
+    assert.match(step, /^\s+if: \$\{\{ inputs\.apply_custom_locales \}\}$/m);
+    assert.ok(step.includes("uses: pentaho/actions-common/.github/actions/apply-custom-locales@stable"));
+    assert.ok(step.includes("container: ${{ job.services.pba.id }}"));
+    assert.ok(step.includes("working_directory: ${{ inputs.working_directory }}"));
+    assert.equal(workflow.split("apply-custom-locales@").length, 2, "locale action must run once");
+    const action = fs.readFileSync(path.join(ACTIONS, "apply-custom-locales/action.yml"), "utf8");
+    assert.match(action, /DST: \$\{\{ inputs\.target_dir \}\}/);
+    assert.match(action, /CONTAINER: \$\{\{ inputs\.container \}\}/);
+    assert.match(action, /SOURCE_DIR: \$\{\{ inputs\.source_dir \}\}/);
+  });
+
   test("test_installation_has_a_separate_timeout_without_duplicate_install", () => {
     const workflow = fs.readFileSync(path.join(ROOT, ".github/workflows/integration-tests-npm.yml"), "utf8");
     assert.ok(workflow.includes("timeout-minutes: ${{ inputs.playwright_install_timeout_minutes }}"));
@@ -670,7 +892,7 @@ describe("WorkflowScripts", () => {
       indexOf(workflow, "- name: Run Playwright tests"));
     const action = fs.readFileSync(path.join(ACTIONS, "run-playwright/action.yml"), "utf8");
     assert.ok(action.includes("inputs.install_dependencies == 'true'"));
-    assert.ok(action.includes("uses: pentaho/actions-common/.github/actions/install-playwright@ci-it"));
+    assert.ok(action.includes("uses: pentaho/actions-common/.github/actions/install-playwright@stable"));
   });
 
   test("test_summary_uses_per_test_statuses_and_excludes_setup", () => {
@@ -734,6 +956,31 @@ describe("WorkflowScripts", () => {
     assert.equal(w.outputs().summary,
       "Chrome: 1 total, ✅ 1 passed, ❌ 0 failed, ⏭️ 0 skipped\n" +
       "Firefox: 1 total, ✅ 0 passed, ❌ 1 failed, ⏭️ 0 skipped");
+  });
+
+  test("test_summary_groups_by_module_folder", () => {
+    for (const [module, suite, status] of [
+      ["browse-files", "chrome > a", "passed"],
+      ["browse-files", "chrome > b", "failed"],
+      ["browse-files", "setup > auth", "passed"],
+      ["home", "chrome > c", "pending"],
+    ]) {
+      const folder = path.join(w.base, module, "automation/playwright-report");
+      fs.mkdirSync(folder, { recursive: true });
+      const file = path.join(folder, "ctrf-report.json");
+      const tests = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")).results.tests : [];
+      fs.writeFileSync(file, JSON.stringify({ results: { tests: [...tests, { status, suite }] } }));
+    }
+    w.runScript("playwright-test-summary/summarize.cjs", {
+      SEARCH_DIRECTORY: w.base, SUMMARY_FORMAT: "multiline", SUMMARY_GROUP_BY: "module",
+    });
+    assert.equal(w.outputs().summary,
+      "Browse Files - Chrome: 2 total, ✅ 1 passed, ❌ 1 failed, ⏭️ 0 skipped\n" +
+      "Home - Chrome: 1 total, ✅ 0 passed, ❌ 0 failed, ⏭️ 1 skipped");
+    const text = w.runScript("playwright-test-summary/summarize.cjs", {
+      success: false, SEARCH_DIRECTORY: w.base, SUMMARY_GROUP_BY: "suite",
+    });
+    assert.ok(text.includes("Unsupported summary grouping: suite"), text);
   });
 
   test("test_report_template_defaults_and_override", () => {
@@ -1180,6 +1427,28 @@ describe("WorkflowScripts", () => {
       "Setup: success, Integration tests: failure",
     ]);
     assert.equal(payload.attachments[0].footer, "by tester");
+  });
+
+  test("test_integration_notification_includes_plugin_version", () => {
+    w.runScript("notify-slack/payload.sh", {
+      FORMAT: "integration_tests",
+      SETUP_RESULT: "success",
+      TESTS_RESULT: "success",
+      SLACK_CHANNEL: "ci",
+      SERVER_VERSION: "11.0.0.0-1",
+      PLUGIN_VERSION: "0.1.16",
+      SERVER_BUILD_NAME: "pdia-master",
+      SERVER_CONTEXT: "sample",
+      PLAYWRIGHT_PROJECT: "all",
+      BRANCH: "master",
+      EVENT_NAME: "schedule",
+      GITHUB_SERVER_URL: "https://github.com",
+      GITHUB_REPOSITORY: "owner/repo",
+      GITHUB_RUN_ID: "123",
+      GITHUB_ACTOR: "tester",
+    });
+    const values = JSON.parse(w.outputs().json).attachments[0].fields.map(field => field.value);
+    assertIn("Version: 11.0.0.0-1 | Plugin version: 0.1.16", values);
   });
 
   test("test_shared_notification_preserves_integration_skipped_status", () => {

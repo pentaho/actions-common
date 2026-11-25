@@ -1,0 +1,80 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Download plugin artifacts
+description: >
+  Download plugin assembly zips of a given (or the latest) build from an Artifactory Maven
+  repository and unzip them into a plugins folder (e.g. pentaho-solutions/system).
+inputs:
+  artifacts:
+    description: >
+      Comma-, space- or newline-separated Maven artifact paths (group path + artifactId,
+      e.g. com/pentaho/pentaho-app-shell-core-assembly); each <path>/<version>/<artifactId>-<version>.zip is unzipped
+    required: true
+  version:
+    description: Version to download; empty resolves the latest build of build_name
+    required: false
+    default: ""
+  build_name:
+    description: Artifactory build name used to resolve the latest version when version is empty
+    required: false
+    default: ""
+  repository:
+    description: Artifactory Maven repository (e.g. pntprv-maven-dev or pntpub-maven-release)
+    required: false
+    default: pntprv-maven-dev
+  artifact_dir:
+    description: Folder the zips are unzipped into
+    required: true
+  artifactory_url:
+    description: Artifactory base URL (https://<host>/artifactory)
+    required: true
+  artifactory_user:
+    description: Artifactory username, used to resolve the latest version
+    required: true
+  artifactory_password:
+    description: Artifactory password, used to resolve the latest version
+    required: true
+  access_token:
+    description: JFrog access token used to download the artifacts
+    required: true
+  verbose:
+    description: List the unzipped plugin folders
+    default: "false"
+outputs:
+  version:
+    description: Downloaded version
+    value: ${{ steps.download.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve latest version
+      id: latest
+      if: ${{ inputs.version == '' }}
+      uses: pentaho/actions-common/.github/actions/get-latest-version@stable
+      with:
+        build_name: ${{ inputs.build_name }}
+        artifactory_url: ${{ inputs.artifactory_url }}
+        artifactory_user: ${{ inputs.artifactory_user }}
+        artifactory_password: ${{ inputs.artifactory_password }}
+
+    - name: Download artifacts
+      id: download
+      shell: bash
+      env:
+        ARTIFACTS: ${{ inputs.artifacts }}
+        VERSION: ${{ inputs.version || steps.latest.outputs.version }}
+        REPOSITORY: ${{ inputs.repository }}
+        ARTIFACT_DIR: ${{ inputs.artifact_dir }}
+        ARTIFACTORY_URL: ${{ inputs.artifactory_url }}
+        ACCESS_TOKEN: ${{ inputs.access_token }}
+        VERBOSE: ${{ inputs.verbose }}
+      run: bash "$GITHUB_ACTION_PATH/download.sh"

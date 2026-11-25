@@ -1,0 +1,22 @@
+name: Collect Playwright failure source files
+description: List bounded, referenced test source files for isolated failure analysis.
+inputs:
+  working_directory:
+    description: Directory containing Playwright reports and source files.
+    required: false
+    default: "."
+outputs:
+  source_list:
+    description: NUL-delimited list of source paths relative to working_directory.
+    value: ${{ steps.collect.outputs.source_list }}
+runs:
+  using: composite
+  steps:
+    - name: Collect referenced test sources
+      id: collect
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        source_list="$(mktemp "$RUNNER_TEMP/playwright-sources.XXXXXX")"
+        node "$GITHUB_ACTION_PATH/collect.cjs" "$source_list"
+        printf 'source_list=%s\n' "$source_list" >> "$GITHUB_OUTPUT"

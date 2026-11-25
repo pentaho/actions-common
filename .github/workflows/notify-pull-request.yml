@@ -51,7 +51,7 @@ jobs:
     runs-on: [k8s, orl-lab]
     timeout-minutes: 5
     steps:
-      - uses: pentaho/actions-common/.github/actions/notify-slack@ci-it
+      - uses: pentaho/actions-common/.github/actions/notify-slack@stable
         with:
           format: pull_request
           results: ${{ inputs.results }}

@@ -1,0 +1,66 @@
+name: FrogBot scan
+description: Run the shared FrogBot pull request scanner.
+inputs:
+  artifactory_url:
+    description: Artifactory URL
+    required: true
+  access_token:
+    description: JFrog access token
+    required: true
+  git_token:
+    description: GitHub token for FrogBot
+    required: true
+  path_exclusions:
+    description: Semicolon-separated path exclusions
+    default: "*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*"
+  maven_mode:
+    description: "Module selection: none, validate with curl, or directives with Python 3"
+    default: "none"
+  modules:
+    description: Comma-separated modules to validate on the pull request base branch
+    default: ""
+  maven_directives:
+    description: Shell-style Maven directives from which to extract project selections and the reactor POM (-f/--file)
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Prepare FrogBot scan
+      id: prepare
+      if: ${{ inputs.maven_mode != 'none' }}
+      continue-on-error: ${{ inputs.maven_mode == 'validate' }}
+      shell: bash
+      env:
+        MAVEN_MODE: ${{ inputs.maven_mode }}
+        MAVEN_MODULES: ${{ inputs.modules }}
+        MAVEN_DIRECTIVES: ${{ inputs.maven_directives }}
+        REPOSITORY: ${{ github.repository }}
+        BASE_REF: ${{ github.event.pull_request.base.ref }}
+        JF_GIT_TOKEN: ${{ inputs.git_token }}
+      run: bash "$GITHUB_ACTION_PATH/prepare.sh"
+
+    # Do not override an inherited MAVEN_ARGS when Maven preparation is disabled.
+    - name: FrogBot scan
+      if: ${{ inputs.maven_mode == 'none' }}
+      uses: lumada-common-services/gh-composite-actions@stable
+      env:
+        JF_URL: ${{ inputs.artifactory_url }}
+        JF_ACCESS_TOKEN: ${{ inputs.access_token }}
+        JF_GIT_TOKEN: ${{ inputs.git_token }}
+        GIT_REPO_OWNER: ${{ github.repository_owner }}
+        GIT_REPO_NAME: ${{ github.event.repository.name }}
+        JF_PATH_EXCLUSIONS: ${{ inputs.path_exclusions }}
+        PULL_REQUEST_NUMBER: ${{ github.event.number }}
+
+    - name: FrogBot scan with Maven
+      if: ${{ inputs.maven_mode != 'none' }}
+      uses: lumada-common-services/gh-composite-actions@stable
+      env:
+        JF_URL: ${{ inputs.artifactory_url }}
+        JF_ACCESS_TOKEN: ${{ inputs.access_token }}
+        JF_GIT_TOKEN: ${{ inputs.git_token }}
+        GIT_REPO_OWNER: ${{ github.repository_owner }}
+        GIT_REPO_NAME: ${{ github.event.repository.name }}
+        JF_PATH_EXCLUSIONS: ${{ inputs.path_exclusions }}
+        PULL_REQUEST_NUMBER: ${{ github.event.number }}
+        MAVEN_ARGS: ${{ steps.prepare.outputs.maven_args }}

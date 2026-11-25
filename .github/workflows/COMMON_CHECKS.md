@@ -23,6 +23,8 @@ Key characteristics:
 
 Runs on every pull request. Performs code quality checks, builds, tests, security scans, and sends notifications.
 
+SonarQube and FrogBot use the shared [`sonarqube-scan`](../actions/sonarqube-scan/action.yml) and [`frogbot-scan`](../actions/frogbot-scan/action.yml) actions. Before the Maven FrogBot scan, the FrogBot action verifies that every selected module exists on the PR base branch; if validation fails, the scan runs without a module filter.
+
 ### Jobs
 
 | Job                     | Condition                      | Purpose                                              |

@@ -28,7 +28,7 @@ runs:
   steps:
     - name: Install Playwright dependencies
       if: ${{ inputs.install_dependencies == 'true' }}
-      uses: pentaho/actions-common/.github/actions/install-playwright@ci-it
+      uses: pentaho/actions-common/.github/actions/install-playwright@stable
       with:
         working_directory: ${{ inputs.working_directory }}
         browsers: ${{ inputs.browsers }}
