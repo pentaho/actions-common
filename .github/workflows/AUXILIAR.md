@@ -427,7 +427,7 @@ Both shared workflows use `workflow_call`. Add `pull_request` and `workflow_disp
 | Job       | Condition                                              | Purpose |
 |-----------|--------------------------------------------------------|---------|
 | `setup`   | always                                                 | Empties the run's volume, downloads `pentaho-plugins` when `use_pr_build` is true, copies SQL from the server image, verifies plugins and generates Docker bind mounts. |
-| `tests`   | `setup` succeeded                                      | Waits for healthy Postgres and Pentaho Server services, runs `npm install`, installs browsers and runs the test script. Summarizes results, publishes the CTRF report and optional Practitest results, and uploads results/logs. |
+| `tests`   | `setup` succeeded                                      | Waits for healthy Postgres and Pentaho Server services, runs `npm install`, installs browsers, optionally applies custom locale overrides and runs the test script. Summarizes results, publishes the CTRF report and optional Practitest results, and uploads results/logs. |
 | `notify`  | always, when `slack_channels` is set                     | Sends setup/test status, platform version, per-browser counts and optional Practitest link to Slack, including setup failures. |
 | `cleanup` | always, when setup ran                                 | When `tests` failed, uploads `/volume/logs` as `<artifact_prefix>-startup-server-logs` (covers service start failures, which skip every test step), then empties the shared volume. |
 
@@ -479,6 +479,7 @@ The `setup` job reads the scripts from the Pentaho Server image, so the reposito
 | `playwright_project`           | string  | No       | `all` | Exported as `PLAYWRIGHT_PROJECT`; caller's npm script/config must honor it, as Scheduler does |
 | `playwright_browsers`          | string  | No       | `chromium firefox webkit chrome msedge` | Bundled Playwright browsers plus Chrome/Edge, matching Scheduler; empty skips installation |
 | `playwright_install_timeout_minutes` | number | No | `10` | Separate timeout for npm dependency and browser installation |
+| `apply_custom_locales`         | boolean | No       | `false` | After installation, copy the `@pentaho/common-automation-resources` locale overrides into the running server's plugin `locales` folders; `working_directory` must depend on that package |
 | `timeout_minutes`              | number  | No       | `60`    | Test job timeout, including the server startup |
 | `artifact_prefix`              | string  | No       | `<repo>-it-<run_id>-<run_attempt>` | Prefix of the `-results`, `-server-logs` and (on test failure) `-startup-server-logs` artifacts |
 | `container_image`              | string  | No       | `vars.PDIA_AC_CONTAINER_IMAGE` | Docker image override |
@@ -554,6 +555,7 @@ The existing optional MS Teams notification still uses `gh-composite-actions` wi
 | [`build-plugins`](../actions/build-plugins/action.yml) | Maven invocation in `build.sh`, optional JUnit check reporting with transient 404 retries, and summary tracking in `update-summary.sh` |
 | [`pentaho-server-fixtures`](../actions/pentaho-server-fixtures/action.yml) | `extract-sql.sh` reads the server image; `stage-fixtures.sh` verifies plugins and generates bind mounts |
 | [`install-playwright`](../actions/install-playwright/action.yml) | `install.sh` installs dependencies/browsers in a separately time-limited workflow step |
+| [`apply-custom-locales`](../actions/apply-custom-locales/action.yml) | Runs the `copy-custom-locales` bin of `@pentaho/common-automation-resources` (resolved from `working_directory`) against the `pba` service, or any named container, via `docker exec` |
 | [`run-playwright`](../actions/run-playwright/action.yml) | `run.sh` invokes the test script; direct callers still install dependencies by default |
 | [`playwright-test-summary`](../actions/playwright-test-summary/action.yml) | `summarize.cjs` aggregates counts/version, `check-reports.cjs` resolves report/template paths, and the reporter fetches history, renders the bundled or caller template and uploads processed CTRF |
 | [`practitest-publish`](../actions/practitest-publish/action.yml) | `publish.sh` runs the caller's uploader; `link.cjs` reads `PT_ENV_FILE` (default `.env`) and builds result links |

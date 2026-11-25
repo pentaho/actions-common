@@ -1,0 +1,47 @@
+# ******************************************************************************
+#
+# Pentaho
+#
+# Copyright (C) 2026 by Pentaho Canada Inc. : http://www.pentaho.com
+#
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file.
+#
+# Change Date: 2030-06-15
+# ******************************************************************************
+name: Apply custom locale overrides
+description: >
+  Copy the custom locale overrides (e.g. supported-locales.json) shipped by
+  @pentaho/common-automation-resources into the plugin locale folders of a running
+  Pentaho Server container. The package must be installed in working_directory or an
+  ancestor npm workspace.
+inputs:
+  container:
+    description: Name or ID of the running Pentaho Server container
+    required: true
+  working_directory:
+    description: Folder whose node_modules provides @pentaho/common-automation-resources
+    required: false
+    default: "."
+  target_dir:
+    description: Pentaho Server system folder that contains the plugins
+    required: false
+    default: /home/devuser/pentaho/pentaho-server/pentaho-solutions/system
+  source_dir:
+    description: Optional override of the locales source folder; empty uses the package's custom-locales
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        CONTAINER: ${{ inputs.container }}
+        DST: ${{ inputs.target_dir }}
+        SOURCE_DIR: ${{ inputs.source_dir }}
+      run: |
+        if [ -n "$SOURCE_DIR" ]; then
+          export SRC="$SOURCE_DIR"
+        fi
+        npm exec --no -- copy-custom-locales

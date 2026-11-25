@@ -73,6 +73,11 @@ on:
         required: false
         default: 10
         description: "Timeout of the npm dependency and Playwright browser installation step"
+      apply_custom_locales:
+        type: boolean
+        required: false
+        default: false
+        description: "Copy @pentaho/common-automation-resources locale overrides into the server; working_directory must depend on that package"
       timeout_minutes:
         type: number
         required: false
@@ -331,6 +336,13 @@ jobs:
           working_directory: ${{ inputs.working_directory }}
           browsers: ${{ inputs.playwright_browsers }}
           verbose: ${{ inputs.verbose }}
+
+      - name: Apply custom locale overrides
+        if: ${{ inputs.apply_custom_locales }}
+        uses: pentaho/actions-common/.github/actions/apply-custom-locales@ci-it
+        with:
+          container: ${{ job.services.pba.id }}
+          working_directory: ${{ inputs.working_directory }}
 
       - name: Run Playwright tests
         id: run-tests
